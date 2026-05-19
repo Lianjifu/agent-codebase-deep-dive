@@ -1,0 +1,2151 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>第 3 章 类型系统设计</title>
+  <style>
+    /* ===== Reset & Base ===== */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { font-size: 62.5%; }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+      font-size: 15px;
+      color: #1e293b;
+      line-height: 1.7;
+      background: #ffffff;
+      -webkit-font-smoothing: antialiased;
+    }
+    
+    /* ===== Layout ===== */
+    .app {
+      display: flex;
+      min-height: 100vh;
+    }
+    
+    /* ===== Sidebar ===== */
+    .sidebar {
+      width: 280px;
+      min-width: 280px;
+      background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+      border-right: 1px solid #e2e8f0;
+      position: fixed;
+      top: 0;
+      left: 0;
+      bottom: 0;
+      display: flex;
+      flex-direction: column;
+    }
+    .sidebar::-webkit-scrollbar { width: 4px; }
+    .sidebar::-webkit-scrollbar-track { background: transparent; }
+    .sidebar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+    .sidebar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+    .sidebar-header {
+      padding: 20px 20px 14px;
+      border-bottom: 1px solid #e2e8f0;
+      flex-shrink: 0;
+    }
+
+    .sidebar-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 15px;
+      font-weight: 700;
+      color: #0f172a;
+      text-decoration: none;
+      letter-spacing: -0.02em;
+    }
+
+    .sidebar-brand .icon {
+      width: 30px;
+      height: 30px;
+      background: linear-gradient(135deg, #3b82f6 0%, #0ea5e9 100%);
+      border-radius: 7px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 15px;
+      flex-shrink: 0;
+    }
+
+    .sidebar-search {
+      padding: 12px 20px;
+      flex-shrink: 0;
+    }
+
+    .search-box {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 8px 12px;
+      transition: all 0.2s ease;
+    }
+
+    .search-box:focus-within {
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+
+    .search-box input {
+      flex: 1;
+      border: none;
+      outline: none;
+      font-size: 13px;
+      color: #1e293b;
+      background: transparent;
+    }
+
+    .search-box input::placeholder {
+      color: #94a3b8;
+    }
+
+    .search-box svg {
+      width: 15px;
+      height: 15px;
+      color: #94a3b8;
+      flex-shrink: 0;
+    }
+
+    .sidebar-nav {
+      flex: 1;
+      padding: 4px 8px;
+      overflow-y: auto;
+    }
+
+    .sidebar-nav ul, .sidebar-nav li {
+      list-style: none;
+    }
+
+    .quick-links {
+      display: flex;
+      gap: 6px;
+      padding: 0 8px 10px;
+      flex-shrink: 0;
+    }
+
+    .quick-links a {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      padding: 7px 10px;
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 7px;
+      font-size: 12px;
+      font-weight: 500;
+      color: #64748b;
+      text-decoration: none;
+      transition: all 0.15s ease;
+    }
+
+    .quick-links a:hover {
+      color: #3b82f6;
+      border-color: #3b82f6;
+      background: #eff6ff;
+    }
+
+    .quick-links a .ql-icon {
+      font-size: 13px;
+      line-height: 1;
+    }
+
+    .sidebar-section {
+      margin-bottom: 2px;
+    }
+
+    .sidebar-section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 9px 12px 9px 14px;
+      cursor: pointer;
+      user-select: none;
+      border-radius: 8px;
+      margin: 0 2px;
+      transition: background 0.15s ease;
+    }
+
+    .sidebar-section-header:hover {
+      background: rgba(59, 130, 246, 0.06);
+    }
+
+    .sidebar-section-header.open {
+      background: rgba(59, 130, 246, 0.08);
+    }
+
+    .section-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+    }
+
+    .section-num {
+      width: 22px;
+      height: 22px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #3b82f6 0%, #0ea5e9 100%);
+      border-radius: 5px;
+      font-size: 10px;
+      font-weight: 700;
+      color: #ffffff;
+      flex-shrink: 0;
+    }
+
+    .section-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: #1e293b;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .sidebar-section-header .arrow {
+      width: 16px;
+      height: 16px;
+      color: #94a3b8;
+      transition: transform 0.2s ease, color 0.15s ease;
+      flex-shrink: 0;
+    }
+
+    .sidebar-section-header:hover .arrow {
+      color: #64748b;
+    }
+
+    .sidebar-section-header.open .arrow {
+      transform: rotate(90deg);
+      color: #3b82f6;
+    }
+
+    .sidebar-section-items {
+      overflow: hidden;
+      transition: max-height 0.2s ease, opacity 0.15s ease;
+      max-height: 2000px;
+      opacity: 1;
+    }
+    .sidebar-section-items.collapsed {
+      max-height: 0;
+      opacity: 0;
+    }
+
+    .sidebar-section-items ul {
+      padding: 2px 6px 6px;
+    }
+
+    .sidebar-section-items li {
+      margin: 1px 0;
+    }
+
+    .sidebar-section-items a {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 10px;
+      font-size: 13px;
+      color: #64748b;
+      text-decoration: none;
+      border-radius: 6px;
+      transition: all 0.15s ease;
+      position: relative;
+    }
+
+    .sidebar-section-items a:hover {
+      color: #3b82f6;
+      background: rgba(59, 130, 246, 0.06);
+    }
+
+    .sidebar-section-items a.active {
+      color: #1e293b;
+      background: rgba(59, 130, 246, 0.1);
+      font-weight: 500;
+    }
+    .sidebar-section-items a.active::before {
+      content: '';
+      position: absolute;
+      left: -6px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 3px;
+      height: 18px;
+      border-radius: 2px;
+      background: #3b82f6;
+    }
+    .sidebar-section-items a.active .num {
+      color: #3b82f6;
+    }
+    .sidebar-section-items a[href*="APPENDIX"] {
+      font-size: 12px;
+      color: #94a3b8;
+      padding-left: 14px;
+    }
+    .sidebar-section-items a[href*="APPENDIX"]:hover {
+      color: #3b82f6;
+    }
+    .sidebar-section-items a[href*="APPENDIX"] .num {
+      display: none;
+    }
+
+    .sidebar-section-items a .num {
+      font-size: 11px;
+      font-weight: 500;
+      color: #94a3b8;
+      min-width: 26px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .sidebar-divider {
+      height: 1px;
+      background: linear-gradient(90deg, transparent, #e2e8f0, transparent);
+      margin: 6px 10px 10px;
+    }
+
+    .sidebar-external {
+      padding: 0 8px 12px;
+      flex-shrink: 0;
+    }
+
+    .sidebar-external a {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 9px 12px;
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 500;
+      color: #475569;
+      text-decoration: none;
+      transition: all 0.15s ease;
+    }
+
+    .sidebar-external a:hover {
+      border-color: #3b82f6;
+      color: #3b82f6;
+      background: #eff6ff;
+    }
+
+    .sidebar-external a svg {
+      width: 15px;
+      height: 15px;
+      opacity: 0.5;
+      flex-shrink: 0;
+    }
+    .sidebar-external a:hover svg {
+      opacity: 0.8;
+    }
+    
+    /* ===== Content ===== */
+    .content {
+      flex: 1;
+      margin-left: 280px;
+      padding: 48px 64px;
+      min-height: 100vh;
+      max-width: 1400px;
+    }
+
+    /* ===== Typography ===== */
+    .markdown-section h1 {
+      font-size: 28px;
+      font-weight: 700;
+      color: #0f172a;
+      letter-spacing: -0.02em;
+      margin: 0 0 24px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    
+    .markdown-section h2 {
+      font-size: 20px;
+      font-weight: 600;
+      color: #1e293b;
+      letter-spacing: -0.01em;
+      margin: 40px 0 16px;
+    }
+    
+    .markdown-section h3 {
+      font-size: 16px;
+      font-weight: 600;
+      color: #3b82f6;
+      margin: 28px 0 12px;
+    }
+    
+    .markdown-section h4 {
+      font-size: 15px;
+      font-weight: 600;
+      color: #1e293b;
+      margin: 20px 0 8px;
+    }
+    .markdown-section h1, .markdown-section h2, .markdown-section h3, .markdown-section h4 {
+      position: relative;
+    }
+    .markdown-section .heading-anchor {
+      position: absolute;
+      left: -20px;
+      top: 50%;
+      transform: translateY(-50%);
+      opacity: 0;
+      color: #94a3b8;
+      text-decoration: none;
+      font-size: 0.8em;
+      font-weight: 400;
+      transition: opacity 0.15s ease;
+      padding-right: 4px;
+    }
+    .markdown-section h1:hover .heading-anchor,
+    .markdown-section h2:hover .heading-anchor,
+    .markdown-section h3:hover .heading-anchor,
+    .markdown-section h4:hover .heading-anchor {
+      opacity: 1;
+    }
+    
+    .markdown-section p {
+      margin: 12px 0;
+      color: #475569;
+    }
+
+    /* ===== Thinking Note ===== */
+    .thinking-note {
+      background: #fffbeb;
+      border-left: 4px solid #f59e0b;
+      border-radius: 0 12px 12px 0;
+      padding: 20px 24px;
+      margin: 24px 0;
+    }
+    .thinking-note h3 {
+      margin: 0 0 12px;
+      padding: 0;
+      border: none;
+      font-size: 14px;
+      font-weight: 700;
+      color: #d97706;
+      letter-spacing: 0.03em;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .thinking-note p {
+      margin: 8px 0;
+      font-size: 14px;
+      line-height: 1.8;
+      color: #78350f;
+    }
+    .thinking-note strong {
+      display: inline-block;
+      margin-top: 6px;
+      color: #92400e;
+    }
+    .thinking-note strong:first-of-type {
+      margin-top: 0;
+    }
+    .thinking-note ul {
+      margin: 4px 0 4px 0;
+      padding-left: 18px;
+      list-style: none;
+    }
+    .thinking-note li {
+      margin: 4px 0;
+      padding-left: 14px;
+      position: relative;
+      color: #78350f;
+      font-size: 14px;
+      line-height: 1.7;
+    }
+    .thinking-note li::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 10px;
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: #d97706;
+      opacity: 0.5;
+    }
+    .thinking-note li strong {
+      color: #92400e;
+    }
+
+    .markdown-section a {
+      color: #3b82f6;
+      text-decoration: none;
+      font-weight: 500;
+    }
+    
+    .markdown-section a:hover {
+      text-decoration: underline;
+    }
+    
+    .markdown-section code {
+      background: #f1f5f9;
+      color: #0f172a;
+      padding: 2px 6px;
+      font-size: 13px;
+      border-radius: 4px;
+      font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Consolas', monospace;
+    }
+    
+    .markdown-section pre {
+      background: #1e293b;
+      border-radius: 12px;
+      padding: 20px 24px;
+      overflow-x: auto;
+      margin: 20px 0;
+    }
+    
+    .markdown-section pre code {
+      background: transparent;
+      color: #e2e8f0;
+      padding: 0;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+    
+    .markdown-section blockquote {
+      background: #f8fafc;
+      border-left: 4px solid #3b82f6;
+      border-radius: 0 8px 8px 0;
+      padding: 16px 20px;
+      margin: 20px 0;
+    }
+    
+    .markdown-section blockquote p {
+      margin: 0;
+      color: #475569;
+    }
+    
+    .markdown-section table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0;
+      font-size: 14px;
+      border-radius: 12px;
+      
+      border: 1px solid #e2e8f0;
+    }
+    
+    .markdown-section table th {
+      background: #f8fafc;
+      font-weight: 600;
+      text-align: left;
+      padding: 12px 16px;
+      color: #475569;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    
+    .markdown-section table td {
+      padding: 12px 16px;
+      border-top: 1px solid #e2e8f0;
+    }
+    
+    .markdown-section table tr:nth-child(2n) td {
+      background: #f8fafc;
+    }
+    
+    .markdown-section ul, .markdown-section ol {
+      padding-left: 24px;
+      margin: 12px 0;
+    }
+    
+    .markdown-section li {
+      margin: 6px 0;
+      color: #475569;
+    }
+    
+    .markdown-section hr {
+      height: 1px;
+      background: #e2e8f0;
+      border: none;
+      margin: 32px 0;
+    }
+    
+    .markdown-section img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 8px;
+    }
+    
+    /* ===== Mermaid Diagrams ===== */
+    .mermaid {
+      background: #f8fafc;
+      border-radius: 12px;
+      padding: 24px;
+      margin: 20px 0;
+      overflow-x: auto;
+      border: 1px solid #e2e8f0;
+      display: block;
+    }
+    .mermaid.rendered {
+      display: block;
+    }
+    .mermaid svg {
+      max-width: 100%;
+      height: auto;
+    }
+    .mermaid-error {
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      border-radius: 8px;
+      padding: 16px;
+      color: #dc2626;
+      margin: 20px 0;
+    }
+    .mermaid-loading {
+      background: #f8fafc;
+      border: 1px dashed #e2e8f0;
+      border-radius: 12px;
+      padding: 24px;
+      margin: 20px 0;
+      color: #64748b;
+      text-align: center;
+    }
+
+    
+    
+
+/* ===== Click-to-Expand Mermaid ===== */
+    .mermaid-zoom-container {
+      position: relative;
+      overflow: hidden;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      margin: 20px 0;
+      background: #f8fafc;
+      cursor: pointer;
+      min-height: 100px;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+    .mermaid-zoom-container:hover {
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 2px rgba(59,130,246,0.1);
+    }
+    .mermaid-zoom-container .mermaid {
+      margin: 0;
+      border: none;
+      border-radius: 0;
+      background: transparent;
+    }
+    .mermaid-zoom-container .mermaid svg {
+      display: block;
+    }
+    .mermaid-expand-overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+      background: rgba(15,23,42,0.03);
+    }
+    .mermaid-zoom-container:hover .mermaid-expand-overlay {
+      opacity: 1;
+    }
+    .mermaid-expand-overlay span {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 18px;
+      background: rgba(255,255,255,0.95);
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 500;
+      color: #3b82f6;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+      backdrop-filter: blur(4px);
+      pointer-events: none;
+      transition: transform 0.15s ease;
+    }
+    .mermaid-zoom-container:hover .mermaid-expand-overlay span {
+      transform: translateY(-2px);
+    }
+    .mermaid-expand-overlay .expand-icon {
+      font-size: 15px;
+    }
+
+    /* ===== Mermaid Modal ===== */
+    @keyframes modal-fade-in {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    @keyframes modal-content-in {
+      from { opacity: 0; transform: scale(0.95) translateY(8px); }
+      to { opacity: 1; transform: scale(1) translateY(0); }
+    }
+    .mermaid-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 1000;
+      background: rgba(15, 23, 42, 0.65);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      animation: modal-fade-in 0.2s ease;
+    }
+    .mermaid-modal.active {
+      display: flex;
+    }
+    .mermaid-modal-content {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      max-width: 90vw;
+      max-height: 90vh;
+      background: #fff;
+      border-radius: 14px;
+      box-shadow: 0 25px 80px rgba(0,0,0,0.3);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      animation: modal-content-in 0.2s ease;
+    }
+    .mermaid-modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 20px;
+      border-bottom: 1px solid #e2e8f0;
+      flex-shrink: 0;
+      background: #fafbfc;
+      gap: 12px;
+    }
+    .mermaid-modal-header .modal-title-wrap {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+    }
+    .mermaid-modal-header .modal-icon {
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      background: linear-gradient(135deg, #3b82f6, #0ea5e9);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      flex-shrink: 0;
+    }
+    .mermaid-modal-header .modal-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: #1e293b;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .mermaid-modal-header .modal-hint {
+      font-size: 12px;
+      color: #94a3b8;
+      font-weight: 400;
+      margin-left: 4px;
+    }
+    .mermaid-modal-header .modal-actions {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      flex-shrink: 0;
+    }
+    .mermaid-modal-header .modal-close {
+      width: 30px;
+      height: 30px;
+      border: none;
+      border-radius: 6px;
+      background: transparent;
+      color: #94a3b8;
+      font-size: 17px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s ease;
+      margin-left: 4px;
+    }
+    .mermaid-modal-header .modal-close:hover {
+      background: #fee2e2;
+      color: #dc2626;
+    }
+    .mermaid-modal-body {
+      flex: 1;
+      overflow: auto;
+      position: relative;
+      user-select: auto;
+      background: #f8fafc
+        repeating-linear-gradient(
+          0deg, transparent, transparent 23px, #f1f5f9 23px, #f1f5f9 24px
+        ),
+        repeating-linear-gradient(
+          90deg, transparent, transparent 23px, #f1f5f9 23px, #f1f5f9 24px
+        );
+    }
+    .mermaid-modal-body svg {
+      display: block;
+    }
+    @media (max-width: 768px) {
+      .mermaid-modal { padding: 12px; }
+      .mermaid-modal-content { max-width: 100vw; max-height: 100vh; border-radius: 10px; }
+      .mermaid-modal-header { padding: 10px 14px; }
+    }
+    @media (max-width: 480px) {
+      .mermaid-modal { padding: 0; }
+      .mermaid-modal-content { border-radius: 0; max-width: 100vw; max-height: 100vh; }
+    }
+
+
+/* ===== 引导思考 - Note-style Card ===== */
+    tr.guide-card-header td {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      width: 100%;
+      padding: 12px 24px !important;
+      font-size: 13px;
+      font-weight: 700;
+      color: #6366f1;
+      letter-spacing: 0.04em;
+      background: transparent !important;
+      border: none !important;
+    }
+    table.guide-card {
+      border-collapse: separate;
+      border-spacing: 0;
+      font-size: 14px;
+      margin: 0 0 24px;
+      overflow: hidden;
+      display: block;
+      width: 100%;
+      background: #f8faff;
+      border-left: 4px solid #6366f1;
+      border-radius: 0 12px 12px 0;
+      box-shadow: 0 1px 3px rgba(99, 102, 241, 0.08);
+    }
+    /* Hide original table header ("思考维度 | 内容") */
+    table.guide-card thead {
+      display: none;
+    }
+    /* Collapse/expand behavior */
+    table.guide-card.collapsed tbody tr:not(.guide-card-header) {
+      display: none;
+    }
+    table.guide-card tbody tr.guide-card-header {
+      cursor: pointer;
+      user-select: none;
+    }
+    table.guide-card tbody tr.guide-card-header:hover {
+      background: rgba(99, 102, 241, 0.04);
+    }
+    .collapse-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 18px;
+      height: 18px;
+      flex-shrink: 0;
+      transition: transform 0.2s ease;
+    }
+    .collapse-icon::before {
+      content: '';
+      display: block;
+      width: 6px;
+      height: 6px;
+      border-right: 2px solid #a5b4fc;
+      border-bottom: 2px solid #a5b4fc;
+      transform: rotate(-45deg);
+      margin-top: -3px;
+      transition: transform 0.2s ease, border-color 0.2s ease;
+    }
+    table.guide-card:not(.collapsed) .collapse-icon::before {
+      transform: rotate(45deg);
+      margin-top: 3px;
+      border-color: #6366f1;
+    }
+    tr.guide-card-header:hover .collapse-icon::before {
+      border-color: #6366f1;
+    }
+    .collapse-hint {
+      font-size: 11px;
+      color: #a5b4fc;
+      font-weight: 400;
+      transition: color 0.2s ease;
+    }
+    table.guide-card:not(.collapsed) .collapse-hint {
+      display: none;
+    }
+    tr.guide-card-header:hover .collapse-hint {
+      color: #6366f1;
+    }
+    table.guide-card tbody,
+    table.guide-card tbody tr {
+      display: block;
+      width: 100%;
+    }
+    table.guide-card tbody td {
+      display: block;
+      width: 100%;
+      padding: 0 24px 14px;
+      border: none;
+      vertical-align: top;
+      line-height: 1.7;
+      color: #475569;
+    }
+    table.guide-card tbody td:first-child {
+      padding: 12px 24px 2px;
+      font-weight: 600;
+      font-size: 12px;
+      color: #6366f1;
+      background: transparent;
+      width: 100%;
+      border: none;
+      letter-spacing: 0.03em;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    table.guide-card tbody td:first-child::before {
+      display: none;
+    }
+    /* Content lists inside cells */
+    table.guide-card tbody td ul {
+      margin: 0;
+      padding-left: 16px;
+      list-style: none;
+    }
+    table.guide-card tbody td > ul > li {
+      position: relative;
+      padding-left: 14px;
+      margin-bottom: 4px;
+      font-size: 13.5px;
+      color: #475569;
+      line-height: 1.7;
+    }
+    table.guide-card tbody td > ul > li::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 10px;
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: #c7d2fe;
+    }
+    table.guide-card tbody td > ul > li:last-child {
+      margin-bottom: 0;
+    }
+    table.guide-card tbody td ul ul {
+      padding-left: 14px;
+      margin-top: 2px;
+    }
+    table.guide-card tbody td ul ul li {
+      position: relative;
+      padding-left: 12px;
+      margin-bottom: 2px;
+      font-size: 13px;
+      color: #64748b;
+      line-height: 1.6;
+    }
+    table.guide-card tbody td ul ul li::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 9px;
+      width: 3px;
+      height: 3px;
+      border-radius: 50%;
+      background: #cbd5e1;
+    }
+    table.guide-card tbody td strong,
+    table.guide-card tbody td:first-child strong {
+      color: #4338ca;
+      font-weight: 600;
+    }
+    table.guide-card tbody td code {
+      background: #eef2ff;
+      color: #6366f1;
+      font-size: 12.5px;
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-weight: 500;
+    }
+
+/* ===== Navigation ===== */
+    .nav {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 48px;
+      padding-top: 24px;
+      border-top: 1px solid #e2e8f0;
+    }
+    
+    .nav a {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 10px 18px;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      color: #475569;
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 500;
+      transition: all 0.15s ease;
+    }
+    
+    .nav a:hover {
+      background: #3b82f6;
+      color: #fff;
+      border-color: #3b82f6;
+    }
+    
+    /* ===== Search Results ===== */
+    .search-results {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.12);
+      max-height: 400px;
+      overflow-y: auto;
+      z-index: 100;
+      display: none;
+      margin: 4px 0 0;
+    }
+    .search-results.active { display: block; }
+    .search-result-item {
+      display: block;
+      padding: 10px 14px;
+      text-decoration: none;
+      border-bottom: 1px solid #f1f5f9;
+      transition: background 0.15s ease;
+    }
+    .search-result-item:last-child { border-bottom: none; }
+    .search-result-item:hover { background: #f8fafc; }
+    .search-result-item .sr-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: #1e293b;
+      margin-bottom: 2px;
+    }
+    .search-result-item .sr-preview {
+      font-size: 12px;
+      color: #64748b;
+      line-height: 1.4;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .search-result-item .sr-path {
+      font-size: 11px;
+      color: #94a3b8;
+      margin-top: 2px;
+    }
+    .search-no-results {
+      padding: 16px;
+      text-align: center;
+      color: #94a3b8;
+      font-size: 13px;
+    }
+    .search-loading {
+      padding: 12px;
+      text-align: center;
+      color: #94a3b8;
+      font-size: 12px;
+    }
+    .sidebar-search { position: relative; }
+
+    /* ===== Copy Code Button ===== */
+    .code-block-wrapper {
+      position: relative;
+    }
+    .copy-code-btn {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      padding: 4px 10px;
+      background: rgba(255,255,255,0.1);
+      color: #94a3b8;
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 6px;
+      font-size: 12px;
+      cursor: pointer;
+      opacity: 0;
+      transition: opacity 0.15s ease, background 0.15s ease, color 0.15s ease;
+    }
+    .markdown-section pre:hover .copy-code-btn,
+    .copy-code-btn:focus {
+      opacity: 1;
+    }
+    .copy-code-btn:hover {
+      background: rgba(255,255,255,0.2);
+      color: #e2e8f0;
+    }
+    .copy-code-btn.copied {
+      background: #22c55e;
+      color: #fff;
+      border-color: #22c55e;
+      opacity: 1;
+    }
+
+    /* ===== Back to Top ===== */
+    .back-to-top {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      width: 40px;
+      height: 40px;
+      background: #3b82f6;
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 12px rgba(59,130,246,0.3);
+      transition: opacity 0.2s ease, transform 0.2s ease;
+      z-index: 80;
+    }
+    .back-to-top.visible { display: flex; }
+    .back-to-top:hover { transform: translateY(-2px); }
+    .back-to-top svg { width: 20px; height: 20px; }
+
+    /* ===== Mobile Menu Toggle ===== */
+    .menu-toggle {
+      display: none;
+      position: fixed;
+      top: 16px;
+      left: 16px;
+      z-index: 200;
+      width: 40px;
+      height: 40px;
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    .menu-toggle svg {
+      width: 20px;
+      height: 20px;
+      color: #475569;
+    }
+    .sidebar-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.3);
+      z-index: 90;
+    }
+    .sidebar-overlay.active { display: block; }
+
+    /* ===== Mobile ===== */
+    @media (max-width: 1024px) {
+      .menu-toggle { display: flex; }
+      .sidebar { transform: translateX(-100%); transition: transform 0.2s ease; z-index: 100; }
+      .sidebar.open { transform: translateX(0); }
+      .content { margin-left: 0; padding: 24px 20px; padding-top: 64px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <nav class="sidebar">
+      <div class="sidebar-header">
+        <a href="../index.html" class="sidebar-brand">
+          <span class="icon">📚</span>
+          LLM Agent 源码学习
+        </a>
+      </div>
+      
+      <div class="sidebar-search">
+        <div class="search-box">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"/>
+            <path d="M21 21l-4.35-4.35"/>
+          </svg>
+          <input type="text" placeholder="搜索文档..." id="searchInput" autocomplete="off">
+        </div>
+        <div class="search-results" id="searchResults"></div>
+      </div>
+      
+      <div class="quick-links">
+        <a href="../index.html">🏠 首页</a>
+        <a href="../SUMMARY.html">📑 目录</a>
+      </div>
+      
+      <div class="sidebar-nav">
+        <div class="sidebar-section">
+        <div class="sidebar-section-header">
+          <span class="section-title">
+            <span class="section-num">1</span>
+            <span class="section-name">Claude Code</span>
+          </span>
+          <svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+        </div>
+        <div class="sidebar-section-items"><ul><li><a href="./01-OVERVIEW.html"><span class="num">1.0</span>全景概览</a></li><li><a href="./02-BOOTSTRAP.html"><span class="num">2.0</span>启动流程</a></li><li><a href="./03-TYPE-SYSTEM.html"><span class="num">3.0</span>类型系统设计</a></li><li><a href="./04-QUERY-ENGINE.html"><span class="num">4.0</span>查询引擎</a></li><li><a href="./05-MESSAGE-SYSTEM.html"><span class="num">5.0</span>消息系统</a></li><li><a href="./06-STREAMING.html"><span class="num">6.0</span>流式处理</a></li><li><a href="./07-TOOL-ARCHITECTURE.html"><span class="num">7.0</span>工具架构</a></li><li><a href="./08-BUILTIN-TOOLS.html"><span class="num">8.0</span>内置工具</a></li><li><a href="./09-TOOL-EXECUTION.html"><span class="num">9.0</span>工具执行</a></li><li><a href="./10-AGENT-MODEL.html"><span class="num">10.0</span>Agent 模型</a></li><li><a href="./11-SUBAGENT.html"><span class="num">11.0</span>子代理</a></li><li><a href="./12-SKILL-SYSTEM.html"><span class="num">12.0</span>技能系统</a></li><li><a href="./13-PERMISSION-MODEL.html"><span class="num">13.0</span>权限模型</a></li><li><a href="./14-BASH-SECURITY.html"><span class="num">14.0</span>Bash 安全</a></li><li><a href="./15-MCP-PROTOCOL.html"><span class="num">15.0</span>MCP 协议</a></li><li><a href="./16-MCP-AUTH.html"><span class="num">16.0</span>MCP 认证</a></li><li><a href="./17-STATE-MANAGEMENT.html"><span class="num">17.0</span>状态管理</a></li><li><a href="./18-CONVERSATION.html"><span class="num">18.0</span>会话管理</a></li><li><a href="./19-INK-REACT.html"><span class="num">19.0</span>Ink React</a></li><li><a href="./20-REPL.html"><span class="num">20.0</span>REPL</a></li><li><a href="./21-PERFORMANCE.html"><span class="num">21.0</span>性能优化</a></li><li><a href="./22-TESTING.html"><span class="num">22.0</span>测试</a></li><li><a href="./23-BUILD-SYSTEM.html"><span class="num">23.0</span>构建系统</a></li><li><a href="./24-DESIGN-PATTERNS.html"><span class="num">24.0</span>设计模式</a></li><li><a href="./25-PHILOSOPHY.html"><span class="num">25.0</span>哲学思想</a></li><li><a href="./26-COGNITIVE-LOOP.html"><span class="num">26.0</span>认知循环</a></li><li><a href="./APPENDIX-A-GLOSSARY.html">附录A 术语表</a></li><li><a href="./APPENDIX-B-SOURCE-MAP.html">附录B 源码导航</a></li></ul></div></div>
+      </div>
+
+      <div class="sidebar-external">
+        <a href="https://github.com/Hyper66666/claude-code-sourcemap" target="_blank">
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+          </svg>
+          GitHub 源码
+        </a>
+      </div>
+    </nav>
+    <button class="back-to-top" id="backToTop" aria-label="回到顶部" title="回到顶部">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M18 15l-6-6-6 6"/>
+      </svg>
+    </button>
+    <button class="menu-toggle" id="menuToggle" aria-label="打开菜单">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M3 12h18M3 6h18M3 18h18"/>
+      </svg>
+    </button>
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+    <main class="content">
+      <article class="markdown-section">
+        <h1>第 3 章 类型系统设计</h1>
+<blockquote>
+<p>&quot;类型不是约束，而是思维的外化。一个好的类型系统设计，就是一份自我验证的架构文档。&quot;</p>
+</blockquote>
+<table class="guide-card collapsed">
+<thead>
+<tr>
+<th>思考维度</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody>
+<tr class="guide-card-header"><td colspan="2"><span class="collapse-icon"></span>引导思考 <span class="collapse-hint">展开</span></td></tr><tr>
+<td><strong>它为什么存在</strong></td>
+<td><ul><li>1900+ 文件的大型项目，类型系统不只是用来做编译检查的——它是架构级别的约束传播机制</li><li>把运行时报错提前到编译阶段发现，在模块边界强制契约——比代码 Review 靠谱多了</li></ul></td>
+</tr>
+<tr>
+<td><strong>它解决什么问题</strong></td>
+<td><ul><li>循环依赖是所有大型 TS 项目的噩梦——纯类型文件（types/ 目录）把运行时依赖彻底解了</li><li>SessionId 和 AgentId 都是字符串，传错了编译器不会报错——Branded Types 让编译器帮你抓这种 bug</li><li>TS 的类型在编译后全没了——Zod 在运行时接班做验证</li></ul></td>
+</tr>
+<tr>
+<td><strong>它在系统中的位置</strong></td>
+<td><ul><li>types/ 是纯类型层，没有运行时代码——谁都能安全引进，不会引起循环</li><li>一个 Zod Schema 搞定三件事：API 契约、运行时验证、类型推断——一个真相来源</li></ul></td>
+</tr>
+<tr>
+<td><strong>它如何工作</strong></td>
+<td><ul><li>Branded Types 通过交叉类型在编译期区分不同 ID 类型</li><li>DeepImmutable 递归冻结权限上下文等安全关键数据结构</li><li>Zod 的 <code>z.infer&lt;T&gt;</code> 让 schema 和类型共享同一真相来源</li><li>tool 泛型通过条件类型区分&quot;属性存在但可选&quot;和&quot;属性存在且必填&quot;</li></ul></td>
+</tr>
+<tr>
+<td><strong>它如何实现</strong></td>
+<td><ul><li>types/ids.ts 里定义 brand 和窄化函数——asSessionId 是断言式，toAgentId 是安全式，区分得很清楚</li><li>types/permissions.ts 里的纯类型定义被十几个模块 import 但不会循环——因为没运行时代码</li><li>BuiltTool<D> 的类型体操模拟了 spread 操作的类型映射——运行时一行代码，类型系统里写了十几行</li></ul></td>
+</tr>
+<tr>
+<td><strong>不同平台如何做</strong></td>
+<td><ul><li><strong>Cursor Agent</strong>：直接用 VS Code 插件的类型系统——官方给你啥就是啥，没有品牌类型</li><li><strong>OpenClaw</strong>：普通 TypeScript 类型，不上 Zod 运行时验证</li><li><strong>Harness Agent</strong>：企业项目类型体系完整，也会用 Zod/io-ts 做运行时验证</li></ul></td>
+</tr>
+<tr>
+<td><strong>优势是什么？</strong></td>
+<td><ul><li><strong>优势</strong><ul><li>纯类型文件优雅破解循环依赖——不加构建步骤</li><li>一个 Zod schema 养三份工——API 契约、运行时验证、类型推断</li><li>ID 混用这种运行时 bug 被提到编译期，开发期就逮住了</li></ul></li></ul></td>
+</tr>
+</tbody></table>
+<p>Claude Code 是一个深度依赖 TypeScript 类型系统的项目。其类型设计不仅仅是为了编译时检查，更是一种<strong>架构级别的约束传播机制</strong>：通过类型定义来强制执行模块边界、打破循环依赖、保证 API 契约，以及在 Agent 系统中实现类型安全的消息传递。本章将从三个维度剖析这套类型系统的设计思想。</p>
+<hr>
+<h2>3.1 TypeScript 严格模式的工程价值</h2>
+<p>在一个拥有 1900 多个文件的代码库中，TypeScript 严格模式不是可选的锦上添花，而是工程必需品。Claude Code 对类型严格性的要求体现在多个层面。</p>
+<h3>品牌类型（Branded Types）</h3>
+<p><code>src/types/ids.ts</code> 展示了一种高级的类型安全技巧 —— 品牌类型：</p>
+<pre><code class="language-typescript">// src/types/ids.ts
+export type SessionId = string &amp; { readonly __brand: 'SessionId' }
+export type AgentId = string &amp; { readonly __brand: 'AgentId' }</code></pre><p><code>SessionId</code> 和 <code>AgentId</code> 在运行时都是普通的 <code>string</code>，但在编译时它们是不可互换的：</p>
+<pre><code class="language-typescript">function processSession(id: SessionId): void { /* ... */ }
+function processAgent(id: AgentId): void { /* ... */ }
+
+const sessionId: SessionId = asSessionId('abc-123')
+const agentId: AgentId = asAgentId('a-deadbeef01234567')
+
+processSession(sessionId)  // 编译通过
+processSession(agentId)    // 编译错误：AgentId 不能赋值给 SessionId</code></pre><p>这种设计消除了一类常见的 bug：在 Agent 系统中，Session ID 和 Agent ID 都是字符串，容易在参数传递中混淆。品牌类型将这种运行时 bug 提升为编译时错误。</p>
+<p>创建品牌类型的函数提供了窄化入口：</p>
+<pre><code class="language-typescript">export function asSessionId(id: string): SessionId {
+  return id as SessionId
+}
+
+export function asAgentId(id: string): AgentId {
+  return id as AgentId
+}</code></pre><p>注意 <code>toAgentId()</code> 函数还包含运行时验证：</p>
+<pre><code class="language-typescript">const AGENT_ID_PATTERN = /^a(?:.+-)?[0-9a-f]{16}$/
+
+export function toAgentId(s: string): AgentId | null {
+  return AGENT_ID_PATTERN.test(s) ? (s as AgentId) : null
+}</code></pre><p><code>toAgentId</code> 和 <code>asAgentId</code> 的区别在于：前者是<strong>安全的窄化</strong>（返回 <code>null</code> 表示无效输入），后者是<strong>断言式窄化</strong>（调用者保证输入合法）。在 Claude Code 的使用中，<code>toAgentId</code> 用于解析外部输入（如 URL 参数），<code>asAgentId</code> 用于内部已知合法的场景。</p>
+<h3>DeepImmutable 类型</h3>
+<p><code>ToolPermissionContext</code> 被 <code>DeepImmutable</code> 包装，确保权限上下文在传递过程中不会被意外修改：</p>
+<pre><code class="language-typescript">// src/Tool.ts
+export type ToolPermissionContext = DeepImmutable&lt;{
+  mode: PermissionMode
+  additionalWorkingDirectories: Map&lt;string, AdditionalWorkingDirectory&gt;
+  alwaysAllowRules: ToolPermissionRulesBySource
+  alwaysDenyRules: ToolPermissionRulesBySource
+  alwaysAskRules: ToolPermissionRulesBySource
+  isBypassPermissionsModeAvailable: boolean
+  // ...
+}&gt;</code></pre><p><code>DeepImmutable</code> 递归地将所有属性标记为 <code>readonly</code>，将 <code>Map</code> 转为 <code>ReadonlyMap</code>，将数组转为 <code>readonly</code> 数组。这保证了权限上下文在工具执行的整个生命周期中是不可变的 —— 任何试图修改它的代码都会导致编译错误。</p>
+<div class="thinking-note"><h3>思考笔记</h3>
+<p>品牌类型和 DeepImmutable 是编译时安全的&quot;双保险&quot;——前者防止程序员犯错，后者防止程序员不小心。</p>
+<ul>
+<li>SessionId 和 AgentId 都是 string，品牌类型让编译器帮你区分它们——运行时零成本，编译期捕获混乱。</li>
+<li>toAgentId 运行时验证 + asAgentId 断言式转换——两者并存说明了一个道理：外部输入要验证，内部传递靠类型。</li>
+<li>DeepImmutable 递归冻结权限上下文——不是担心开发人员故意改，而是防止大型代码库中有人在角落不小心改了一个字段。</li>
+<li>这种&quot;使不合法状态不可表示&quot;的理念是类型系统设计的高级境界——不是加更多检查，而是让错误在类型层面就不可能。</li>
+</ul>
+</div><hr>
+<h2>3.2 循环依赖破解：纯类型文件的架构模式</h2>
+<p>循环依赖是大型 TypeScript 项目中最常见的架构退化信号。Claude Code 采用了一种系统性的解决方案：<strong>将共享类型提取到纯类型文件中</strong>。</p>
+<h3>问题根源</h3>
+<p>考虑以下依赖场景：</p>
+<div class="mermaid">%%{init: {"theme": "base", "themeVariables":{"primaryColor":"#3b82f6","primaryTextColor":"#1e293b","primaryBorderColor":"#60a5fa","lineColor":"#94a3b8","secondaryColor":"#f1f5f9","tertiaryColor":"#ffffff","fontFamily":"-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif"}}}%%
+graph LR
+    A["Tool.ts&lt;br/&gt;(定义 Tool 接口)"] --&gt;|"import"| B["permissions.ts&lt;br/&gt;(定义权限检查)"]
+    B --&gt;|"import"| C["Tool.ts 中的 ToolPermissionContext"]
+
+    style A fill:#fecaca,stroke:#ef4444
+    style B fill:#fecaca,stroke:#ef4444</div><p><code>Tool.ts</code> 需要引用权限类型，权限模块也需要引用工具类型。在运行时，这种循环会导致模块初始化时某些导出为 <code>undefined</code>。</p>
+<h3>解决方案：types/ 目录</h3>
+<p><code>src/types/</code> 目录中的文件遵循严格的规则：<strong>只包含类型定义和编译时常量，没有运行时依赖</strong>。</p>
+<pre><code class="language-typescript">// src/types/permissions.ts 文件头注释
+/**
+ * Pure permission type definitions extracted to break import cycles.
+ *
+ * This file contains only type definitions and constants with no
+ * runtime dependencies.
+ * Implementation files remain in src/utils/permissions/ but can now
+ * import from here to avoid circular dependencies.
+ */</code></pre><div class="mermaid">%%{init: {"theme": "base", "themeVariables":{"primaryColor":"#3b82f6","primaryTextColor":"#1e293b","primaryBorderColor":"#60a5fa","lineColor":"#94a3b8","secondaryColor":"#f1f5f9","tertiaryColor":"#ffffff","fontFamily":"-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif"}}}%%
+graph TD
+    subgraph "types/ — 纯类型层（无运行时代码）"
+        TP["types/permissions.ts&lt;br/&gt;PermissionMode, PermissionResult, ..."]
+        TH["types/hooks.ts&lt;br/&gt;HookEvent, HookResult, ..."]
+        TI["types/ids.ts&lt;br/&gt;SessionId, AgentId"]
+        TC["types/command.ts&lt;br/&gt;Command, PromptCommand, ..."]
+    end
+
+    subgraph "实现层"
+        Tool["Tool.ts"] --&gt;|"import type"| TP
+        Tool --&gt;|"import type"| TH
+        Perm["utils/permissions/"] --&gt;|"import type"| TP
+        Hook["utils/hooks/"] --&gt;|"import type"| TH
+        Main["main.tsx"] --&gt;|"import type"| TC
+        QE["QueryEngine.ts"] --&gt;|"import type"| TI
+    end
+
+    style TP fill:#eff6ff,stroke:#2563eb
+    style TH fill:#eff6ff,stroke:#2563eb
+    style TI fill:#eff6ff,stroke:#2563eb
+    style TC fill:#eff6ff,stroke:#2563eb</div><p>在 <code>Tool.ts</code> 中可以看到这种模式的具体应用：</p>
+<pre><code class="language-typescript">// src/Tool.ts
+// 从集中位置导入权限类型以打破导入循环
+import type {
+  AdditionalWorkingDirectory,
+  PermissionMode,
+  PermissionResult,
+} from './types/permissions.js'
+
+// 从集中位置导入工具进度类型以打破导入循环
+import type {
+  AgentToolProgress,
+  BashProgress,
+  MCPProgress,
+  REPLToolProgress,
+  SkillToolProgress,
+  TaskOutputProgress,
+  ToolProgressData,
+  WebSearchProgress,
+} from './types/tools.js'</code></pre><p>注释明确标注了 &quot;to break import cycles&quot;。同时，为了向后兼容，这些类型被重新导出：</p>
+<pre><code class="language-typescript">// 为了向后兼容，重新导出进度类型
+export type {
+  AgentToolProgress,
+  BashProgress,
+  MCPProgress,
+  REPLToolProgress,
+  SkillToolProgress,
+  TaskOutputProgress,
+  WebSearchProgress,
+}</code></pre><p>这意味着现有的消费者代码不需要修改导入路径 —— 它们仍然可以从 <code>Tool.ts</code> 导入这些类型，但 <code>Tool.ts</code> 自身的依赖链不再形成循环。</p>
+<h3>types/permissions.ts 的完整剖析</h3>
+<p><code>src/types/permissions.ts</code> 是这种模式的范例。它定义了完整的权限类型层次结构：</p>
+<pre><code class="language-typescript">// 权限模式 — 判别联合
+export type ExternalPermissionMode = (typeof EXTERNAL_PERMISSION_MODES)[number]
+export type InternalPermissionMode = ExternalPermissionMode | 'auto' | 'bubble'
+export type PermissionMode = InternalPermissionMode
+
+// 权限行为 — 三值枚举
+export type PermissionBehavior = 'allow' | 'deny' | 'ask'
+
+// 权限规则 — 来源标签
+export type PermissionRuleSource =
+  | 'userSettings'
+  | 'projectSettings'
+  | 'localSettings'
+  | 'flagSettings'
+  | 'policySettings'
+  | 'cliArg'
+  | 'command'
+  | 'session'
+
+// 权限决策 — 判别联合
+export type PermissionDecision&lt;Input&gt; =
+  | PermissionAllowDecision&lt;Input&gt;
+  | PermissionAskDecision&lt;Input&gt;
+  | PermissionDenyDecision</code></pre><p>注意 <code>PermissionMode</code> 的定义方式：外部可见的模式（<code>ExternalPermissionMode</code>）是内部模式（<code>InternalPermissionMode</code>）的子集。<code>&#39;auto&#39;</code> 和 <code>&#39;bubble&#39;</code> 模式只在内部使用。通过 <code>feature()</code> 编译时开关，<code>&#39;auto&#39;</code> 模式甚至可以从运行时验证集合中完全移除：</p>
+<pre><code class="language-typescript">export const INTERNAL_PERMISSION_MODES = [
+  ...EXTERNAL_PERMISSION_MODES,
+  ...(feature('TRANSCRIPT_CLASSIFIER')
+    ? (['auto'] as const)
+    : ([] as const)),
+] as const satisfies readonly PermissionMode[]</code></pre><p>这是一个精妙的设计：类型系统中 <code>&#39;auto&#39;</code> 始终存在（因为 <code>InternalPermissionMode</code> 包含它），但运行时验证集合可以根据 feature flag 排除它。<code>satisfies</code> 关键字确保了数组内容与类型定义的一致性。</p>
+<div class="thinking-note"><h3>思考笔记</h3>
+<p>types/ 纯类型目录是循环依赖的&quot;外科手术刀&quot;——不改变模块依赖关系，只切断回环的那条边。</p>
+<ul>
+<li>纯类型文件没有运行时代码，可以被任何模块安全 import——这是破解循环依赖最简单也最优雅的方案。</li>
+<li><code>&lt;strong&gt;import type&lt;/strong&gt;</code> 加上 types/ 目录，一个加在导入侧一个加在组织侧——双重保障。</li>
+<li>向后兼容的重新导出说明了另一个道理：架构重构要考虑现有消费者，不要让他们为你的重构买单。</li>
+<li>PermissionMode 通过 feature() 条件编译控制运行时验证集合，但类型层面始终保留 &#39;auto&#39;——这是一种&quot;编译时剪枝+运行时缩小&quot;的精细控制。</li>
+</ul>
+</div><hr>
+<h2>3.3 Zod Schema：运行时类型验证</h2>
+<p>TypeScript 的类型在编译后完全消失。对于需要处理外部输入的系统来说，仅靠编译时类型检查是不够的。Claude Code 使用 Zod v4 实现运行时类型验证，特别是在以下场景中：</p>
+<h3>工具输入验证</h3>
+<p>每个工具的 <code>inputSchema</code> 是一个 Zod schema：</p>
+<pre><code class="language-typescript">// 概念性示例：FileRead 工具的输入 schema
+const inputSchema = z.object({
+  file_path: z.string().describe("The absolute path to the file to read"),
+  offset: z.number().optional().describe("Line number to start reading from"),
+  limit: z.number().optional().describe("Number of lines to read"),
+})</code></pre><p>这个 schema 同时服务三个目的：</p>
+<ol>
+<li><strong>API 契约</strong>：自动生成 JSON Schema，发送给 Anthropic API 的 <code>tools</code> 参数</li>
+<li><strong>运行时验证</strong>：验证模型返回的工具调用参数是否合法</li>
+<li><strong>类型推断</strong>：通过 <code>z.infer&lt;typeof inputSchema&gt;</code> 自动推断 TypeScript 类型</li>
+</ol>
+<div class="mermaid">%%{init: {"theme": "base", "themeVariables":{"primaryColor":"#3b82f6","primaryTextColor":"#1e293b","primaryBorderColor":"#60a5fa","lineColor":"#94a3b8","secondaryColor":"#f1f5f9","tertiaryColor":"#ffffff","fontFamily":"-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif"}}}%%
+graph LR
+    ZS["Zod Schema&lt;br/&gt;z.object({...})"]
+    ZS --&gt;|"z.infer&lt;&gt;"| TS["TypeScript 类型&lt;br/&gt;{file_path: string, ...}"]
+    ZS --&gt;|"toJsonSchema()"| JS["JSON Schema&lt;br/&gt;{type: 'object', ...}"]
+    ZS --&gt;|"schema.parse()"| RV["运行时验证&lt;br/&gt;✓/✗"]
+
+    style ZS fill:#fef9c3,stroke:#eab308</div><h3>Hook 响应验证</h3>
+<p><code>src/types/hooks.ts</code> 中定义了 Hook 系统的响应 schema：</p>
+<pre><code class="language-typescript">// src/types/hooks.ts
+export const syncHookResponseSchema = lazySchema(() =&gt;
+  z.object({
+    continue: z.boolean()
+      .describe('Whether Claude should continue after hook (default: true)')
+      .optional(),
+    suppressOutput: z.boolean()
+      .describe('Hide stdout from transcript (default: false)')
+      .optional(),
+    stopReason: z.string()
+      .describe('Message shown when continue is false')
+      .optional(),
+    decision: z.enum(['approve', 'block']).optional(),
+    reason: z.string()
+      .describe('Explanation for the decision')
+      .optional(),
+    hookSpecificOutput: z.union([
+      z.object({
+        hookEventName: z.literal('PreToolUse'),
+        permissionDecision: permissionBehaviorSchema().optional(),
+        updatedInput: z.record(z.string(), z.unknown()).optional(),
+        additionalContext: z.string().optional(),
+      }),
+      z.object({
+        hookEventName: z.literal('PostToolUse'),
+        additionalContext: z.string().optional(),
+        updatedMCPToolOutput: z.unknown().optional(),
+      }),
+      // ... 更多 hook 事件类型
+    ]).optional(),
+  }),
+)</code></pre><p>注意 <code>lazySchema()</code> 包装器。这是一种延迟初始化模式 —— Zod schema 的创建有非零成本（需要分配验证器对象），通过 lazy 包装可以推迟到首次使用时才初始化。</p>
+<h3>编译时类型一致性断言</h3>
+<p>在 <code>hooks.ts</code> 的末尾有一段引人注目的代码：</p>
+<pre><code class="language-typescript">// src/types/hooks.ts
+import type { IsEqual } from 'type-fest'
+type Assert&lt;T extends true&gt; = T
+type _assertSDKTypesMatch = Assert&lt;
+  IsEqual&lt;SchemaHookJSONOutput, HookJSONOutput&gt;
+&gt;</code></pre><p>这是一个<strong>编译时断言</strong>，确保 Zod schema 推断出的类型（<code>SchemaHookJSONOutput</code>）与 SDK 中手动定义的类型（<code>HookJSONOutput</code>）完全一致。如果两者不匹配，编译会失败。</p>
+<p>这种模式解决了一个常见问题：当 Zod schema 和手动类型定义同时存在时，它们可能因为独立修改而产生不一致。编译时断言充当了两个类型定义之间的&quot;契约验证器&quot;。</p>
+<div class="mermaid">%%{init: {"theme": "base", "themeVariables":{"primaryColor":"#3b82f6","primaryTextColor":"#1e293b","primaryBorderColor":"#60a5fa","lineColor":"#94a3b8","secondaryColor":"#f1f5f9","tertiaryColor":"#ffffff","fontFamily":"-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif"}}}%%
+graph TD
+    SDK["SDK 手动定义&lt;br/&gt;HookJSONOutput"] --&gt;|"必须匹配"| Check["编译时断言&lt;br/&gt;Assert&lt;IsEqual&lt;A, B&gt;&gt;"]
+    Zod["Zod Schema 推断&lt;br/&gt;SchemaHookJSONOutput"] --&gt;|"必须匹配"| Check
+    Check --&gt;|"一致"| OK["编译通过"]
+    Check --&gt;|"不一致"| Fail["编译错误"]
+
+    style Check fill:#fffbeb,stroke:#d97706</div><div class="thinking-note"><h3>思考笔记</h3>
+<p>TypeScript 的类型在编译后消失——Zod 在运行时接过了验证的责任。</p>
+<ul>
+<li>一个 Zod Schema 养三份工（API 契约、运行时验证、类型推断）——&quot;一个真相来源&quot;的设计原则。</li>
+<li>lazySchema 延迟初始化说明 Schema 创建成本虽小，但 40+ 工具累加起来不可忽视。</li>
+<li>编译时断言（Assert&lt;IsEqual&lt;A, B&gt;&gt;）确保手动类型和 Zod 类型永远一致。</li>
+<li>工具输入验证不是&quot;要不要检查&quot;，而是&quot;在哪一层检查&quot;——Zod 在边界层而非逻辑层做验证。</li>
+</ul>
+</div><hr>
+<h2>3.4 泛型工具类型：Tool&lt;Input, Output, Progress&gt;</h2>
+<p><code>Tool</code> 类型是 Claude Code 类型系统的核心。它是一个三参数泛型类型，将输入验证、输出类型和进度报告统一在一个接口中：</p>
+<pre><code class="language-typescript">// src/Tool.ts
+export type Tool&lt;
+  Input extends AnyObject = AnyObject,
+  Output = unknown,
+  P extends ToolProgressData = ToolProgressData,
+&gt; = {
+  readonly name: string
+  readonly inputSchema: Input
+
+  call(
+    args: z.infer&lt;Input&gt;,
+    context: ToolUseContext,
+    canUseTool: CanUseToolFn,
+    parentMessage: AssistantMessage,
+    onProgress?: ToolCallProgress&lt;P&gt;,
+  ): Promise&lt;ToolResult&lt;Output&gt;&gt;
+
+  description(
+    input: z.infer&lt;Input&gt;,
+    options: { /* ... */ },
+  ): Promise&lt;string&gt;
+
+  renderToolResultMessage?(
+    content: Output,
+    progressMessagesForMessage: ProgressMessage&lt;P&gt;[],
+    options: { /* ... */ },
+  ): React.ReactNode
+
+  // ... 30+ 方法定义
+}</code></pre><p>三个类型参数的含义：</p>
+<ul>
+<li><strong><code>Input extends AnyObject</code></strong>：工具输入的 Zod schema 类型。通过 <code>z.infer&lt;Input&gt;</code> 自动推断为 TypeScript 类型</li>
+<li><strong><code>Output</code></strong>：工具执行结果的类型。不同工具有不同的输出结构</li>
+<li><strong><code>P extends ToolProgressData</code></strong>：进度报告的类型。不同工具报告不同的进度信息</li>
+</ul>
+<p>这种泛型设计确保了<strong>方法签名之间的类型一致性</strong>。例如，<code>call()</code> 方法返回 <code>ToolResult&lt;Output&gt;</code>，而 <code>renderToolResultMessage()</code> 接收 <code>Output</code> 类型的 <code>content</code> 参数 —— 编译器确保了产生结果和渲染结果使用相同的类型。</p>
+<h3>buildTool 与 ToolDef</h3>
+<p>为了简化工具定义，Claude Code 引入了 <code>buildTool()</code> 工厂函数和 <code>ToolDef</code> 类型：</p>
+<pre><code class="language-typescript">// src/Tool.ts
+type DefaultableToolKeys =
+  | 'isEnabled'
+  | 'isConcurrencySafe'
+  | 'isReadOnly'
+  | 'isDestructive'
+  | 'checkPermissions'
+  | 'toAutoClassifierInput'
+  | 'userFacingName'
+
+export type ToolDef&lt;Input, Output, P&gt; =
+  Omit&lt;Tool&lt;Input, Output, P&gt;, DefaultableToolKeys&gt; &amp;
+  Partial&lt;Pick&lt;Tool&lt;Input, Output, P&gt;, DefaultableToolKeys&gt;&gt;</code></pre><p><code>ToolDef</code> 将 <code>Tool</code> 接口中的 7 个方法标记为可选。<code>buildTool()</code> 函数填充默认值：</p>
+<pre><code class="language-typescript">const TOOL_DEFAULTS = {
+  isEnabled: () =&gt; true,
+  isConcurrencySafe: (_input?: unknown) =&gt; false,  // 假设不安全
+  isReadOnly: (_input?: unknown) =&gt; false,           // 假设有写操作
+  isDestructive: (_input?: unknown) =&gt; false,
+  checkPermissions: (input, _ctx?) =&gt;
+    Promise.resolve({ behavior: 'allow', updatedInput: input }),
+  toAutoClassifierInput: (_input?: unknown) =&gt; '',
+  userFacingName: (_input?: unknown) =&gt; '',
+}
+
+export function buildTool&lt;D extends AnyToolDef&gt;(def: D): BuiltTool&lt;D&gt; {
+  return {
+    ...TOOL_DEFAULTS,
+    userFacingName: () =&gt; def.name,
+    ...def,
+  } as BuiltTool&lt;D&gt;
+}</code></pre><p>注意默认值的<strong>安全倾向</strong>设计：</p>
+<ul>
+<li><code>isConcurrencySafe</code> 默认 <code>false</code>：假设工具不能并发执行（保守策略）</li>
+<li><code>isReadOnly</code> 默认 <code>false</code>：假设工具有写操作（需要权限检查）</li>
+<li><code>checkPermissions</code> 默认 <code>allow</code>：将权限决策交给通用权限系统</li>
+</ul>
+<p>这种&quot;安全默认&quot;（fail-closed）的设计原则意味着：忘记实现某个方法不会导致安全漏洞，只会导致功能受限。</p>
+<h3>BuiltTool 的类型级别 spread</h3>
+<p><code>BuiltTool&lt;D&gt;</code> 的类型定义模拟了运行时的 <code>{ ...TOOL_DEFAULTS, ...def }</code> 操作：</p>
+<pre><code class="language-typescript">type BuiltTool&lt;D&gt; = Omit&lt;D, DefaultableToolKeys&gt; &amp; {
+  [K in DefaultableToolKeys]-?: K extends keyof D
+    ? undefined extends D[K]
+      ? ToolDefaults[K]     // D 中可选 → 使用默认值类型
+      : D[K]                 // D 中必填 → 使用 D 的类型
+    : ToolDefaults[K]        // D 中不存在 → 使用默认值类型
+}</code></pre><p>这段类型体操的核心是条件类型 <code>undefined extends D[K]</code> —— 它区分了&quot;属性存在但可选&quot;和&quot;属性存在且必填&quot;。这确保了当工具定义覆盖了某个默认方法时，返回类型精确反映覆盖后的签名。</p>
+<div class="thinking-note"><h3>思考笔记</h3>
+<p>Zod Schema 和泛型 Tool 类型是运行时与编译时的两次&quot;类型验证&quot;——一个在运行前，一个在运行时。</p>
+<ul>
+<li>一个 Zod Schema 同时养三份工（API 契约、运行时验证、类型推断）——这不是巧合，是刻意设计的&quot;一个真相来源&quot;。</li>
+<li>lazySchema 延迟初始化说明了一个微妙但重要的事：Schema 的创建成本不是零，在大规模工具系统里会积少成多。</li>
+<li>buildTool 的 fail-closed 安全默认——&quot;假设不可并发、假设有写操作&quot;——体现的是一种防御性设计哲学。</li>
+<li>BuiltTool 的类型体操 <code>&lt;undefined extends D[K] ? ToolDefaults[K] : D[K]&gt;</code> 模拟了运行时 spread 的逻辑——类型系统不是万能的，但类型体操可以逼近。</li>
+</ul>
+</div><hr>
+<h2>3.5 判别联合类型</h2>
+<p>Claude Code 的消息系统和权限系统大量使用判别联合（Discriminated Union），通过 <code>type</code> 字段区分不同的消息/决策变体。</p>
+<h3>权限决策系统</h3>
+<p><code>PermissionResult</code> 是一个经典的判别联合：</p>
+<pre><code class="language-typescript">// src/types/permissions.ts
+export type PermissionResult&lt;Input&gt; =
+  | PermissionAllowDecision&lt;Input&gt;
+  | PermissionAskDecision&lt;Input&gt;
+  | PermissionDenyDecision
+  | { behavior: 'passthrough'; message: string; /* ... */ }</code></pre><p>每个变体通过 <code>behavior</code> 字段判别：</p>
+<pre><code class="language-typescript">export type PermissionAllowDecision&lt;Input&gt; = {
+  behavior: 'allow'
+  updatedInput?: Input       // 可能修改后的输入
+  userModified?: boolean     // 用户是否手动修改
+  acceptFeedback?: string    // 用户接受时的反馈
+  contentBlocks?: ContentBlockParam[]
+}
+
+export type PermissionAskDecision&lt;Input&gt; = {
+  behavior: 'ask'
+  message: string            // 询问用户的消息
+  suggestions?: PermissionUpdate[]  // 建议的权限更新
+  pendingClassifierCheck?: PendingClassifierCheck  // 异步分类器检查
+}
+
+export type PermissionDenyDecision = {
+  behavior: 'deny'
+  message: string            // 拒绝原因
+  decisionReason: PermissionDecisionReason  // 必填：必须说明原因
+}</code></pre><p>注意类型设计中的<strong>不对称性</strong>：</p>
+<ul>
+<li><code>allow</code> 的 <code>decisionReason</code> 是可选的（允许不需要解释）</li>
+<li><code>deny</code> 的 <code>decisionReason</code> 是<strong>必填的</strong>（拒绝必须给出原因）</li>
+<li><code>ask</code> 可以携带 <code>suggestions</code>（建议用户如何修改权限规则）</li>
+</ul>
+<p>消费代码中的 narrowing：</p>
+<pre><code class="language-typescript">const result = await checkPermissions(input, context)
+
+switch (result.behavior) {
+  case 'allow':
+    // TypeScript 知道 result 是 PermissionAllowDecision
+    const finalInput = result.updatedInput ?? input
+    break
+  case 'ask':
+    // TypeScript 知道 result 是 PermissionAskDecision
+    showPrompt(result.message, result.suggestions)
+    break
+  case 'deny':
+    // TypeScript 知道 result 是 PermissionDenyDecision
+    logDenial(result.decisionReason)  // decisionReason 保证存在
+    break
+}</code></pre><h3>PermissionDecisionReason 的深层判别</h3>
+<p>权限决策的原因本身也是一个判别联合，使用 <code>type</code> 字段：</p>
+<pre><code class="language-typescript">export type PermissionDecisionReason =
+  | { type: 'rule'; rule: PermissionRule }
+  | { type: 'mode'; mode: PermissionMode }
+  | { type: 'subcommandResults'; reasons: Map&lt;string, PermissionResult&gt; }
+  | { type: 'hook'; hookName: string; hookSource?: string; reason?: string }
+  | { type: 'asyncAgent'; reason: string }
+  | { type: 'sandboxOverride'; reason: 'excludedCommand' | 'dangerouslyDisableSandbox' }
+  | { type: 'classifier'; classifier: string; reason: string }
+  | { type: 'workingDir'; reason: string }
+  | { type: 'safetyCheck'; reason: string; classifierApprovable: boolean }
+  | { type: 'other'; reason: string }</code></pre><p>这个类型精确表达了&quot;一个权限决策可能由 10 种不同的原因产生&quot;。<code>subcommandResults</code> 变体甚至包含了一个递归的 <code>PermissionResult</code> Map，用于表示 Bash 命令中子命令的权限结果组合。</p>
+<p><code>safetyCheck</code> 变体中的 <code>classifierApprovable</code> 布尔字段是一个精细的安全决策标记：</p>
+<pre><code class="language-typescript">{
+  type: 'safetyCheck'
+  reason: string
+  // 当为 true 时，auto 模式允许分类器评估而非强制弹窗
+  // 对于敏感文件路径（.claude/, .git/, shell configs）为 true
+  // 对于 Windows 路径绕过和跨机器 bridge 消息为 false
+  classifierApprovable: boolean
+}</code></pre><h3>工具搜索与读取操作的类型判别</h3>
+<p><code>Tool</code> 接口中的 <code>isSearchOrReadCommand</code> 方法返回一个结构化的操作分类：</p>
+<pre><code class="language-typescript">isSearchOrReadCommand?(input: z.infer&lt;Input&gt;): {
+  isSearch: boolean    // grep, find, glob 模式
+  isRead: boolean      // cat, head, tail, 文件读取
+  isList?: boolean     // ls, tree, du
+}</code></pre><p>这个返回类型不是布尔值，而是一个三维的操作分类。UI 层使用它来决定是否将连续的搜索/读取操作折叠为紧凑显示。<code>isList</code> 标记为可选是因为它是后加的 —— <code>isSearch</code> 和 <code>isRead</code> 在初始设计中就存在。</p>
+<h3>Command 类型的联合设计</h3>
+<p><code>src/types/command.ts</code> 中的 <code>Command</code> 类型展示了另一种判别联合模式 —— <strong>基类 + 变体联合</strong>：</p>
+<pre><code class="language-typescript">export type Command = CommandBase &amp;
+  (PromptCommand | LocalCommand | LocalJSXCommand)</code></pre><p><code>CommandBase</code> 定义了所有命令共享的属性（name, description, isEnabled 等），而联合部分通过 <code>type</code> 字段区分三种执行模式：</p>
+<pre><code class="language-typescript">type PromptCommand = {
+  type: 'prompt'             // 发送给模型执行
+  progressMessage: string
+  getPromptForCommand(args: string, context: ToolUseContext):
+    Promise&lt;ContentBlockParam[]&gt;
+}
+
+type LocalCommand = {
+  type: 'local'              // 本地执行（无 UI）
+  supportsNonInteractive: boolean
+  load: () =&gt; Promise&lt;LocalCommandModule&gt;
+}
+
+type LocalJSXCommand = {
+  type: 'local-jsx'          // 本地执行（有 UI）
+  load: () =&gt; Promise&lt;LocalJSXCommandModule&gt;
+}</code></pre><p><code>PromptCommand</code> 是斜杠命令（如技能和插件）的类型：它们被转换为 prompt 发送给模型。<code>LocalCommand</code> 和 <code>LocalJSXCommand</code> 是本地执行的命令：前者是纯逻辑命令，后者需要渲染 React 组件。</p>
+<p>注意 <code>load()</code> 方法的延迟加载设计：命令的实现代码只在用户实际调用时才加载，避免了注册数十个命令带来的启动开销。</p>
+<div class="thinking-note"><h3>思考笔记</h3>
+<p>判别联合让不合法状态在类型层面就不可表示——这是类型系统设计的高级境界。</p>
+<ul>
+<li>PermissionResult 的 behavior 字段作为判别器，每个分支都是独立类型——编译器强制穷举处理。</li>
+<li>deny 的 decisionReason 必填、allow 的可选——&quot;拒绝必须有理由&quot;的语义通过类型强制执行。</li>
+<li>10 种 PermissionDecisionReason 变体覆盖了从规则匹配到安全检测的所有场景。</li>
+<li>类型定义比实现代码更容易膨胀——因为它承载了整个系统的&quot;数据契约&quot;。</li>
+</ul>
+</div><hr>
+<h2>3.6 类型系统作为架构文档</h2>
+<p>回顾本章讨论的类型设计，可以提炼出几条贯穿整个代码库的设计原则：</p>
+<div class="mermaid">%%{init: {"theme": "base", "themeVariables":{"primaryColor":"#3b82f6","primaryTextColor":"#1e293b","primaryBorderColor":"#60a5fa","lineColor":"#94a3b8","secondaryColor":"#f1f5f9","tertiaryColor":"#ffffff","fontFamily":"-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif"}}}%%
+graph TD
+    P1["原则 1：类型即文档&lt;br/&gt;品牌类型标注语义意图"] --&gt; Practice["实践"]
+    P2["原则 2：类型即契约&lt;br/&gt;Zod + 编译时断言保证一致性"] --&gt; Practice
+    P3["原则 3：类型即边界&lt;br/&gt;纯类型文件打破循环依赖"] --&gt; Practice
+    P4["原则 4：类型即安全&lt;br/&gt;判别联合强制穷举处理"] --&gt; Practice
+    P5["原则 5：类型即默认&lt;br/&gt;buildTool 的安全默认值"] --&gt; Practice
+
+    Practice --&gt; Code["1900 文件的&lt;br/&gt;类型安全代码库"]</div><p><strong>1. 使不合法状态不可表示</strong>（Make illegal states unrepresentable）。<code>SessionId</code> 和 <code>AgentId</code> 的品牌类型使得混淆两者在编译时就会被捕获。<code>PermissionDenyDecision</code> 的必填 <code>decisionReason</code> 使得&quot;无理由拒绝&quot;在类型层面不可能。</p>
+<p><strong>2. 用编译时断言桥接两个类型世界</strong>。当 Zod schema 和 SDK 类型并存时，<code>Assert&lt;IsEqual&lt;A, B&gt;&gt;</code> 确保它们永远一致。</p>
+<p><strong>3. 将运行时验证与静态类型统一</strong>。Zod 的 <code>z.infer&lt;T&gt;</code> 让 schema 和类型共享同一个真相来源，避免了手动维护两份定义的同步问题。</p>
+<p><strong>4. 通过纯类型文件实现架构解耦</strong>。<code>types/</code> 目录不包含运行时代码，这使得它可以被任何模块安全导入，而不会引入运行时依赖。</p>
+<p><strong>5. 安全默认与显式覆盖</strong>。<code>buildTool()</code> 的默认值选择了保守的安全策略（不可并发、非只读、交由通用权限系统），工具实现者必须显式声明更宽松的行为。</p>
+<div class="thinking-note"><h3>思考笔记</h3>
+<p>判别联合和编译时断言是 TypeScript 类型系统中最强大的两个模式——一个做穷举检查，一个做契约验证。</p>
+<ul>
+<li>PermissionResult 判别联合通过 behavior 字段区分 allow/ask/deny/passthrough——每个分支都是独立的类型，消费方必须穷举处理。</li>
+<li>deny 的 decisionReason 必填、allow 的可选——这不是随意设计，而是传递了&quot;拒绝必须有理由&quot;的语义。</li>
+<li>Assert&lt;IsEqual&lt;A, B&gt;&gt; 编译时断言是两套类型定义之间的&quot;诚信检测器&quot;——Zod schema 和手动类型分开维护时，确保它们不会脱节。</li>
+<li>34 行的 createStore（第 17 章）和 10 种 PermissionDecisionReason 变体的对比说明了同一件事：类型定义比实现代码更容易膨胀——因为它承载了整个系统的&quot;数据契约&quot;。</li>
+</ul>
+</div><hr>
+<h2>本章小结</h2>
+<p>Claude Code 的类型系统不是简单的&quot;给 JavaScript 加类型注解&quot;。它是一个精心设计的、多层次的类型架构：</p>
+<ol>
+<li><strong>底层</strong>：品牌类型和 DeepImmutable 提供编译时安全保障</li>
+<li><strong>中层</strong>：纯类型文件和重新导出解决循环依赖和模块边界问题</li>
+<li><strong>上层</strong>：Zod schema 和判别联合实现运行时验证和穷举性检查</li>
+<li><strong>工具层</strong>：泛型 Tool 接口和 buildTool 工厂函数统一了 40+ 工具的类型契约</li>
+</ol>
+<p>这套类型系统的设计使得一个 1900 文件的代码库能够在快速迭代中保持结构完整性 —— 类型检查器充当了永不休息的架构审查员。</p>
+
+      </article>
+    </main>
+  </div>
+  
+  <!-- Syntax highlighting -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script>hljs.highlightAll();</script>
+
+  <script>
+    // Collapsible sidebar sections
+    document.querySelectorAll('.sidebar-section-header').forEach(header => {
+      header.addEventListener('click', () => {
+        const items = header.nextElementSibling;
+        const isCollapsed = items.classList.contains('collapsed');
+        // If collapsed, uncollapse; if visible, collapse
+        items.classList.toggle('collapsed');
+        header.classList.toggle('open');
+      });
+    });
+
+    // Auto-open current page's section + highlight active link
+    const currentPath = window.location.pathname;
+    const currentFilename = currentPath.split('/').pop();
+    let foundMatch = false;
+    document.querySelectorAll('.sidebar-section-items a').forEach(link => {
+      const href = link.getAttribute('href');
+      const linkFilename = href.split('/').pop();
+      if (linkFilename === currentFilename) {
+        link.classList.add('active');
+        const section = link.closest('.sidebar-section-items');
+        const header = section ? section.previousElementSibling : null;
+        if (section) section.classList.remove('collapsed');
+        if (header) header.classList.add('open');
+        foundMatch = true;
+      }
+    });
+    
+    // Full-text search
+    (function() {
+      const searchInput = document.getElementById('searchInput');
+      const searchResults = document.getElementById('searchResults');
+      if (!searchInput || !searchResults) return;
+
+      let searchIndex = [];
+      let indexLoaded = false;
+
+      // Compute root path for loading search-index.json
+      const currentScript = document.currentScript;
+      const rootPath = '../';
+
+      function loadIndex() {
+        if (indexLoaded) return;
+        indexLoaded = true;
+        fetch(rootPath + 'search-index.json')
+          .then(r => r.json())
+          .then(data => { searchIndex = data; })
+          .catch(() => { searchIndex = []; });
+      }
+
+      function highlight(text, query) {
+        const re = new RegExp('(' + query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi');
+        return text.replace(re, '<mark style="background:#fde047;padding:0 2px;border-radius:2px;">$1</mark>');
+      }
+
+      function search(query) {
+        if (!query || !searchIndex.length) return [];
+        const terms = query.toLowerCase().split(/\s+/).filter(t => t.length > 0);
+        if (!terms.length) return [];
+
+        const results = searchIndex.map(doc => {
+          const titleLower = doc.title.toLowerCase();
+          const textLower = doc.text.toLowerCase();
+          let score = 0;
+
+          for (const term of terms) {
+            if (titleLower.includes(term)) score += 10;
+            if (textLower.includes(term)) score += 1;
+          }
+
+          if (score === 0) return null;
+
+          // Find best snippet
+          let snippet = doc.text.slice(0, 120);
+          for (const term of terms) {
+            const idx = doc.text.toLowerCase().indexOf(term);
+            if (idx !== -1) {
+              const start = Math.max(0, idx - 40);
+              snippet = doc.text.slice(start, start + 120);
+              break;
+            }
+          }
+
+          return { ...doc, score, snippet };
+        }).filter(Boolean);
+
+        return results.sort((a, b) => b.score - a.score).slice(0, 10);
+      }
+
+      function render(results, query) {
+        if (!query) {
+          searchResults.classList.remove('active');
+          searchResults.innerHTML = '';
+          return;
+        }
+        if (!results.length) {
+          searchResults.innerHTML = '<div class="search-no-results">未找到相关文档</div>';
+          searchResults.classList.add('active');
+          return;
+        }
+
+        let html = '';
+        for (const r of results) {
+          const title = highlight(r.title, query);
+          const preview = highlight(r.snippet.replace(/\s+/g, ' '), query);
+          html += `<a href="${rootPath + r.path}" class="search-result-item">
+            <div class="sr-title">${title}</div>
+            <div class="sr-preview">${preview}...</div>
+          </a>`;
+        }
+        searchResults.innerHTML = html;
+        searchResults.classList.add('active');
+      }
+
+      let debounce;
+      searchInput.addEventListener('input', (e) => {
+        loadIndex();
+        clearTimeout(debounce);
+        const query = e.target.value.trim();
+        if (!query) {
+          render([], '');
+          return;
+        }
+        searchResults.innerHTML = '<div class="search-loading">搜索中...</div>';
+        searchResults.classList.add('active');
+        debounce = setTimeout(() => {
+          render(search(query), query);
+        }, 150);
+      });
+
+      // Close results on click outside
+      document.addEventListener('click', (e) => {
+        if (!e.target.closest('.sidebar-search')) {
+          searchResults.classList.remove('active');
+        }
+      });
+
+      // Keyboard navigation
+      searchInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          searchResults.classList.remove('active');
+          searchInput.blur();
+        }
+      });
+    })();
+    
+    // Back to top
+    (function() {
+      const btn = document.getElementById('backToTop');
+      if (!btn) return;
+      const toggle = () => {
+        btn.classList.toggle('visible', window.scrollY > 400);
+      };
+      window.addEventListener('scroll', toggle, { passive: true });
+      btn.addEventListener('click', () => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+    })();
+
+    // Mobile menu toggle
+    (function() {
+      const menuToggle = document.getElementById('menuToggle');
+      const sidebar = document.querySelector('.sidebar');
+      const overlay = document.getElementById('sidebarOverlay');
+      if (!menuToggle || !sidebar || !overlay) return;
+
+      menuToggle.addEventListener('click', () => {
+        sidebar.classList.toggle('open');
+        overlay.classList.toggle('active');
+      });
+
+      overlay.addEventListener('click', () => {
+        sidebar.classList.remove('open');
+        overlay.classList.remove('active');
+      });
+
+      // Close sidebar when a nav link is clicked (mobile)
+      sidebar.querySelectorAll('a').forEach(link => {
+        link.addEventListener('click', () => {
+          if (window.innerWidth <= 1024) {
+            sidebar.classList.remove('open');
+            overlay.classList.remove('active');
+          }
+        });
+      });
+    })();
+
+    // Copy code buttons
+    (function() {
+      document.querySelectorAll('.markdown-section pre').forEach(pre => {
+        const btn = document.createElement('button');
+        btn.className = 'copy-code-btn';
+        btn.textContent = '复制';
+        btn.addEventListener('click', () => {
+          const code = pre.querySelector('code')?.textContent || pre.textContent;
+          navigator.clipboard.writeText(code).then(() => {
+            btn.textContent = '已复制';
+            btn.classList.add('copied');
+            setTimeout(() => {
+              btn.textContent = '复制';
+              btn.classList.remove('copied');
+            }, 1500);
+          }).catch(() => {
+            btn.textContent = '失败';
+            setTimeout(() => { btn.textContent = '复制'; }, 1500);
+          });
+        });
+        pre.style.position = 'relative';
+        pre.appendChild(btn);
+      });
+    })();
+
+    // 引导思考 collapsible card
+    (function() {
+      document.querySelectorAll('.guide-card-header').forEach(function(header) {
+        header.addEventListener('click', function() {
+          var table = header.closest('.guide-card');
+          table.classList.toggle('collapsed');
+        });
+      });
+    })();
+
+    // Mermaid: Load dynamically + zoomable containers
+    (function() {
+      var mermaidDivs = document.querySelectorAll('.mermaid');
+      if (mermaidDivs.length === 0) return;
+
+      var cdns = [
+        '../mermaid.min.js',
+        'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js',
+        'https://unpkg.com/mermaid@10/dist/mermaid.min.js'
+      ];
+      var cdnIndex = 0;
+
+      function showError(msg) {
+        mermaidDivs.forEach(function(div) {
+          div.innerHTML = '<div class="mermaid-error" style="padding:16px;color:#dc2626;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;margin:20px 0;">' + msg + '</div>';
+          div.classList.add('rendered');
+        });
+      }
+
+      function wrapZoomable(div) {
+        if (div.parentNode.classList.contains('mermaid-zoom-container')) return;
+        if (!div.querySelector('svg')) return;
+        div.classList.add('rendered');
+
+        var wrapper = document.createElement('div');
+        wrapper.className = 'mermaid-zoom-container';
+        div.parentNode.insertBefore(wrapper, div);
+        wrapper.appendChild(div);
+
+        // Click overlay hint
+        var overlay = document.createElement('div');
+        overlay.className = 'mermaid-expand-overlay';
+        overlay.innerHTML = '<span><span class="expand-icon">⛶</span> 点击查看全图</span>';
+        wrapper.appendChild(overlay);
+
+        // Click (or double-click) to open modal
+        wrapper.addEventListener('click', function() { openMermaidModal(div); });
+      }
+
+      // ---- Mermaid Modal (full-screen viewer) ----
+      var modalInstance = null;
+
+      function openMermaidModal(sourceDiv) {
+        closeMermaidModal();
+        var clone = sourceDiv.cloneNode(true);
+        var svg = clone.querySelector('svg');
+        if (!svg) return;
+
+        // Let SVG fill width, height follows viewBox aspect ratio
+        svg.removeAttribute('width');
+        svg.removeAttribute('height');
+        svg.style.width = '100%';
+        svg.style.height = 'auto';
+        svg.style.maxWidth = 'none';
+
+        // Build modal: simple header + scrollable body
+        var modal = document.createElement('div');
+        modal.className = 'mermaid-modal active';
+
+        var content = document.createElement('div');
+        content.className = 'mermaid-modal-content';
+
+        var header = document.createElement('div');
+        header.className = 'mermaid-modal-header';
+        var chapterHint = '';
+        var prev = sourceDiv.closest('.markdown-section');
+        if (prev) {
+          var heading = prev.querySelector('h2, h3');
+          if (heading) chapterHint = heading.textContent.replace(/[#\d.]/g,'').trim().slice(0, 30);
+        }
+        header.innerHTML =
+          '<div class="modal-title-wrap">' +
+            '<span class="modal-icon">⬡</span>' +
+            '<span class="modal-title">' + (chapterHint || '图表') + '</span>' +
+          '</div>' +
+          '<button class="modal-close" title="关闭 (ESC)">✕</button>';
+
+        var body = document.createElement('div');
+        body.className = 'mermaid-modal-body';
+        body.appendChild(clone);
+
+        content.appendChild(header);
+        content.appendChild(body);
+        modal.appendChild(content);
+        document.body.appendChild(modal);
+
+        // Close handlers
+        header.querySelector('.modal-close').addEventListener('click', closeMermaidModal);
+        modal.addEventListener('click', function(e) {
+          if (e.target === modal) closeMermaidModal();
+        });
+
+        modalInstance = modal;
+      }
+
+      function closeMermaidModal() {
+        if (modalInstance) {
+          modalInstance.remove();
+          modalInstance = null;
+        }
+      }
+
+      document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') closeMermaidModal();
+      });
+
+      function tryLoadMermaid() {
+        if (cdnIndex >= cdns.length) {
+          showError('❌ 无法加载图表库，请检查网络连接后刷新页面');
+          return;
+        }
+
+        var script = document.createElement('script');
+        script.src = cdns[cdnIndex];
+        script.onload = function() {
+          if (typeof mermaid === 'undefined') {
+            showError('❌ 图表库加载失败');
+            return;
+          }
+          try {
+            mermaid.initialize({
+              startOnLoad: false,
+              theme: 'base',
+              themeVariables: {
+                fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif',
+                primaryColor: '#ffffff',
+                primaryTextColor: '#1e293b',
+                primaryBorderColor: '#e2e8f0',
+                lineColor: '#64748b',
+                secondaryColor: '#f1f5f9',
+                tertiaryColor: '#f8fafc',
+              },
+              securityLevel: 'loose',
+              flowchart: {
+                curve: 'basis',
+                padding: 15,
+                nodeSpacing: 50,
+                rankSpacing: 80,
+              },
+              maxTextSize: 50000,
+            });
+            mermaid.run({ querySelector: '.mermaid' }).then(function() {
+              mermaidDivs.forEach(wrapZoomable);
+            });
+          } catch(e) {
+            showError('❌ 图表渲染失败: ' + e.message);
+          }
+        };
+        script.onerror = function() {
+          cdnIndex++;
+          tryLoadMermaid();
+        };
+        document.head.appendChild(script);
+      }
+
+      tryLoadMermaid();
+    })();
+
+  </script>
+</body>
+</html>

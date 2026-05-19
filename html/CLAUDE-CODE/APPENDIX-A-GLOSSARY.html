@@ -1,0 +1,2438 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>附录 A：术语表</title>
+  <style>
+    /* ===== Reset & Base ===== */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { font-size: 62.5%; }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+      font-size: 15px;
+      color: #1e293b;
+      line-height: 1.7;
+      background: #ffffff;
+      -webkit-font-smoothing: antialiased;
+    }
+    
+    /* ===== Layout ===== */
+    .app {
+      display: flex;
+      min-height: 100vh;
+    }
+    
+    /* ===== Sidebar ===== */
+    .sidebar {
+      width: 280px;
+      min-width: 280px;
+      background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+      border-right: 1px solid #e2e8f0;
+      position: fixed;
+      top: 0;
+      left: 0;
+      bottom: 0;
+      display: flex;
+      flex-direction: column;
+    }
+    .sidebar::-webkit-scrollbar { width: 4px; }
+    .sidebar::-webkit-scrollbar-track { background: transparent; }
+    .sidebar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+    .sidebar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+    .sidebar-header {
+      padding: 20px 20px 14px;
+      border-bottom: 1px solid #e2e8f0;
+      flex-shrink: 0;
+    }
+
+    .sidebar-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 15px;
+      font-weight: 700;
+      color: #0f172a;
+      text-decoration: none;
+      letter-spacing: -0.02em;
+    }
+
+    .sidebar-brand .icon {
+      width: 30px;
+      height: 30px;
+      background: linear-gradient(135deg, #3b82f6 0%, #0ea5e9 100%);
+      border-radius: 7px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 15px;
+      flex-shrink: 0;
+    }
+
+    .sidebar-search {
+      padding: 12px 20px;
+      flex-shrink: 0;
+    }
+
+    .search-box {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 8px 12px;
+      transition: all 0.2s ease;
+    }
+
+    .search-box:focus-within {
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+
+    .search-box input {
+      flex: 1;
+      border: none;
+      outline: none;
+      font-size: 13px;
+      color: #1e293b;
+      background: transparent;
+    }
+
+    .search-box input::placeholder {
+      color: #94a3b8;
+    }
+
+    .search-box svg {
+      width: 15px;
+      height: 15px;
+      color: #94a3b8;
+      flex-shrink: 0;
+    }
+
+    .sidebar-nav {
+      flex: 1;
+      padding: 4px 8px;
+      overflow-y: auto;
+    }
+
+    .sidebar-nav ul, .sidebar-nav li {
+      list-style: none;
+    }
+
+    .quick-links {
+      display: flex;
+      gap: 6px;
+      padding: 0 8px 10px;
+      flex-shrink: 0;
+    }
+
+    .quick-links a {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      padding: 7px 10px;
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 7px;
+      font-size: 12px;
+      font-weight: 500;
+      color: #64748b;
+      text-decoration: none;
+      transition: all 0.15s ease;
+    }
+
+    .quick-links a:hover {
+      color: #3b82f6;
+      border-color: #3b82f6;
+      background: #eff6ff;
+    }
+
+    .quick-links a .ql-icon {
+      font-size: 13px;
+      line-height: 1;
+    }
+
+    .sidebar-section {
+      margin-bottom: 2px;
+    }
+
+    .sidebar-section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 9px 12px 9px 14px;
+      cursor: pointer;
+      user-select: none;
+      border-radius: 8px;
+      margin: 0 2px;
+      transition: background 0.15s ease;
+    }
+
+    .sidebar-section-header:hover {
+      background: rgba(59, 130, 246, 0.06);
+    }
+
+    .sidebar-section-header.open {
+      background: rgba(59, 130, 246, 0.08);
+    }
+
+    .section-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+    }
+
+    .section-num {
+      width: 22px;
+      height: 22px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #3b82f6 0%, #0ea5e9 100%);
+      border-radius: 5px;
+      font-size: 10px;
+      font-weight: 700;
+      color: #ffffff;
+      flex-shrink: 0;
+    }
+
+    .section-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: #1e293b;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .sidebar-section-header .arrow {
+      width: 16px;
+      height: 16px;
+      color: #94a3b8;
+      transition: transform 0.2s ease, color 0.15s ease;
+      flex-shrink: 0;
+    }
+
+    .sidebar-section-header:hover .arrow {
+      color: #64748b;
+    }
+
+    .sidebar-section-header.open .arrow {
+      transform: rotate(90deg);
+      color: #3b82f6;
+    }
+
+    .sidebar-section-items {
+      overflow: hidden;
+      transition: max-height 0.2s ease, opacity 0.15s ease;
+      max-height: 2000px;
+      opacity: 1;
+    }
+    .sidebar-section-items.collapsed {
+      max-height: 0;
+      opacity: 0;
+    }
+
+    .sidebar-section-items ul {
+      padding: 2px 6px 6px;
+    }
+
+    .sidebar-section-items li {
+      margin: 1px 0;
+    }
+
+    .sidebar-section-items a {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 10px;
+      font-size: 13px;
+      color: #64748b;
+      text-decoration: none;
+      border-radius: 6px;
+      transition: all 0.15s ease;
+      position: relative;
+    }
+
+    .sidebar-section-items a:hover {
+      color: #3b82f6;
+      background: rgba(59, 130, 246, 0.06);
+    }
+
+    .sidebar-section-items a.active {
+      color: #1e293b;
+      background: rgba(59, 130, 246, 0.1);
+      font-weight: 500;
+    }
+    .sidebar-section-items a.active::before {
+      content: '';
+      position: absolute;
+      left: -6px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 3px;
+      height: 18px;
+      border-radius: 2px;
+      background: #3b82f6;
+    }
+    .sidebar-section-items a.active .num {
+      color: #3b82f6;
+    }
+    .sidebar-section-items a[href*="APPENDIX"] {
+      font-size: 12px;
+      color: #94a3b8;
+      padding-left: 14px;
+    }
+    .sidebar-section-items a[href*="APPENDIX"]:hover {
+      color: #3b82f6;
+    }
+    .sidebar-section-items a[href*="APPENDIX"] .num {
+      display: none;
+    }
+
+    .sidebar-section-items a .num {
+      font-size: 11px;
+      font-weight: 500;
+      color: #94a3b8;
+      min-width: 26px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .sidebar-divider {
+      height: 1px;
+      background: linear-gradient(90deg, transparent, #e2e8f0, transparent);
+      margin: 6px 10px 10px;
+    }
+
+    .sidebar-external {
+      padding: 0 8px 12px;
+      flex-shrink: 0;
+    }
+
+    .sidebar-external a {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 9px 12px;
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 500;
+      color: #475569;
+      text-decoration: none;
+      transition: all 0.15s ease;
+    }
+
+    .sidebar-external a:hover {
+      border-color: #3b82f6;
+      color: #3b82f6;
+      background: #eff6ff;
+    }
+
+    .sidebar-external a svg {
+      width: 15px;
+      height: 15px;
+      opacity: 0.5;
+      flex-shrink: 0;
+    }
+    .sidebar-external a:hover svg {
+      opacity: 0.8;
+    }
+    
+    /* ===== Content ===== */
+    .content {
+      flex: 1;
+      margin-left: 280px;
+      padding: 48px 64px;
+      min-height: 100vh;
+      max-width: 1400px;
+    }
+
+    /* ===== Typography ===== */
+    .markdown-section h1 {
+      font-size: 28px;
+      font-weight: 700;
+      color: #0f172a;
+      letter-spacing: -0.02em;
+      margin: 0 0 24px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    
+    .markdown-section h2 {
+      font-size: 20px;
+      font-weight: 600;
+      color: #1e293b;
+      letter-spacing: -0.01em;
+      margin: 40px 0 16px;
+    }
+    
+    .markdown-section h3 {
+      font-size: 16px;
+      font-weight: 600;
+      color: #3b82f6;
+      margin: 28px 0 12px;
+    }
+    
+    .markdown-section h4 {
+      font-size: 15px;
+      font-weight: 600;
+      color: #1e293b;
+      margin: 20px 0 8px;
+    }
+    .markdown-section h1, .markdown-section h2, .markdown-section h3, .markdown-section h4 {
+      position: relative;
+    }
+    .markdown-section .heading-anchor {
+      position: absolute;
+      left: -20px;
+      top: 50%;
+      transform: translateY(-50%);
+      opacity: 0;
+      color: #94a3b8;
+      text-decoration: none;
+      font-size: 0.8em;
+      font-weight: 400;
+      transition: opacity 0.15s ease;
+      padding-right: 4px;
+    }
+    .markdown-section h1:hover .heading-anchor,
+    .markdown-section h2:hover .heading-anchor,
+    .markdown-section h3:hover .heading-anchor,
+    .markdown-section h4:hover .heading-anchor {
+      opacity: 1;
+    }
+    
+    .markdown-section p {
+      margin: 12px 0;
+      color: #475569;
+    }
+
+    /* ===== Thinking Note ===== */
+    .thinking-note {
+      background: #fffbeb;
+      border-left: 4px solid #f59e0b;
+      border-radius: 0 12px 12px 0;
+      padding: 20px 24px;
+      margin: 24px 0;
+    }
+    .thinking-note h3 {
+      margin: 0 0 12px;
+      padding: 0;
+      border: none;
+      font-size: 14px;
+      font-weight: 700;
+      color: #d97706;
+      letter-spacing: 0.03em;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .thinking-note p {
+      margin: 8px 0;
+      font-size: 14px;
+      line-height: 1.8;
+      color: #78350f;
+    }
+    .thinking-note strong {
+      display: inline-block;
+      margin-top: 6px;
+      color: #92400e;
+    }
+    .thinking-note strong:first-of-type {
+      margin-top: 0;
+    }
+    .thinking-note ul {
+      margin: 4px 0 4px 0;
+      padding-left: 18px;
+      list-style: none;
+    }
+    .thinking-note li {
+      margin: 4px 0;
+      padding-left: 14px;
+      position: relative;
+      color: #78350f;
+      font-size: 14px;
+      line-height: 1.7;
+    }
+    .thinking-note li::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 10px;
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: #d97706;
+      opacity: 0.5;
+    }
+    .thinking-note li strong {
+      color: #92400e;
+    }
+
+    .markdown-section a {
+      color: #3b82f6;
+      text-decoration: none;
+      font-weight: 500;
+    }
+    
+    .markdown-section a:hover {
+      text-decoration: underline;
+    }
+    
+    .markdown-section code {
+      background: #f1f5f9;
+      color: #0f172a;
+      padding: 2px 6px;
+      font-size: 13px;
+      border-radius: 4px;
+      font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Consolas', monospace;
+    }
+    
+    .markdown-section pre {
+      background: #1e293b;
+      border-radius: 12px;
+      padding: 20px 24px;
+      overflow-x: auto;
+      margin: 20px 0;
+    }
+    
+    .markdown-section pre code {
+      background: transparent;
+      color: #e2e8f0;
+      padding: 0;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+    
+    .markdown-section blockquote {
+      background: #f8fafc;
+      border-left: 4px solid #3b82f6;
+      border-radius: 0 8px 8px 0;
+      padding: 16px 20px;
+      margin: 20px 0;
+    }
+    
+    .markdown-section blockquote p {
+      margin: 0;
+      color: #475569;
+    }
+    
+    .markdown-section table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0;
+      font-size: 14px;
+      border-radius: 12px;
+      
+      border: 1px solid #e2e8f0;
+    }
+    
+    .markdown-section table th {
+      background: #f8fafc;
+      font-weight: 600;
+      text-align: left;
+      padding: 12px 16px;
+      color: #475569;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    
+    .markdown-section table td {
+      padding: 12px 16px;
+      border-top: 1px solid #e2e8f0;
+    }
+    
+    .markdown-section table tr:nth-child(2n) td {
+      background: #f8fafc;
+    }
+    
+    .markdown-section ul, .markdown-section ol {
+      padding-left: 24px;
+      margin: 12px 0;
+    }
+    
+    .markdown-section li {
+      margin: 6px 0;
+      color: #475569;
+    }
+    
+    .markdown-section hr {
+      height: 1px;
+      background: #e2e8f0;
+      border: none;
+      margin: 32px 0;
+    }
+    
+    .markdown-section img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 8px;
+    }
+    
+    /* ===== Mermaid Diagrams ===== */
+    .mermaid {
+      background: #f8fafc;
+      border-radius: 12px;
+      padding: 24px;
+      margin: 20px 0;
+      overflow-x: auto;
+      border: 1px solid #e2e8f0;
+      display: block;
+    }
+    .mermaid.rendered {
+      display: block;
+    }
+    .mermaid svg {
+      max-width: 100%;
+      height: auto;
+    }
+    .mermaid-error {
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      border-radius: 8px;
+      padding: 16px;
+      color: #dc2626;
+      margin: 20px 0;
+    }
+    .mermaid-loading {
+      background: #f8fafc;
+      border: 1px dashed #e2e8f0;
+      border-radius: 12px;
+      padding: 24px;
+      margin: 20px 0;
+      color: #64748b;
+      text-align: center;
+    }
+
+    
+    
+
+/* ===== Click-to-Expand Mermaid ===== */
+    .mermaid-zoom-container {
+      position: relative;
+      overflow: hidden;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      margin: 20px 0;
+      background: #f8fafc;
+      cursor: pointer;
+      min-height: 100px;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+    .mermaid-zoom-container:hover {
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 2px rgba(59,130,246,0.1);
+    }
+    .mermaid-zoom-container .mermaid {
+      margin: 0;
+      border: none;
+      border-radius: 0;
+      background: transparent;
+    }
+    .mermaid-zoom-container .mermaid svg {
+      display: block;
+    }
+    .mermaid-expand-overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+      background: rgba(15,23,42,0.03);
+    }
+    .mermaid-zoom-container:hover .mermaid-expand-overlay {
+      opacity: 1;
+    }
+    .mermaid-expand-overlay span {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 18px;
+      background: rgba(255,255,255,0.95);
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 500;
+      color: #3b82f6;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+      backdrop-filter: blur(4px);
+      pointer-events: none;
+      transition: transform 0.15s ease;
+    }
+    .mermaid-zoom-container:hover .mermaid-expand-overlay span {
+      transform: translateY(-2px);
+    }
+    .mermaid-expand-overlay .expand-icon {
+      font-size: 15px;
+    }
+
+    /* ===== Mermaid Modal ===== */
+    @keyframes modal-fade-in {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    @keyframes modal-content-in {
+      from { opacity: 0; transform: scale(0.95) translateY(8px); }
+      to { opacity: 1; transform: scale(1) translateY(0); }
+    }
+    .mermaid-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 1000;
+      background: rgba(15, 23, 42, 0.65);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      animation: modal-fade-in 0.2s ease;
+    }
+    .mermaid-modal.active {
+      display: flex;
+    }
+    .mermaid-modal-content {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      max-width: 90vw;
+      max-height: 90vh;
+      background: #fff;
+      border-radius: 14px;
+      box-shadow: 0 25px 80px rgba(0,0,0,0.3);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      animation: modal-content-in 0.2s ease;
+    }
+    .mermaid-modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 20px;
+      border-bottom: 1px solid #e2e8f0;
+      flex-shrink: 0;
+      background: #fafbfc;
+      gap: 12px;
+    }
+    .mermaid-modal-header .modal-title-wrap {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+    }
+    .mermaid-modal-header .modal-icon {
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      background: linear-gradient(135deg, #3b82f6, #0ea5e9);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      flex-shrink: 0;
+    }
+    .mermaid-modal-header .modal-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: #1e293b;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .mermaid-modal-header .modal-hint {
+      font-size: 12px;
+      color: #94a3b8;
+      font-weight: 400;
+      margin-left: 4px;
+    }
+    .mermaid-modal-header .modal-actions {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      flex-shrink: 0;
+    }
+    .mermaid-modal-header .modal-close {
+      width: 30px;
+      height: 30px;
+      border: none;
+      border-radius: 6px;
+      background: transparent;
+      color: #94a3b8;
+      font-size: 17px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s ease;
+      margin-left: 4px;
+    }
+    .mermaid-modal-header .modal-close:hover {
+      background: #fee2e2;
+      color: #dc2626;
+    }
+    .mermaid-modal-body {
+      flex: 1;
+      overflow: auto;
+      position: relative;
+      user-select: auto;
+      background: #f8fafc
+        repeating-linear-gradient(
+          0deg, transparent, transparent 23px, #f1f5f9 23px, #f1f5f9 24px
+        ),
+        repeating-linear-gradient(
+          90deg, transparent, transparent 23px, #f1f5f9 23px, #f1f5f9 24px
+        );
+    }
+    .mermaid-modal-body svg {
+      display: block;
+    }
+    @media (max-width: 768px) {
+      .mermaid-modal { padding: 12px; }
+      .mermaid-modal-content { max-width: 100vw; max-height: 100vh; border-radius: 10px; }
+      .mermaid-modal-header { padding: 10px 14px; }
+    }
+    @media (max-width: 480px) {
+      .mermaid-modal { padding: 0; }
+      .mermaid-modal-content { border-radius: 0; max-width: 100vw; max-height: 100vh; }
+    }
+
+
+/* ===== 引导思考 - Note-style Card ===== */
+    tr.guide-card-header td {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      width: 100%;
+      padding: 12px 24px !important;
+      font-size: 13px;
+      font-weight: 700;
+      color: #6366f1;
+      letter-spacing: 0.04em;
+      background: transparent !important;
+      border: none !important;
+    }
+    table.guide-card {
+      border-collapse: separate;
+      border-spacing: 0;
+      font-size: 14px;
+      margin: 0 0 24px;
+      overflow: hidden;
+      display: block;
+      width: 100%;
+      background: #f8faff;
+      border-left: 4px solid #6366f1;
+      border-radius: 0 12px 12px 0;
+      box-shadow: 0 1px 3px rgba(99, 102, 241, 0.08);
+    }
+    /* Hide original table header ("思考维度 | 内容") */
+    table.guide-card thead {
+      display: none;
+    }
+    /* Collapse/expand behavior */
+    table.guide-card.collapsed tbody tr:not(.guide-card-header) {
+      display: none;
+    }
+    table.guide-card tbody tr.guide-card-header {
+      cursor: pointer;
+      user-select: none;
+    }
+    table.guide-card tbody tr.guide-card-header:hover {
+      background: rgba(99, 102, 241, 0.04);
+    }
+    .collapse-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 18px;
+      height: 18px;
+      flex-shrink: 0;
+      transition: transform 0.2s ease;
+    }
+    .collapse-icon::before {
+      content: '';
+      display: block;
+      width: 6px;
+      height: 6px;
+      border-right: 2px solid #a5b4fc;
+      border-bottom: 2px solid #a5b4fc;
+      transform: rotate(-45deg);
+      margin-top: -3px;
+      transition: transform 0.2s ease, border-color 0.2s ease;
+    }
+    table.guide-card:not(.collapsed) .collapse-icon::before {
+      transform: rotate(45deg);
+      margin-top: 3px;
+      border-color: #6366f1;
+    }
+    tr.guide-card-header:hover .collapse-icon::before {
+      border-color: #6366f1;
+    }
+    .collapse-hint {
+      font-size: 11px;
+      color: #a5b4fc;
+      font-weight: 400;
+      transition: color 0.2s ease;
+    }
+    table.guide-card:not(.collapsed) .collapse-hint {
+      display: none;
+    }
+    tr.guide-card-header:hover .collapse-hint {
+      color: #6366f1;
+    }
+    table.guide-card tbody,
+    table.guide-card tbody tr {
+      display: block;
+      width: 100%;
+    }
+    table.guide-card tbody td {
+      display: block;
+      width: 100%;
+      padding: 0 24px 14px;
+      border: none;
+      vertical-align: top;
+      line-height: 1.7;
+      color: #475569;
+    }
+    table.guide-card tbody td:first-child {
+      padding: 12px 24px 2px;
+      font-weight: 600;
+      font-size: 12px;
+      color: #6366f1;
+      background: transparent;
+      width: 100%;
+      border: none;
+      letter-spacing: 0.03em;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    table.guide-card tbody td:first-child::before {
+      display: none;
+    }
+    /* Content lists inside cells */
+    table.guide-card tbody td ul {
+      margin: 0;
+      padding-left: 16px;
+      list-style: none;
+    }
+    table.guide-card tbody td > ul > li {
+      position: relative;
+      padding-left: 14px;
+      margin-bottom: 4px;
+      font-size: 13.5px;
+      color: #475569;
+      line-height: 1.7;
+    }
+    table.guide-card tbody td > ul > li::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 10px;
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: #c7d2fe;
+    }
+    table.guide-card tbody td > ul > li:last-child {
+      margin-bottom: 0;
+    }
+    table.guide-card tbody td ul ul {
+      padding-left: 14px;
+      margin-top: 2px;
+    }
+    table.guide-card tbody td ul ul li {
+      position: relative;
+      padding-left: 12px;
+      margin-bottom: 2px;
+      font-size: 13px;
+      color: #64748b;
+      line-height: 1.6;
+    }
+    table.guide-card tbody td ul ul li::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 9px;
+      width: 3px;
+      height: 3px;
+      border-radius: 50%;
+      background: #cbd5e1;
+    }
+    table.guide-card tbody td strong,
+    table.guide-card tbody td:first-child strong {
+      color: #4338ca;
+      font-weight: 600;
+    }
+    table.guide-card tbody td code {
+      background: #eef2ff;
+      color: #6366f1;
+      font-size: 12.5px;
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-weight: 500;
+    }
+
+/* ===== Navigation ===== */
+    .nav {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 48px;
+      padding-top: 24px;
+      border-top: 1px solid #e2e8f0;
+    }
+    
+    .nav a {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 10px 18px;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      color: #475569;
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 500;
+      transition: all 0.15s ease;
+    }
+    
+    .nav a:hover {
+      background: #3b82f6;
+      color: #fff;
+      border-color: #3b82f6;
+    }
+    
+    /* ===== Search Results ===== */
+    .search-results {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.12);
+      max-height: 400px;
+      overflow-y: auto;
+      z-index: 100;
+      display: none;
+      margin: 4px 0 0;
+    }
+    .search-results.active { display: block; }
+    .search-result-item {
+      display: block;
+      padding: 10px 14px;
+      text-decoration: none;
+      border-bottom: 1px solid #f1f5f9;
+      transition: background 0.15s ease;
+    }
+    .search-result-item:last-child { border-bottom: none; }
+    .search-result-item:hover { background: #f8fafc; }
+    .search-result-item .sr-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: #1e293b;
+      margin-bottom: 2px;
+    }
+    .search-result-item .sr-preview {
+      font-size: 12px;
+      color: #64748b;
+      line-height: 1.4;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .search-result-item .sr-path {
+      font-size: 11px;
+      color: #94a3b8;
+      margin-top: 2px;
+    }
+    .search-no-results {
+      padding: 16px;
+      text-align: center;
+      color: #94a3b8;
+      font-size: 13px;
+    }
+    .search-loading {
+      padding: 12px;
+      text-align: center;
+      color: #94a3b8;
+      font-size: 12px;
+    }
+    .sidebar-search { position: relative; }
+
+    /* ===== Copy Code Button ===== */
+    .code-block-wrapper {
+      position: relative;
+    }
+    .copy-code-btn {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      padding: 4px 10px;
+      background: rgba(255,255,255,0.1);
+      color: #94a3b8;
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 6px;
+      font-size: 12px;
+      cursor: pointer;
+      opacity: 0;
+      transition: opacity 0.15s ease, background 0.15s ease, color 0.15s ease;
+    }
+    .markdown-section pre:hover .copy-code-btn,
+    .copy-code-btn:focus {
+      opacity: 1;
+    }
+    .copy-code-btn:hover {
+      background: rgba(255,255,255,0.2);
+      color: #e2e8f0;
+    }
+    .copy-code-btn.copied {
+      background: #22c55e;
+      color: #fff;
+      border-color: #22c55e;
+      opacity: 1;
+    }
+
+    /* ===== Back to Top ===== */
+    .back-to-top {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      width: 40px;
+      height: 40px;
+      background: #3b82f6;
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 12px rgba(59,130,246,0.3);
+      transition: opacity 0.2s ease, transform 0.2s ease;
+      z-index: 80;
+    }
+    .back-to-top.visible { display: flex; }
+    .back-to-top:hover { transform: translateY(-2px); }
+    .back-to-top svg { width: 20px; height: 20px; }
+
+    /* ===== Mobile Menu Toggle ===== */
+    .menu-toggle {
+      display: none;
+      position: fixed;
+      top: 16px;
+      left: 16px;
+      z-index: 200;
+      width: 40px;
+      height: 40px;
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    .menu-toggle svg {
+      width: 20px;
+      height: 20px;
+      color: #475569;
+    }
+    .sidebar-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.3);
+      z-index: 90;
+    }
+    .sidebar-overlay.active { display: block; }
+
+    /* ===== Mobile ===== */
+    @media (max-width: 1024px) {
+      .menu-toggle { display: flex; }
+      .sidebar { transform: translateX(-100%); transition: transform 0.2s ease; z-index: 100; }
+      .sidebar.open { transform: translateX(0); }
+      .content { margin-left: 0; padding: 24px 20px; padding-top: 64px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <nav class="sidebar">
+      <div class="sidebar-header">
+        <a href="../index.html" class="sidebar-brand">
+          <span class="icon">📚</span>
+          LLM Agent 源码学习
+        </a>
+      </div>
+      
+      <div class="sidebar-search">
+        <div class="search-box">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"/>
+            <path d="M21 21l-4.35-4.35"/>
+          </svg>
+          <input type="text" placeholder="搜索文档..." id="searchInput" autocomplete="off">
+        </div>
+        <div class="search-results" id="searchResults"></div>
+      </div>
+      
+      <div class="quick-links">
+        <a href="../index.html">🏠 首页</a>
+        <a href="../SUMMARY.html">📑 目录</a>
+      </div>
+      
+      <div class="sidebar-nav">
+        <div class="sidebar-section">
+        <div class="sidebar-section-header">
+          <span class="section-title">
+            <span class="section-num">1</span>
+            <span class="section-name">Claude Code</span>
+          </span>
+          <svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+        </div>
+        <div class="sidebar-section-items"><ul><li><a href="./01-OVERVIEW.html"><span class="num">1.0</span>全景概览</a></li><li><a href="./02-BOOTSTRAP.html"><span class="num">2.0</span>启动流程</a></li><li><a href="./03-TYPE-SYSTEM.html"><span class="num">3.0</span>类型系统设计</a></li><li><a href="./04-QUERY-ENGINE.html"><span class="num">4.0</span>查询引擎</a></li><li><a href="./05-MESSAGE-SYSTEM.html"><span class="num">5.0</span>消息系统</a></li><li><a href="./06-STREAMING.html"><span class="num">6.0</span>流式处理</a></li><li><a href="./07-TOOL-ARCHITECTURE.html"><span class="num">7.0</span>工具架构</a></li><li><a href="./08-BUILTIN-TOOLS.html"><span class="num">8.0</span>内置工具</a></li><li><a href="./09-TOOL-EXECUTION.html"><span class="num">9.0</span>工具执行</a></li><li><a href="./10-AGENT-MODEL.html"><span class="num">10.0</span>Agent 模型</a></li><li><a href="./11-SUBAGENT.html"><span class="num">11.0</span>子代理</a></li><li><a href="./12-SKILL-SYSTEM.html"><span class="num">12.0</span>技能系统</a></li><li><a href="./13-PERMISSION-MODEL.html"><span class="num">13.0</span>权限模型</a></li><li><a href="./14-BASH-SECURITY.html"><span class="num">14.0</span>Bash 安全</a></li><li><a href="./15-MCP-PROTOCOL.html"><span class="num">15.0</span>MCP 协议</a></li><li><a href="./16-MCP-AUTH.html"><span class="num">16.0</span>MCP 认证</a></li><li><a href="./17-STATE-MANAGEMENT.html"><span class="num">17.0</span>状态管理</a></li><li><a href="./18-CONVERSATION.html"><span class="num">18.0</span>会话管理</a></li><li><a href="./19-INK-REACT.html"><span class="num">19.0</span>Ink React</a></li><li><a href="./20-REPL.html"><span class="num">20.0</span>REPL</a></li><li><a href="./21-PERFORMANCE.html"><span class="num">21.0</span>性能优化</a></li><li><a href="./22-TESTING.html"><span class="num">22.0</span>测试</a></li><li><a href="./23-BUILD-SYSTEM.html"><span class="num">23.0</span>构建系统</a></li><li><a href="./24-DESIGN-PATTERNS.html"><span class="num">24.0</span>设计模式</a></li><li><a href="./25-PHILOSOPHY.html"><span class="num">25.0</span>哲学思想</a></li><li><a href="./26-COGNITIVE-LOOP.html"><span class="num">26.0</span>认知循环</a></li><li><a href="./APPENDIX-A-GLOSSARY.html">附录A 术语表</a></li><li><a href="./APPENDIX-B-SOURCE-MAP.html">附录B 源码导航</a></li></ul></div></div>
+      </div>
+
+      <div class="sidebar-external">
+        <a href="https://github.com/Hyper66666/claude-code-sourcemap" target="_blank">
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+          </svg>
+          GitHub 源码
+        </a>
+      </div>
+    </nav>
+    <button class="back-to-top" id="backToTop" aria-label="回到顶部" title="回到顶部">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M18 15l-6-6-6 6"/>
+      </svg>
+    </button>
+    <button class="menu-toggle" id="menuToggle" aria-label="打开菜单">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M3 12h18M3 6h18M3 18h18"/>
+      </svg>
+    </button>
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+    <main class="content">
+      <article class="markdown-section">
+        <h1>附录 A：术语表</h1>
+<table class="guide-card collapsed">
+<thead>
+<tr>
+<th>思考维度</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody>
+<tr class="guide-card-header"><td colspan="2"><span class="collapse-icon"></span>引导思考 <span class="collapse-hint">展开</span></td></tr><tr>
+<td><strong>它为什么存在</strong></td>
+<td><ul><li>25 章技术深潜塞了 65 个术语——中文名、英文名、首次出现的章节，一次性查清楚</li><li>既是词典也是索引：想看某个概念在书里的分析，跟着首见章节跳转就行</li></ul></td>
+</tr>
+<tr>
+<td><strong>它解决什么问题</strong></td>
+<td><ul><li>新读者面对一堆缩写（XAA、DCE、CIMD、MCP、PTL）时的茫然感</li><li>跨章节追踪术语定义时的翻阅需求</li></ul></td>
+</tr>
+<tr>
+<td><strong>它在系统中的位置</strong></td>
+<td><ul><li>作为附录不参与主线叙事，但看书过程中随时可能需要翻过来查</li><li>A-Z 字母序排列方便快速定位</li></ul></td>
+</tr>
+<tr>
+<td><strong>它如何工作</strong></td>
+<td><ul><li>每个术语包含英文名、中文译名、一句话定义和首见章节</li><li>A-Z 分组表格组织，一目了然</li></ul></td>
+</tr>
+<tr>
+<td><strong>它如何实现</strong></td>
+<td><ul><li>纯 Markdown 表格，兼容 GitBook 渲染</li><li>跟正文中的术语使用保持同步</li></ul></td>
+</tr>
+<tr>
+<td><strong>不同平台如何做</strong></td>
+<td><ul><li><strong>传统技术书</strong>：通常把术语表放书末或每章开头——本书延续了这个惯例</li><li><strong>代码注释生成</strong>：有些项目用 TypeDoc 自动生成 API 术语表，但本书的手工维护更可控</li></ul></td>
+</tr>
+<tr>
+<td><strong>优势是什么？</strong></td>
+<td><ul><li><strong>优势</strong><ul><li>一站式 65 个术语查阅，不用跨章节搜</li><li>首见章节索引方便回溯</li></ul></li></ul></td>
+</tr>
+<tr>
+<td><strong>它解决什么问题</strong></td>
+<td><ul><li>新读者面对大量自创缩写（XAA、DCE、CIMD、MCP、PTL）和专有概念时的茫然感</li><li>跨章节追踪术语定义时的高频查阅需求</li></ul></td>
+</tr>
+<tr>
+<td><strong>它在系统中的位置</strong></td>
+<td><ul><li>作为附录不参与主线叙事</li><li>按字母顺序排列的结构方便快速查找</li></ul></td>
+</tr>
+<tr>
+<td><strong>它如何工作</strong></td>
+<td><ul><li>每个术语包含英文名、中文译名、一句话定义和首见章节</li><li>表格形式组织，A-Z 字母分组</li></ul></td>
+</tr>
+<tr>
+<td><strong>它如何实现</strong></td>
+<td><ul><li>纯 Markdown 表格，与 GitBook 渲染引擎兼容</li><li>手动维护，与正文中术语的使用保持同步</li></ul></td>
+</tr>
+<tr>
+<td><strong>不同平台如何做</strong></td>
+<td><ul><li><strong>传统技术文档</strong>：通常将术语表置于书末或每章开头，Claude Code 源码分析延续了这一惯例</li><li><strong>代码注释（JSDoc）</strong>：有些项目使用 TypeScript 注释生成 API 术语表（TypeDoc），与本附录互补而非替代</li></ul></td>
+</tr>
+<tr>
+<td><strong>优缺点是什么</strong></td>
+<td><ul><li><strong>优势</strong><ul><li>一站式查阅 65 个术语，避免跨章节搜索</li><li>首见章节索引帮助读者按需回溯阅读</li></ul></li></ul></td>
+</tr>
+</tbody></table>
+<h2>A</h2>
+<table>
+<thead>
+<tr>
+<th>术语</th>
+<th>中文</th>
+<th>定义</th>
+<th>首见章节</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>AbortController</td>
+<td>中止控制器</td>
+<td>Web API 标准的信号控制器，Claude Code 用于取消正在进行的 API 请求和工具执行，通过 <code>createAbortController</code> 封装支持用户中断和超时传播</td>
+<td>Ch4 查询引擎</td>
+</tr>
+<tr>
+<td>Agent</td>
+<td>智能体</td>
+<td>Claude Code 中可自主执行任务的子系统，通过 Markdown frontmatter 定义，拥有独立的工具集、模型选择和权限模式，经 <code>AgentTool</code> 派生并运行</td>
+<td>Ch10 Agent 模型</td>
+</tr>
+<tr>
+<td>AgentDefinition</td>
+<td>Agent 定义</td>
+<td>描述一个 Agent 的联合类型，分为 <code>BuiltInAgentDefinition</code>、<code>CustomAgentDefinition</code>、<code>PluginAgentDefinition</code> 三种形态，由 <code>loadAgentsDir.ts</code> 从 <code>.claude/agents/</code> 目录解析</td>
+<td>Ch10 Agent 模型</td>
+</tr>
+<tr>
+<td>AppState</td>
+<td>应用状态</td>
+<td>全局状态树对象，包含对话消息列表、权限上下文、设置、工具执行状态等所有运行时数据，通过 Zustand-like Store 管理</td>
+<td>Ch17 状态管理</td>
+</tr>
+<tr>
+<td>AssistantMessage</td>
+<td>助手消息</td>
+<td><code>Message</code> 联合类型的一个分支，表示 Claude 模型的回复内容，可包含文本块、思考过程和工具调用块（<code>tool_use</code>）</td>
+<td>Ch5 消息系统</td>
+</tr>
+<tr>
+<td>AsyncGenerator</td>
+<td>异步生成器</td>
+<td>TypeScript 的 <code>async function*</code> 语法，Claude Code 全栈使用的流式处理范式，支持背压控制、取消传播和 <code>yield*</code> 组合</td>
+<td>Ch6 流式处理</td>
+</tr>
+<tr>
+<td>AttributionState</td>
+<td>归因状态</td>
+<td>记录文件修改归属信息的状态对象，由 <code>commitAttribution.ts</code> 管理，用于追踪哪些文件变更是 Claude 做出的</td>
+<td>Ch17 状态管理</td>
+</tr>
+<tr>
+<td>AutoCompact</td>
+<td>自动压缩</td>
+<td>监控 token 用量并在接近上限时自动触发 Compaction 的机制，由 <code>autoCompact.ts</code> 实现阈值判断和触发逻辑</td>
+<td>Ch18 会话管理</td>
+</tr>
+</tbody></table>
+<h2>B</h2>
+<table>
+<thead>
+<tr>
+<th>术语</th>
+<th>中文</th>
+<th>定义</th>
+<th>首见章节</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>BashTool</td>
+<td>Bash 工具</td>
+<td>最复杂的内置工具（18 个源文件），赋予 AI 执行 shell 命令的能力，配备命令安全分类、路径验证、只读模式强制和破坏性操作检测等多层安全机制</td>
+<td>Ch8 内置工具</td>
+</tr>
+<tr>
+<td>Branded Type</td>
+<td>品牌类型</td>
+<td>TypeScript 中通过交叉类型 <code>string &amp; { __brand: &#39;X&#39; }</code> 创建的名义类型（如 <code>SessionId</code>、<code>AgentId</code>），在编译期防止不同 ID 类型的意外混用</td>
+<td>Ch3 类型系统</td>
+</tr>
+<tr>
+<td>BridgeAPI</td>
+<td>桥接 API</td>
+<td>连接 Claude Code CLI 与外部 IDE（VS Code 等）的通信层，通过 <code>bridge/</code> 目录下的模块实现 HTTP/WebSocket 双向消息传递</td>
+<td>Ch20 REPL</td>
+</tr>
+<tr>
+<td>buildTool</td>
+<td>工具工厂</td>
+<td><code>src/Tool.ts</code> 中的工厂函数，将 <code>ToolDef</code> 注入失败关闭的安全默认值（如 <code>isConcurrencySafe: false</code>）并补全为完整的 <code>Tool</code> 对象</td>
+<td>Ch7 工具架构</td>
+</tr>
+<tr>
+<td>Bundle</td>
+<td>打包产物</td>
+<td>通过 Bun 打包器将 TypeScript 源码编译为单个可分发 JavaScript 文件的最终产物，包含 tree-shaking、DCE 和 <code>feature()</code> 宏展开等优化</td>
+<td>Ch23 构建系统</td>
+</tr>
+</tbody></table>
+<h2>C</h2>
+<table>
+<thead>
+<tr>
+<th>术语</th>
+<th>中文</th>
+<th>定义</th>
+<th>首见章节</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>CanUseToolFn</td>
+<td>工具可用性判断函数</td>
+<td>类型签名为 <code>(tool, input, toolUseContext, assistantMessage, toolUseID) =&gt; Promise&lt;PermissionResult&gt;</code> 的回调，决定某个工具调用是否被允许</td>
+<td>Ch13 权限模型</td>
+</tr>
+<tr>
+<td>CircularBuffer</td>
+<td>循环缓冲区</td>
+<td>固定容量的环形数据结构（<code>utils/CircularBuffer.ts</code>），写满后覆盖最早数据，用于日志记录和终端输出等需要限制内存用量的场景</td>
+<td>Ch21 性能优化</td>
+</tr>
+<tr>
+<td>Claude Code</td>
+<td>Claude Code</td>
+<td>Anthropic 官方推出的 CLI 编码助手，基于 Claude 模型构建，集成工具调用、Agent 系统、MCP 协议等能力的终端原生 AI 开发工具，约 49 万行 TypeScript 源码</td>
+<td>Ch1 全景概览</td>
+</tr>
+<tr>
+<td>Compaction</td>
+<td>上下文压缩</td>
+<td>当对话 token 超过阈值时，自动裁剪历史消息并生成摘要以释放 token 空间的机制，包括 <code>compact</code>、<code>microCompact</code>、<code>snipCompaction</code> 等策略层级</td>
+<td>Ch18 会话管理</td>
+</tr>
+<tr>
+<td>ContentBlockParam</td>
+<td>内容块参数</td>
+<td>Anthropic SDK 中表示消息内容块的类型，包括 <code>text</code>、<code>tool_use</code>、<code>tool_result</code>、<code>image</code> 等变体，构成 API 请求/响应的基本内容单元</td>
+<td>Ch5 消息系统</td>
+</tr>
+<tr>
+<td>Coordinator Mode</td>
+<td>协调者模式</td>
+<td>多 Agent 协作的运行模式，一个主 Agent 充当协调者分配任务给多个子 Agent 并行执行，由 <code>coordinator/coordinatorMode.ts</code> 实现</td>
+<td>Ch11 子代理</td>
+</tr>
+<tr>
+<td>CostTracker</td>
+<td>成本追踪器</td>
+<td>追踪 API 调用的 token 用量和费用的模块（<code>cost-tracker.ts</code>，约 320 行），提供 <code>getModelUsage</code>、<code>getTotalCost</code> 等聚合函数</td>
+<td>Ch4 查询引擎</td>
+</tr>
+<tr>
+<td>createStore</td>
+<td>创建存储</td>
+<td>Zustand-like 的响应式状态存储工厂函数（<code>state/store.ts</code>，34 行），支持 <code>useSyncExternalStore</code> 订阅和 <code>onChangeAppState</code> 回调</td>
+<td>Ch17 状态管理</td>
+</tr>
+</tbody></table>
+<h2>D</h2>
+<table>
+<thead>
+<tr>
+<th>术语</th>
+<th>中文</th>
+<th>定义</th>
+<th>首见章节</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>DCE (Dead Code Elimination)</td>
+<td>死代码消除</td>
+<td>构建时通过 <code>feature()</code> 宏和 <code>process.env</code> 条件判断，在 Bun 打包阶段移除不会执行到的代码分支，减小产物体积并隔离内部/外部功能</td>
+<td>Ch23 构建系统</td>
+</tr>
+<tr>
+<td>DeepImmutable</td>
+<td>深度不可变</td>
+<td>递归地将对象所有属性标记为 <code>readonly</code> 的工具类型，用于权限上下文等安全关键数据结构，防止意外修改</td>
+<td>Ch3 类型系统</td>
+</tr>
+<tr>
+<td>DenialTracking</td>
+<td>拒绝追踪</td>
+<td>记录工具调用被用户拒绝次数的机制（<code>DenialTrackingState</code>），连续拒绝超过阈值时自动升级为人工确认，避免反复打扰</td>
+<td>Ch13 权限模型</td>
+</tr>
+<tr>
+<td>Discriminated Union</td>
+<td>可辨识联合</td>
+<td>TypeScript 中通过共享的字面量字段（如 `type: &#39;user&#39;</td>
+<td>&#39;assistant&#39;<code>）区分联合类型各分支的设计模式，</code>Message` 类型体系的核心架构</td>
+</tr>
+</tbody></table>
+<h2>E</h2>
+<table>
+<thead>
+<tr>
+<th>术语</th>
+<th>中文</th>
+<th>定义</th>
+<th>首见章节</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Elicitation</td>
+<td>信息征询</td>
+<td>MCP 协议中 Server 向 Client 主动请求额外输入信息的机制（如请求 OAuth 凭据或用户确认），由 <code>services/mcp/elicitationHandler.ts</code> 处理</td>
+<td>Ch15 MCP 协议</td>
+</tr>
+<tr>
+<td>ExploreAgent</td>
+<td>探索智能体</td>
+<td>内置 Agent 之一，专用于代码库探索和信息收集的只读任务，使用低成本模型并跳过 CLAUDE.md 加载以最大化效率</td>
+<td>Ch10 Agent 模型</td>
+</tr>
+</tbody></table>
+<h2>F</h2>
+<table>
+<thead>
+<tr>
+<th>术语</th>
+<th>中文</th>
+<th>定义</th>
+<th>首见章节</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Feature Flag</td>
+<td>特性开关</td>
+<td>通过 GrowthBook 远程配置或 <code>feature()</code> 编译时宏控制的功能开关，用于渐进式发布新功能、A/B 测试和内外部功能隔离</td>
+<td>Ch23 构建系统</td>
+</tr>
+<tr>
+<td>feature()</td>
+<td>特性宏</td>
+<td><code>bun:bundle</code> 提供的编译时宏函数，返回布尔常量，在打包阶段决定条件分支的去留，实现零运行时开销的特性开关</td>
+<td>Ch2 启动流程</td>
+</tr>
+<tr>
+<td>FileHistoryState</td>
+<td>文件历史状态</td>
+<td>记录工具执行过程中文件修改前后快照的状态对象（<code>utils/fileHistory.ts</code>），支持用户回滚单个文件或整轮变更</td>
+<td>Ch17 状态管理</td>
+</tr>
+<tr>
+<td>FileStateCache</td>
+<td>文件状态缓存</td>
+<td>LRU 缓存结构（<code>utils/fileStateCache.ts</code>），存储已读取文件的内容和元数据，避免同一轮工具执行中重复磁盘 I/O</td>
+<td>Ch9 工具执行</td>
+</tr>
+<tr>
+<td>Fork (subagent)</td>
+<td>派生（子代理）</td>
+<td>从主 Agent 创建独立子 Agent 的操作（<code>forkSubagent.ts</code>，约 210 行），子 Agent 继承部分上下文但拥有独立消息历史和工具集，通过共享 prompt cache 前缀最大化缓存命中</td>
+<td>Ch11 子代理</td>
+</tr>
+</tbody></table>
+<h2>G</h2>
+<table>
+<thead>
+<tr>
+<th>术语</th>
+<th>中文</th>
+<th>定义</th>
+<th>首见章节</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Generator Pipeline</td>
+<td>生成器管道</td>
+<td><code>query()</code> → <code>queryLoop()</code> → <code>tool execution</code> 构成的三层 <code>AsyncGenerator</code> 嵌套管道，通过 <code>yield</code> 逐层冒泡进度事件，再由外层收集器聚合为最终结果</td>
+<td>Ch6 流式处理</td>
+</tr>
+<tr>
+<td>GrowthBook</td>
+<td>GrowthBook</td>
+<td>开源的特性开关和 A/B 测试平台，Claude Code 通过 <code>services/analytics/growthbook.ts</code>（约 1150 行）集成，控制远程功能发布和实验分组</td>
+<td>Ch2 启动流程</td>
+</tr>
+</tbody></table>
+<h2>H</h2>
+<table>
+<thead>
+<tr>
+<th>术语</th>
+<th>中文</th>
+<th>定义</th>
+<th>首见章节</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Harness Engineering</td>
+<td>骨架工程</td>
+<td>一种 AI 应用开发方法论，将应用分为确定性的&quot;骨架&quot;（Harness）和非确定性的&quot;模型&quot;（Model）两部分；骨架负责工具注册、权限、UI 等基础设施，模型负责推理和决策</td>
+<td>Ch1 全景概览</td>
+</tr>
+<tr>
+<td>Hook System</td>
+<td>钩子系统</td>
+<td>允许用户在工具执行前后注入自定义脚本的扩展机制，通过 <code>settings.json</code> 配置 <code>hooks</code> 字段，支持 <code>PreToolUse</code>、<code>PostToolUse</code>、<code>Notification</code>、<code>Stop</code> 等事件类型</td>
+<td>Ch9 工具执行</td>
+</tr>
+</tbody></table>
+<h2>I</h2>
+<table>
+<thead>
+<tr>
+<th>术语</th>
+<th>中文</th>
+<th>定义</th>
+<th>首见章节</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Ink</td>
+<td>Ink 框架</td>
+<td>基于 React 的终端 UI 框架，Claude Code 使用其深度定制的内部 fork 版本（<code>src/ink/</code>，50+ 模块），支持 Flexbox 布局、焦点管理、搜索高亮和虚拟滚动</td>
+<td>Ch19 Ink React</td>
+</tr>
+<tr>
+<td>InputSchema</td>
+<td>输入模式</td>
+<td>每个工具使用 Zod（v4）定义的参数验证 schema，在工具注册时声明，运行时自动验证 Claude 返回的 JSON 参数是否合法，同时驱动 TypeScript 类型推断</td>
+<td>Ch7 工具架构</td>
+</tr>
+<tr>
+<td>isConcurrencySafe</td>
+<td>并发安全</td>
+<td>Tool 接口的布尔方法，返回 <code>true</code> 时允许该工具与其他标记为并发安全的工具并行执行；默认为 <code>false</code>（失败关闭原则）</td>
+<td>Ch7 工具架构</td>
+</tr>
+</tbody></table>
+<h2>J</h2>
+<table>
+<thead>
+<tr>
+<th>术语</th>
+<th>中文</th>
+<th>定义</th>
+<th>首见章节</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>JSON-RPC</td>
+<td>JSON 远程过程调用</td>
+<td>基于 JSON 的轻量远程过程调用协议（2.0 规范），MCP 协议的底层传输格式，通过 <code>jsonrpc: &quot;2.0&quot;</code> 标记，支持请求/响应和单向通知两种消息模式</td>
+<td>Ch15 MCP 协议</td>
+</tr>
+<tr>
+<td>JSX</td>
+<td>JSX</td>
+<td>JavaScript XML 语法扩展，Claude Code 使用 JSX 编写终端 UI 组件（<code>.tsx</code> 文件），通过 Ink 框架将 React 组件树渲染到终端而非浏览器 DOM</td>
+<td>Ch19 Ink React</td>
+</tr>
+</tbody></table>
+<h2>L</h2>
+<table>
+<thead>
+<tr>
+<th>术语</th>
+<th>中文</th>
+<th>定义</th>
+<th>首见章节</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>lazySchema</td>
+<td>惰性模式</td>
+<td>延迟构造 Zod schema 的包装器（<code>utils/lazySchema.ts</code>），用于打破模块加载时的循环依赖，避免启动时同步解析所有工具 schema</td>
+<td>Ch7 工具架构</td>
+</tr>
+<tr>
+<td>LRU Cache</td>
+<td>最近最少使用缓存</td>
+<td>一种缓存淘汰策略，当容量满时移除最久未被访问的条目；Claude Code 中用于 <code>FileStateCache</code>、MCP 连接缓存等多个场景</td>
+<td>Ch21 性能优化</td>
+</tr>
+</tbody></table>
+<h2>M</h2>
+<table>
+<thead>
+<tr>
+<th>术语</th>
+<th>中文</th>
+<th>定义</th>
+<th>首见章节</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>MCP (Model Context Protocol)</td>
+<td>模型上下文协议</td>
+<td>Anthropic 提出的开放协议标准，定义 AI 应用（Client）与外部工具/数据源（Server）之间的标准化 JSON-RPC 通信接口，支持 stdio 和 SSE 两种传输方式</td>
+<td>Ch15 MCP 协议</td>
+</tr>
+<tr>
+<td>MCPServerConnection</td>
+<td>MCP 服务器连接</td>
+<td>表示一个已建立 MCP Server 连接的对象，包含连接状态、可用工具列表、资源目录和提示模板等运行时信息</td>
+<td>Ch15 MCP 协议</td>
+</tr>
+<tr>
+<td>Memoization</td>
+<td>记忆化</td>
+<td>缓存函数调用结果的优化技术，Claude Code 有三层体系：<code>memoize</code>（永久缓存）、<code>memoizeWithTTL</code>（定时过期）和 React Compiler 自动 memoization</td>
+<td>Ch21 性能优化</td>
+</tr>
+<tr>
+<td>Message (类型体系)</td>
+<td>消息（类型体系）</td>
+<td>以 Discriminated Union 模式定义的消息类型族，包含 <code>UserMessage</code>、<code>AssistantMessage</code>、<code>SystemMessage</code>、<code>ProgressMessage</code>、<code>TombstoneMessage</code>、<code>AttachmentMessage</code> 等 7+ 种变体</td>
+<td>Ch5 消息系统</td>
+</tr>
+<tr>
+<td>MicroCompact</td>
+<td>微压缩</td>
+<td>Compaction 的最轻量级策略（<code>services/compact/microCompact.ts</code>，约 530 行），使用快速模型对单条过长工具结果进行局部摘要，不触碰整体对话结构</td>
+<td>Ch18 会话管理</td>
+</tr>
+</tbody></table>
+<h2>N</h2>
+<table>
+<thead>
+<tr>
+<th>术语</th>
+<th>中文</th>
+<th>定义</th>
+<th>首见章节</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>normalizeMessagesForAPI</td>
+<td>API 消息标准化</td>
+<td>将内部 <code>Message[]</code> 转换为 Anthropic API 可接受的 user/assistant 交替格式的多阶段转换函数，处理消息合并、进度消息过滤、附件转换等</td>
+<td>Ch5 消息系统</td>
+</tr>
+</tbody></table>
+<h2>O</h2>
+<table>
+<thead>
+<tr>
+<th>术语</th>
+<th>中文</th>
+<th>定义</th>
+<th>首见章节</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>OAuth</td>
+<td>开放授权</td>
+<td>标准授权框架（2.0 + PKCE），Claude Code 通过 <code>services/oauth/</code> 实现完整的授权码流程，用于 claude.ai 登录认证和 MCP Server 授权</td>
+<td>Ch16 MCP 认证</td>
+</tr>
+<tr>
+<td>omitClaudeMd</td>
+<td>省略 CLAUDE.md</td>
+<td>Agent 配置选项，指示在子 Agent 或 SDK 模式下跳过加载 <code>CLAUDE.md</code> 项目配置文件以节省 token；Explore Agent 利用此选项每周节省大量 token 消耗</td>
+<td>Ch10 Agent 模型</td>
+</tr>
+</tbody></table>
+<h2>P</h2>
+<table>
+<thead>
+<tr>
+<th>术语</th>
+<th>中文</th>
+<th>定义</th>
+<th>首见章节</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>PermissionMode</td>
+<td>权限模式</td>
+<td>控制工具执行审批策略的枚举，包含 <code>default</code>（逐一确认）、<code>auto</code>（自动批准安全操作）、<code>bypassPermissions</code>（跳过所有确认）、<code>plan</code>（只读规划）等多种模式</td>
+<td>Ch13 权限模型</td>
+</tr>
+<tr>
+<td>PermissionResult</td>
+<td>权限结果</td>
+<td>工具权限检查的返回值类型，行为分为 <code>allow</code>（允许）、<code>deny</code>（拒绝）、<code>ask</code>（需要用户确认）三种</td>
+<td>Ch13 权限模型</td>
+</tr>
+<tr>
+<td>ProgressMessage</td>
+<td>进度消息</td>
+<td><code>Message</code> 类型的一个分支，表示工具执行过程中的实时进度更新，泛型参数允许工具自定义进度数据结构</td>
+<td>Ch6 流式处理</td>
+</tr>
+<tr>
+<td>Prompt Cache</td>
+<td>提示缓存</td>
+<td>Anthropic API 的缓存机制，对已发送的 system prompt 和历史消息前缀进行缓存，后续请求可复用已处理的 token；Fork Agent 通过 <code>model: &#39;inherit&#39;</code> 最大化缓存命中率</td>
+<td>Ch11 子代理</td>
+</tr>
+</tbody></table>
+<h2>Q</h2>
+<table>
+<thead>
+<tr>
+<th>术语</th>
+<th>中文</th>
+<th>定义</th>
+<th>首见章节</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>QueryEngine</td>
+<td>查询引擎</td>
+<td>Claude Code 的核心引擎类（<code>QueryEngine.ts</code>，约 1300 行），一个对话对应一个实例，封装 <code>submitMessage</code> 入口、消息流管理和上下文压缩调度，SDK 和 REPL 共享同一抽象</td>
+<td>Ch4 查询引擎</td>
+</tr>
+<tr>
+<td>queryLoop</td>
+<td>查询循环</td>
+<td><code>query.ts</code> 中实现的核心状态机（约 1700 行），每次迭代执行&quot;发送 API 请求 → 接收流式响应 → 执行工具 → 判断终止/继续&quot;循环，直至任务完成</td>
+<td>Ch4 查询引擎</td>
+</tr>
+</tbody></table>
+<h2>R</h2>
+<table>
+<thead>
+<tr>
+<th>术语</th>
+<th>中文</th>
+<th>定义</th>
+<th>首见章节</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>React Compiler</td>
+<td>React 编译器</td>
+<td>Meta 开发的编译器插件，Claude Code 集成该编译器（可在 <code>AppState.tsx</code> 的 <code>_c()</code> 调用中观察到）自动为 React 组件添加 memoization，无需手动 <code>useMemo</code>/<code>useCallback</code></td>
+<td>Ch19 Ink React</td>
+</tr>
+<tr>
+<td>Reconciler</td>
+<td>协调器</td>
+<td>React 渲染管道中负责比较虚拟树差异并更新实际输出的模块，Claude Code 的 <code>ink/reconciler.ts</code>（约 510 行）为终端字符矩阵渲染定制了专用协调器</td>
+<td>Ch19 Ink React</td>
+</tr>
+<tr>
+<td>REPL</td>
+<td>交互式执行环境</td>
+<td>Read-Eval-Print Loop 的缩写，既指 Claude Code 的主交互界面（<code>screens/REPL.tsx</code>），也指通过 <code>REPLTool</code> 提供的交互式代码执行工具</td>
+<td>Ch20 REPL</td>
+</tr>
+<tr>
+<td>Resume (Agent)</td>
+<td>Agent 恢复</td>
+<td>从持久化的会话 Transcript 中恢复 Agent 执行状态的机制，通过 <code>resumeAgent.ts</code>（约 265 行）实现 sidechain 重建，支持 <code>--resume</code> 断点续跑</td>
+<td>Ch11 子代理</td>
+</tr>
+</tbody></table>
+<h2>S</h2>
+<table>
+<thead>
+<tr>
+<th>术语</th>
+<th>中文</th>
+<th>定义</th>
+<th>首见章节</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>SDKMessage</td>
+<td>SDK 消息</td>
+<td>通过 Agent SDK 接口传递的消息类型，是内部 <code>Message</code> 类型的外部投影，适配 SDK 调用方的集成需求</td>
+<td>Ch1 全景概览</td>
+</tr>
+<tr>
+<td>SessionMemory</td>
+<td>会话记忆</td>
+<td>跨会话持久化的关键信息摘要，Compaction 时自动由 <code>services/compact/sessionMemoryCompact.ts</code> 提取并存储，支持下次会话恢复上下文</td>
+<td>Ch18 会话管理</td>
+</tr>
+<tr>
+<td>Skill</td>
+<td>技能</td>
+<td>由 Markdown frontmatter 定义触发条件、系统提示词和工具白名单的可复用能力模块，对应用户的 <code>/slash-command</code>，通过 <code>SkillTool</code> 注入会话</td>
+<td>Ch12 技能系统</td>
+</tr>
+<tr>
+<td>SnipCompaction</td>
+<td>片段压缩</td>
+<td>Compaction 策略之一，将过长的工具结果（如大文件内容）截断为摘要并标注被省略的行数，比完整 Compaction 更精细更轻量</td>
+<td>Ch18 会话管理</td>
+</tr>
+<tr>
+<td>StreamingToolExecutor</td>
+<td>流式工具执行器</td>
+<td><code>services/tools/StreamingToolExecutor.ts</code>（约 530 行）中定义的并发调度引擎，管理工具的四态生命周期（queued → executing → completed → yielded）</td>
+<td>Ch9 工具执行</td>
+</tr>
+<tr>
+<td>SystemMessage</td>
+<td>系统消息</td>
+<td><code>Message</code> 类型的一个分支，由系统自动生成的内部控制消息，包含 15+ 种子类型（<code>compact_boundary</code>、<code>local_command</code>、<code>api_error</code> 等），不直接暴露给用户</td>
+<td>Ch5 消息系统</td>
+</tr>
+</tbody></table>
+<h2>T</h2>
+<table>
+<thead>
+<tr>
+<th>术语</th>
+<th>中文</th>
+<th>定义</th>
+<th>首见章节</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Tool</td>
+<td>工具</td>
+<td>Claude Code 的核心接口（<code>Tool.ts</code>，约 790 行），定义了 30+ 方法覆盖输入验证、权限检查、执行函数、UI 渲染和并发控制的完整生命周期</td>
+<td>Ch7 工具架构</td>
+</tr>
+<tr>
+<td>ToolDef</td>
+<td>工具定义</td>
+<td><code>Tool</code> 接口的部分实现类型，开发者只需定义关键方法（<code>inputSchema</code>、<code>call</code>、<code>userFacingName</code> 等），通过 <code>buildTool</code> 工厂函数补全默认值后成为完整 Tool</td>
+<td>Ch7 工具架构</td>
+</tr>
+<tr>
+<td>ToolResult</td>
+<td>工具结果</td>
+<td>工具执行完成后的返回值类型，包含 <code>data</code>（内容块数组）、<code>newMessages</code>（注入消息）和 <code>contextModifier</code>（上下文修改器）等字段</td>
+<td>Ch7 工具架构</td>
+</tr>
+<tr>
+<td>ToolSearchTool</td>
+<td>工具搜索工具</td>
+<td>延迟加载机制的核心工具（<code>tools/ToolSearchTool/</code>，约 470 行），当可用工具过多时，Claude 先通过搜索发现相关工具再按需加载 schema，避免一次性注册所有工具占满 prompt</td>
+<td>Ch7 工具架构</td>
+</tr>
+<tr>
+<td>ToolUseContext</td>
+<td>工具使用上下文</td>
+<td>依赖注入的核心载体，传递给每个工具执行函数的大型结构体（40+ 字段），包含 <code>AppState</code>、<code>AbortController</code>、<code>FileStateCache</code>、配置、跟踪器等运行时信息</td>
+<td>Ch7 工具架构</td>
+</tr>
+<tr>
+<td>TombstoneMessage</td>
+<td>墓碑消息</td>
+<td><code>Message</code> 类型的一个分支，标记已被 Compaction 移除的消息占位符，保留消息 ID 但清空内容，确保消息索引序列不断裂</td>
+<td>Ch5 消息系统</td>
+</tr>
+<tr>
+<td>Transcript</td>
+<td>对话记录</td>
+<td>完整的会话消息历史，以 JSONL 格式通过 <code>utils/sessionStorage.ts</code> 持久化到磁盘（<code>~/.claude/sessions/</code>），支持增量录制和 <code>--resume</code> 恢复</td>
+<td>Ch5 消息系统</td>
+</tr>
+</tbody></table>
+<h2>U</h2>
+<table>
+<thead>
+<tr>
+<th>术语</th>
+<th>中文</th>
+<th>定义</th>
+<th>首见章节</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>UserMessage</td>
+<td>用户消息</td>
+<td><code>Message</code> 类型的一个分支，表示用户输入的消息，包含文本内容和可选附件（图片、文件等），是查询循环的触发点，由 <code>createUserMessage</code> 工厂函数构建</td>
+<td>Ch5 消息系统</td>
+</tr>
+</tbody></table>
+<h2>V</h2>
+<table>
+<thead>
+<tr>
+<th>术语</th>
+<th>中文</th>
+<th>定义</th>
+<th>首见章节</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Verification Agent</td>
+<td>验证智能体</td>
+<td>内置 Agent 之一，专用于对抗性验证代码变更的正确性，红色标识表示审查角色，通过运行测试、lint 和自我反省确认修改符合预期</td>
+<td>Ch10 Agent 模型</td>
+</tr>
+</tbody></table>
+<h2>X</h2>
+<table>
+<thead>
+<tr>
+<th>术语</th>
+<th>中文</th>
+<th>定义</th>
+<th>首见章节</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>XAA (Cross-Account Access)</td>
+<td>跨账户访问</td>
+<td>企业级 MCP 认证扩展机制（<code>services/mcp/xaa.ts</code>，约 510 行），基于 RFC 8693 Token Exchange + RFC 7523 JWT Bearer 实现跨组织的 MCP Server 授权</td>
+<td>Ch16 MCP 认证</td>
+</tr>
+</tbody></table>
+<h2>Y</h2>
+<table>
+<thead>
+<tr>
+<th>术语</th>
+<th>中文</th>
+<th>定义</th>
+<th>首见章节</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>yield*</td>
+<td>委托生成</td>
+<td>JavaScript 生成器语法，将一个 Generator 的所有产出值委托给另一个 Generator，Claude Code 的 Generator Pipeline 中大量使用此语法链接子管道实现组合</td>
+<td>Ch6 流式处理</td>
+</tr>
+<tr>
+<td>Yoga Layout</td>
+<td>Yoga 布局引擎</td>
+<td>Meta 开发的跨平台 Flexbox 布局引擎，Ink 框架底层通过 WASM 调用 Yoga 在终端中计算 UI 组件的尺寸和位置，支持 <code>flexDirection</code>、<code>padding</code>、<code>margin</code> 等属性</td>
+<td>Ch19 Ink React</td>
+</tr>
+</tbody></table>
+<h2>Z</h2>
+<table>
+<thead>
+<tr>
+<th>术语</th>
+<th>中文</th>
+<th>定义</th>
+<th>首见章节</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Zod Schema</td>
+<td>Zod 验证模式</td>
+<td>使用 Zod 库（v4）定义的运行时类型验证模式，Claude Code 的所有工具输入参数均通过 Zod schema 声明，同时服务于参数验证、TypeScript 类型推断和 JSON Schema 生成供 API 使用</td>
+<td>Ch3 类型系统</td>
+</tr>
+</tbody></table>
+<p>本术语表收录了《深入理解 Claude Code 源码》中出现的关键技术术语，按英文字母顺序排列。每个术语包含英文名、中文译名、一句话定义，以及在本书中首次出现的章节。</p>
+<hr>
+<blockquote>
+<p><strong>注</strong>：本术语表共收录 65 个术语。部分术语在多个章节中反复出现，&quot;首见章节&quot;仅标注其首次被系统性讨论的位置。</p>
+</blockquote>
+
+      </article>
+    </main>
+  </div>
+  
+  <!-- Syntax highlighting -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script>hljs.highlightAll();</script>
+
+  <script>
+    // Collapsible sidebar sections
+    document.querySelectorAll('.sidebar-section-header').forEach(header => {
+      header.addEventListener('click', () => {
+        const items = header.nextElementSibling;
+        const isCollapsed = items.classList.contains('collapsed');
+        // If collapsed, uncollapse; if visible, collapse
+        items.classList.toggle('collapsed');
+        header.classList.toggle('open');
+      });
+    });
+
+    // Auto-open current page's section + highlight active link
+    const currentPath = window.location.pathname;
+    const currentFilename = currentPath.split('/').pop();
+    let foundMatch = false;
+    document.querySelectorAll('.sidebar-section-items a').forEach(link => {
+      const href = link.getAttribute('href');
+      const linkFilename = href.split('/').pop();
+      if (linkFilename === currentFilename) {
+        link.classList.add('active');
+        const section = link.closest('.sidebar-section-items');
+        const header = section ? section.previousElementSibling : null;
+        if (section) section.classList.remove('collapsed');
+        if (header) header.classList.add('open');
+        foundMatch = true;
+      }
+    });
+    
+    // Full-text search
+    (function() {
+      const searchInput = document.getElementById('searchInput');
+      const searchResults = document.getElementById('searchResults');
+      if (!searchInput || !searchResults) return;
+
+      let searchIndex = [];
+      let indexLoaded = false;
+
+      // Compute root path for loading search-index.json
+      const currentScript = document.currentScript;
+      const rootPath = '../';
+
+      function loadIndex() {
+        if (indexLoaded) return;
+        indexLoaded = true;
+        fetch(rootPath + 'search-index.json')
+          .then(r => r.json())
+          .then(data => { searchIndex = data; })
+          .catch(() => { searchIndex = []; });
+      }
+
+      function highlight(text, query) {
+        const re = new RegExp('(' + query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi');
+        return text.replace(re, '<mark style="background:#fde047;padding:0 2px;border-radius:2px;">$1</mark>');
+      }
+
+      function search(query) {
+        if (!query || !searchIndex.length) return [];
+        const terms = query.toLowerCase().split(/\s+/).filter(t => t.length > 0);
+        if (!terms.length) return [];
+
+        const results = searchIndex.map(doc => {
+          const titleLower = doc.title.toLowerCase();
+          const textLower = doc.text.toLowerCase();
+          let score = 0;
+
+          for (const term of terms) {
+            if (titleLower.includes(term)) score += 10;
+            if (textLower.includes(term)) score += 1;
+          }
+
+          if (score === 0) return null;
+
+          // Find best snippet
+          let snippet = doc.text.slice(0, 120);
+          for (const term of terms) {
+            const idx = doc.text.toLowerCase().indexOf(term);
+            if (idx !== -1) {
+              const start = Math.max(0, idx - 40);
+              snippet = doc.text.slice(start, start + 120);
+              break;
+            }
+          }
+
+          return { ...doc, score, snippet };
+        }).filter(Boolean);
+
+        return results.sort((a, b) => b.score - a.score).slice(0, 10);
+      }
+
+      function render(results, query) {
+        if (!query) {
+          searchResults.classList.remove('active');
+          searchResults.innerHTML = '';
+          return;
+        }
+        if (!results.length) {
+          searchResults.innerHTML = '<div class="search-no-results">未找到相关文档</div>';
+          searchResults.classList.add('active');
+          return;
+        }
+
+        let html = '';
+        for (const r of results) {
+          const title = highlight(r.title, query);
+          const preview = highlight(r.snippet.replace(/\s+/g, ' '), query);
+          html += `<a href="${rootPath + r.path}" class="search-result-item">
+            <div class="sr-title">${title}</div>
+            <div class="sr-preview">${preview}...</div>
+          </a>`;
+        }
+        searchResults.innerHTML = html;
+        searchResults.classList.add('active');
+      }
+
+      let debounce;
+      searchInput.addEventListener('input', (e) => {
+        loadIndex();
+        clearTimeout(debounce);
+        const query = e.target.value.trim();
+        if (!query) {
+          render([], '');
+          return;
+        }
+        searchResults.innerHTML = '<div class="search-loading">搜索中...</div>';
+        searchResults.classList.add('active');
+        debounce = setTimeout(() => {
+          render(search(query), query);
+        }, 150);
+      });
+
+      // Close results on click outside
+      document.addEventListener('click', (e) => {
+        if (!e.target.closest('.sidebar-search')) {
+          searchResults.classList.remove('active');
+        }
+      });
+
+      // Keyboard navigation
+      searchInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          searchResults.classList.remove('active');
+          searchInput.blur();
+        }
+      });
+    })();
+    
+    // Back to top
+    (function() {
+      const btn = document.getElementById('backToTop');
+      if (!btn) return;
+      const toggle = () => {
+        btn.classList.toggle('visible', window.scrollY > 400);
+      };
+      window.addEventListener('scroll', toggle, { passive: true });
+      btn.addEventListener('click', () => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+    })();
+
+    // Mobile menu toggle
+    (function() {
+      const menuToggle = document.getElementById('menuToggle');
+      const sidebar = document.querySelector('.sidebar');
+      const overlay = document.getElementById('sidebarOverlay');
+      if (!menuToggle || !sidebar || !overlay) return;
+
+      menuToggle.addEventListener('click', () => {
+        sidebar.classList.toggle('open');
+        overlay.classList.toggle('active');
+      });
+
+      overlay.addEventListener('click', () => {
+        sidebar.classList.remove('open');
+        overlay.classList.remove('active');
+      });
+
+      // Close sidebar when a nav link is clicked (mobile)
+      sidebar.querySelectorAll('a').forEach(link => {
+        link.addEventListener('click', () => {
+          if (window.innerWidth <= 1024) {
+            sidebar.classList.remove('open');
+            overlay.classList.remove('active');
+          }
+        });
+      });
+    })();
+
+    // Copy code buttons
+    (function() {
+      document.querySelectorAll('.markdown-section pre').forEach(pre => {
+        const btn = document.createElement('button');
+        btn.className = 'copy-code-btn';
+        btn.textContent = '复制';
+        btn.addEventListener('click', () => {
+          const code = pre.querySelector('code')?.textContent || pre.textContent;
+          navigator.clipboard.writeText(code).then(() => {
+            btn.textContent = '已复制';
+            btn.classList.add('copied');
+            setTimeout(() => {
+              btn.textContent = '复制';
+              btn.classList.remove('copied');
+            }, 1500);
+          }).catch(() => {
+            btn.textContent = '失败';
+            setTimeout(() => { btn.textContent = '复制'; }, 1500);
+          });
+        });
+        pre.style.position = 'relative';
+        pre.appendChild(btn);
+      });
+    })();
+
+    // 引导思考 collapsible card
+    (function() {
+      document.querySelectorAll('.guide-card-header').forEach(function(header) {
+        header.addEventListener('click', function() {
+          var table = header.closest('.guide-card');
+          table.classList.toggle('collapsed');
+        });
+      });
+    })();
+
+    // Mermaid: Load dynamically + zoomable containers
+    (function() {
+      var mermaidDivs = document.querySelectorAll('.mermaid');
+      if (mermaidDivs.length === 0) return;
+
+      var cdns = [
+        '../mermaid.min.js',
+        'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js',
+        'https://unpkg.com/mermaid@10/dist/mermaid.min.js'
+      ];
+      var cdnIndex = 0;
+
+      function showError(msg) {
+        mermaidDivs.forEach(function(div) {
+          div.innerHTML = '<div class="mermaid-error" style="padding:16px;color:#dc2626;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;margin:20px 0;">' + msg + '</div>';
+          div.classList.add('rendered');
+        });
+      }
+
+      function wrapZoomable(div) {
+        if (div.parentNode.classList.contains('mermaid-zoom-container')) return;
+        if (!div.querySelector('svg')) return;
+        div.classList.add('rendered');
+
+        var wrapper = document.createElement('div');
+        wrapper.className = 'mermaid-zoom-container';
+        div.parentNode.insertBefore(wrapper, div);
+        wrapper.appendChild(div);
+
+        // Click overlay hint
+        var overlay = document.createElement('div');
+        overlay.className = 'mermaid-expand-overlay';
+        overlay.innerHTML = '<span><span class="expand-icon">⛶</span> 点击查看全图</span>';
+        wrapper.appendChild(overlay);
+
+        // Click (or double-click) to open modal
+        wrapper.addEventListener('click', function() { openMermaidModal(div); });
+      }
+
+      // ---- Mermaid Modal (full-screen viewer) ----
+      var modalInstance = null;
+
+      function openMermaidModal(sourceDiv) {
+        closeMermaidModal();
+        var clone = sourceDiv.cloneNode(true);
+        var svg = clone.querySelector('svg');
+        if (!svg) return;
+
+        // Let SVG fill width, height follows viewBox aspect ratio
+        svg.removeAttribute('width');
+        svg.removeAttribute('height');
+        svg.style.width = '100%';
+        svg.style.height = 'auto';
+        svg.style.maxWidth = 'none';
+
+        // Build modal: simple header + scrollable body
+        var modal = document.createElement('div');
+        modal.className = 'mermaid-modal active';
+
+        var content = document.createElement('div');
+        content.className = 'mermaid-modal-content';
+
+        var header = document.createElement('div');
+        header.className = 'mermaid-modal-header';
+        var chapterHint = '';
+        var prev = sourceDiv.closest('.markdown-section');
+        if (prev) {
+          var heading = prev.querySelector('h2, h3');
+          if (heading) chapterHint = heading.textContent.replace(/[#\d.]/g,'').trim().slice(0, 30);
+        }
+        header.innerHTML =
+          '<div class="modal-title-wrap">' +
+            '<span class="modal-icon">⬡</span>' +
+            '<span class="modal-title">' + (chapterHint || '图表') + '</span>' +
+          '</div>' +
+          '<button class="modal-close" title="关闭 (ESC)">✕</button>';
+
+        var body = document.createElement('div');
+        body.className = 'mermaid-modal-body';
+        body.appendChild(clone);
+
+        content.appendChild(header);
+        content.appendChild(body);
+        modal.appendChild(content);
+        document.body.appendChild(modal);
+
+        // Close handlers
+        header.querySelector('.modal-close').addEventListener('click', closeMermaidModal);
+        modal.addEventListener('click', function(e) {
+          if (e.target === modal) closeMermaidModal();
+        });
+
+        modalInstance = modal;
+      }
+
+      function closeMermaidModal() {
+        if (modalInstance) {
+          modalInstance.remove();
+          modalInstance = null;
+        }
+      }
+
+      document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') closeMermaidModal();
+      });
+
+      function tryLoadMermaid() {
+        if (cdnIndex >= cdns.length) {
+          showError('❌ 无法加载图表库，请检查网络连接后刷新页面');
+          return;
+        }
+
+        var script = document.createElement('script');
+        script.src = cdns[cdnIndex];
+        script.onload = function() {
+          if (typeof mermaid === 'undefined') {
+            showError('❌ 图表库加载失败');
+            return;
+          }
+          try {
+            mermaid.initialize({
+              startOnLoad: false,
+              theme: 'base',
+              themeVariables: {
+                fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif',
+                primaryColor: '#ffffff',
+                primaryTextColor: '#1e293b',
+                primaryBorderColor: '#e2e8f0',
+                lineColor: '#64748b',
+                secondaryColor: '#f1f5f9',
+                tertiaryColor: '#f8fafc',
+              },
+              securityLevel: 'loose',
+              flowchart: {
+                curve: 'basis',
+                padding: 15,
+                nodeSpacing: 50,
+                rankSpacing: 80,
+              },
+              maxTextSize: 50000,
+            });
+            mermaid.run({ querySelector: '.mermaid' }).then(function() {
+              mermaidDivs.forEach(wrapZoomable);
+            });
+          } catch(e) {
+            showError('❌ 图表渲染失败: ' + e.message);
+          }
+        };
+        script.onerror = function() {
+          cdnIndex++;
+          tryLoadMermaid();
+        };
+        document.head.appendChild(script);
+      }
+
+      tryLoadMermaid();
+    })();
+
+  </script>
+</body>
+</html>

@@ -1,0 +1,2395 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>第 9 章：工具执行管线</title>
+  <style>
+    /* ===== Reset & Base ===== */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { font-size: 62.5%; }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+      font-size: 15px;
+      color: #1e293b;
+      line-height: 1.7;
+      background: #ffffff;
+      -webkit-font-smoothing: antialiased;
+    }
+    
+    /* ===== Layout ===== */
+    .app {
+      display: flex;
+      min-height: 100vh;
+    }
+    
+    /* ===== Sidebar ===== */
+    .sidebar {
+      width: 280px;
+      min-width: 280px;
+      background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+      border-right: 1px solid #e2e8f0;
+      position: fixed;
+      top: 0;
+      left: 0;
+      bottom: 0;
+      display: flex;
+      flex-direction: column;
+    }
+    .sidebar::-webkit-scrollbar { width: 4px; }
+    .sidebar::-webkit-scrollbar-track { background: transparent; }
+    .sidebar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+    .sidebar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+    .sidebar-header {
+      padding: 20px 20px 14px;
+      border-bottom: 1px solid #e2e8f0;
+      flex-shrink: 0;
+    }
+
+    .sidebar-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 15px;
+      font-weight: 700;
+      color: #0f172a;
+      text-decoration: none;
+      letter-spacing: -0.02em;
+    }
+
+    .sidebar-brand .icon {
+      width: 30px;
+      height: 30px;
+      background: linear-gradient(135deg, #3b82f6 0%, #0ea5e9 100%);
+      border-radius: 7px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 15px;
+      flex-shrink: 0;
+    }
+
+    .sidebar-search {
+      padding: 12px 20px;
+      flex-shrink: 0;
+    }
+
+    .search-box {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 8px 12px;
+      transition: all 0.2s ease;
+    }
+
+    .search-box:focus-within {
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+
+    .search-box input {
+      flex: 1;
+      border: none;
+      outline: none;
+      font-size: 13px;
+      color: #1e293b;
+      background: transparent;
+    }
+
+    .search-box input::placeholder {
+      color: #94a3b8;
+    }
+
+    .search-box svg {
+      width: 15px;
+      height: 15px;
+      color: #94a3b8;
+      flex-shrink: 0;
+    }
+
+    .sidebar-nav {
+      flex: 1;
+      padding: 4px 8px;
+      overflow-y: auto;
+    }
+
+    .sidebar-nav ul, .sidebar-nav li {
+      list-style: none;
+    }
+
+    .quick-links {
+      display: flex;
+      gap: 6px;
+      padding: 0 8px 10px;
+      flex-shrink: 0;
+    }
+
+    .quick-links a {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      padding: 7px 10px;
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 7px;
+      font-size: 12px;
+      font-weight: 500;
+      color: #64748b;
+      text-decoration: none;
+      transition: all 0.15s ease;
+    }
+
+    .quick-links a:hover {
+      color: #3b82f6;
+      border-color: #3b82f6;
+      background: #eff6ff;
+    }
+
+    .quick-links a .ql-icon {
+      font-size: 13px;
+      line-height: 1;
+    }
+
+    .sidebar-section {
+      margin-bottom: 2px;
+    }
+
+    .sidebar-section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 9px 12px 9px 14px;
+      cursor: pointer;
+      user-select: none;
+      border-radius: 8px;
+      margin: 0 2px;
+      transition: background 0.15s ease;
+    }
+
+    .sidebar-section-header:hover {
+      background: rgba(59, 130, 246, 0.06);
+    }
+
+    .sidebar-section-header.open {
+      background: rgba(59, 130, 246, 0.08);
+    }
+
+    .section-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+    }
+
+    .section-num {
+      width: 22px;
+      height: 22px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #3b82f6 0%, #0ea5e9 100%);
+      border-radius: 5px;
+      font-size: 10px;
+      font-weight: 700;
+      color: #ffffff;
+      flex-shrink: 0;
+    }
+
+    .section-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: #1e293b;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .sidebar-section-header .arrow {
+      width: 16px;
+      height: 16px;
+      color: #94a3b8;
+      transition: transform 0.2s ease, color 0.15s ease;
+      flex-shrink: 0;
+    }
+
+    .sidebar-section-header:hover .arrow {
+      color: #64748b;
+    }
+
+    .sidebar-section-header.open .arrow {
+      transform: rotate(90deg);
+      color: #3b82f6;
+    }
+
+    .sidebar-section-items {
+      overflow: hidden;
+      transition: max-height 0.2s ease, opacity 0.15s ease;
+      max-height: 2000px;
+      opacity: 1;
+    }
+    .sidebar-section-items.collapsed {
+      max-height: 0;
+      opacity: 0;
+    }
+
+    .sidebar-section-items ul {
+      padding: 2px 6px 6px;
+    }
+
+    .sidebar-section-items li {
+      margin: 1px 0;
+    }
+
+    .sidebar-section-items a {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 10px;
+      font-size: 13px;
+      color: #64748b;
+      text-decoration: none;
+      border-radius: 6px;
+      transition: all 0.15s ease;
+      position: relative;
+    }
+
+    .sidebar-section-items a:hover {
+      color: #3b82f6;
+      background: rgba(59, 130, 246, 0.06);
+    }
+
+    .sidebar-section-items a.active {
+      color: #1e293b;
+      background: rgba(59, 130, 246, 0.1);
+      font-weight: 500;
+    }
+    .sidebar-section-items a.active::before {
+      content: '';
+      position: absolute;
+      left: -6px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 3px;
+      height: 18px;
+      border-radius: 2px;
+      background: #3b82f6;
+    }
+    .sidebar-section-items a.active .num {
+      color: #3b82f6;
+    }
+    .sidebar-section-items a[href*="APPENDIX"] {
+      font-size: 12px;
+      color: #94a3b8;
+      padding-left: 14px;
+    }
+    .sidebar-section-items a[href*="APPENDIX"]:hover {
+      color: #3b82f6;
+    }
+    .sidebar-section-items a[href*="APPENDIX"] .num {
+      display: none;
+    }
+
+    .sidebar-section-items a .num {
+      font-size: 11px;
+      font-weight: 500;
+      color: #94a3b8;
+      min-width: 26px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .sidebar-divider {
+      height: 1px;
+      background: linear-gradient(90deg, transparent, #e2e8f0, transparent);
+      margin: 6px 10px 10px;
+    }
+
+    .sidebar-external {
+      padding: 0 8px 12px;
+      flex-shrink: 0;
+    }
+
+    .sidebar-external a {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 9px 12px;
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 500;
+      color: #475569;
+      text-decoration: none;
+      transition: all 0.15s ease;
+    }
+
+    .sidebar-external a:hover {
+      border-color: #3b82f6;
+      color: #3b82f6;
+      background: #eff6ff;
+    }
+
+    .sidebar-external a svg {
+      width: 15px;
+      height: 15px;
+      opacity: 0.5;
+      flex-shrink: 0;
+    }
+    .sidebar-external a:hover svg {
+      opacity: 0.8;
+    }
+    
+    /* ===== Content ===== */
+    .content {
+      flex: 1;
+      margin-left: 280px;
+      padding: 48px 64px;
+      min-height: 100vh;
+      max-width: 1400px;
+    }
+
+    /* ===== Typography ===== */
+    .markdown-section h1 {
+      font-size: 28px;
+      font-weight: 700;
+      color: #0f172a;
+      letter-spacing: -0.02em;
+      margin: 0 0 24px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    
+    .markdown-section h2 {
+      font-size: 20px;
+      font-weight: 600;
+      color: #1e293b;
+      letter-spacing: -0.01em;
+      margin: 40px 0 16px;
+    }
+    
+    .markdown-section h3 {
+      font-size: 16px;
+      font-weight: 600;
+      color: #3b82f6;
+      margin: 28px 0 12px;
+    }
+    
+    .markdown-section h4 {
+      font-size: 15px;
+      font-weight: 600;
+      color: #1e293b;
+      margin: 20px 0 8px;
+    }
+    .markdown-section h1, .markdown-section h2, .markdown-section h3, .markdown-section h4 {
+      position: relative;
+    }
+    .markdown-section .heading-anchor {
+      position: absolute;
+      left: -20px;
+      top: 50%;
+      transform: translateY(-50%);
+      opacity: 0;
+      color: #94a3b8;
+      text-decoration: none;
+      font-size: 0.8em;
+      font-weight: 400;
+      transition: opacity 0.15s ease;
+      padding-right: 4px;
+    }
+    .markdown-section h1:hover .heading-anchor,
+    .markdown-section h2:hover .heading-anchor,
+    .markdown-section h3:hover .heading-anchor,
+    .markdown-section h4:hover .heading-anchor {
+      opacity: 1;
+    }
+    
+    .markdown-section p {
+      margin: 12px 0;
+      color: #475569;
+    }
+
+    /* ===== Thinking Note ===== */
+    .thinking-note {
+      background: #fffbeb;
+      border-left: 4px solid #f59e0b;
+      border-radius: 0 12px 12px 0;
+      padding: 20px 24px;
+      margin: 24px 0;
+    }
+    .thinking-note h3 {
+      margin: 0 0 12px;
+      padding: 0;
+      border: none;
+      font-size: 14px;
+      font-weight: 700;
+      color: #d97706;
+      letter-spacing: 0.03em;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .thinking-note p {
+      margin: 8px 0;
+      font-size: 14px;
+      line-height: 1.8;
+      color: #78350f;
+    }
+    .thinking-note strong {
+      display: inline-block;
+      margin-top: 6px;
+      color: #92400e;
+    }
+    .thinking-note strong:first-of-type {
+      margin-top: 0;
+    }
+    .thinking-note ul {
+      margin: 4px 0 4px 0;
+      padding-left: 18px;
+      list-style: none;
+    }
+    .thinking-note li {
+      margin: 4px 0;
+      padding-left: 14px;
+      position: relative;
+      color: #78350f;
+      font-size: 14px;
+      line-height: 1.7;
+    }
+    .thinking-note li::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 10px;
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: #d97706;
+      opacity: 0.5;
+    }
+    .thinking-note li strong {
+      color: #92400e;
+    }
+
+    .markdown-section a {
+      color: #3b82f6;
+      text-decoration: none;
+      font-weight: 500;
+    }
+    
+    .markdown-section a:hover {
+      text-decoration: underline;
+    }
+    
+    .markdown-section code {
+      background: #f1f5f9;
+      color: #0f172a;
+      padding: 2px 6px;
+      font-size: 13px;
+      border-radius: 4px;
+      font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Consolas', monospace;
+    }
+    
+    .markdown-section pre {
+      background: #1e293b;
+      border-radius: 12px;
+      padding: 20px 24px;
+      overflow-x: auto;
+      margin: 20px 0;
+    }
+    
+    .markdown-section pre code {
+      background: transparent;
+      color: #e2e8f0;
+      padding: 0;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+    
+    .markdown-section blockquote {
+      background: #f8fafc;
+      border-left: 4px solid #3b82f6;
+      border-radius: 0 8px 8px 0;
+      padding: 16px 20px;
+      margin: 20px 0;
+    }
+    
+    .markdown-section blockquote p {
+      margin: 0;
+      color: #475569;
+    }
+    
+    .markdown-section table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0;
+      font-size: 14px;
+      border-radius: 12px;
+      
+      border: 1px solid #e2e8f0;
+    }
+    
+    .markdown-section table th {
+      background: #f8fafc;
+      font-weight: 600;
+      text-align: left;
+      padding: 12px 16px;
+      color: #475569;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    
+    .markdown-section table td {
+      padding: 12px 16px;
+      border-top: 1px solid #e2e8f0;
+    }
+    
+    .markdown-section table tr:nth-child(2n) td {
+      background: #f8fafc;
+    }
+    
+    .markdown-section ul, .markdown-section ol {
+      padding-left: 24px;
+      margin: 12px 0;
+    }
+    
+    .markdown-section li {
+      margin: 6px 0;
+      color: #475569;
+    }
+    
+    .markdown-section hr {
+      height: 1px;
+      background: #e2e8f0;
+      border: none;
+      margin: 32px 0;
+    }
+    
+    .markdown-section img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 8px;
+    }
+    
+    /* ===== Mermaid Diagrams ===== */
+    .mermaid {
+      background: #f8fafc;
+      border-radius: 12px;
+      padding: 24px;
+      margin: 20px 0;
+      overflow-x: auto;
+      border: 1px solid #e2e8f0;
+      display: block;
+    }
+    .mermaid.rendered {
+      display: block;
+    }
+    .mermaid svg {
+      max-width: 100%;
+      height: auto;
+    }
+    .mermaid-error {
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      border-radius: 8px;
+      padding: 16px;
+      color: #dc2626;
+      margin: 20px 0;
+    }
+    .mermaid-loading {
+      background: #f8fafc;
+      border: 1px dashed #e2e8f0;
+      border-radius: 12px;
+      padding: 24px;
+      margin: 20px 0;
+      color: #64748b;
+      text-align: center;
+    }
+
+    
+    
+
+/* ===== Click-to-Expand Mermaid ===== */
+    .mermaid-zoom-container {
+      position: relative;
+      overflow: hidden;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      margin: 20px 0;
+      background: #f8fafc;
+      cursor: pointer;
+      min-height: 100px;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+    .mermaid-zoom-container:hover {
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 2px rgba(59,130,246,0.1);
+    }
+    .mermaid-zoom-container .mermaid {
+      margin: 0;
+      border: none;
+      border-radius: 0;
+      background: transparent;
+    }
+    .mermaid-zoom-container .mermaid svg {
+      display: block;
+    }
+    .mermaid-expand-overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+      background: rgba(15,23,42,0.03);
+    }
+    .mermaid-zoom-container:hover .mermaid-expand-overlay {
+      opacity: 1;
+    }
+    .mermaid-expand-overlay span {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 18px;
+      background: rgba(255,255,255,0.95);
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 500;
+      color: #3b82f6;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+      backdrop-filter: blur(4px);
+      pointer-events: none;
+      transition: transform 0.15s ease;
+    }
+    .mermaid-zoom-container:hover .mermaid-expand-overlay span {
+      transform: translateY(-2px);
+    }
+    .mermaid-expand-overlay .expand-icon {
+      font-size: 15px;
+    }
+
+    /* ===== Mermaid Modal ===== */
+    @keyframes modal-fade-in {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    @keyframes modal-content-in {
+      from { opacity: 0; transform: scale(0.95) translateY(8px); }
+      to { opacity: 1; transform: scale(1) translateY(0); }
+    }
+    .mermaid-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 1000;
+      background: rgba(15, 23, 42, 0.65);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      animation: modal-fade-in 0.2s ease;
+    }
+    .mermaid-modal.active {
+      display: flex;
+    }
+    .mermaid-modal-content {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      max-width: 90vw;
+      max-height: 90vh;
+      background: #fff;
+      border-radius: 14px;
+      box-shadow: 0 25px 80px rgba(0,0,0,0.3);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      animation: modal-content-in 0.2s ease;
+    }
+    .mermaid-modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 20px;
+      border-bottom: 1px solid #e2e8f0;
+      flex-shrink: 0;
+      background: #fafbfc;
+      gap: 12px;
+    }
+    .mermaid-modal-header .modal-title-wrap {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+    }
+    .mermaid-modal-header .modal-icon {
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      background: linear-gradient(135deg, #3b82f6, #0ea5e9);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      flex-shrink: 0;
+    }
+    .mermaid-modal-header .modal-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: #1e293b;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .mermaid-modal-header .modal-hint {
+      font-size: 12px;
+      color: #94a3b8;
+      font-weight: 400;
+      margin-left: 4px;
+    }
+    .mermaid-modal-header .modal-actions {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      flex-shrink: 0;
+    }
+    .mermaid-modal-header .modal-close {
+      width: 30px;
+      height: 30px;
+      border: none;
+      border-radius: 6px;
+      background: transparent;
+      color: #94a3b8;
+      font-size: 17px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s ease;
+      margin-left: 4px;
+    }
+    .mermaid-modal-header .modal-close:hover {
+      background: #fee2e2;
+      color: #dc2626;
+    }
+    .mermaid-modal-body {
+      flex: 1;
+      overflow: auto;
+      position: relative;
+      user-select: auto;
+      background: #f8fafc
+        repeating-linear-gradient(
+          0deg, transparent, transparent 23px, #f1f5f9 23px, #f1f5f9 24px
+        ),
+        repeating-linear-gradient(
+          90deg, transparent, transparent 23px, #f1f5f9 23px, #f1f5f9 24px
+        );
+    }
+    .mermaid-modal-body svg {
+      display: block;
+    }
+    @media (max-width: 768px) {
+      .mermaid-modal { padding: 12px; }
+      .mermaid-modal-content { max-width: 100vw; max-height: 100vh; border-radius: 10px; }
+      .mermaid-modal-header { padding: 10px 14px; }
+    }
+    @media (max-width: 480px) {
+      .mermaid-modal { padding: 0; }
+      .mermaid-modal-content { border-radius: 0; max-width: 100vw; max-height: 100vh; }
+    }
+
+
+/* ===== 引导思考 - Note-style Card ===== */
+    tr.guide-card-header td {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      width: 100%;
+      padding: 12px 24px !important;
+      font-size: 13px;
+      font-weight: 700;
+      color: #6366f1;
+      letter-spacing: 0.04em;
+      background: transparent !important;
+      border: none !important;
+    }
+    table.guide-card {
+      border-collapse: separate;
+      border-spacing: 0;
+      font-size: 14px;
+      margin: 0 0 24px;
+      overflow: hidden;
+      display: block;
+      width: 100%;
+      background: #f8faff;
+      border-left: 4px solid #6366f1;
+      border-radius: 0 12px 12px 0;
+      box-shadow: 0 1px 3px rgba(99, 102, 241, 0.08);
+    }
+    /* Hide original table header ("思考维度 | 内容") */
+    table.guide-card thead {
+      display: none;
+    }
+    /* Collapse/expand behavior */
+    table.guide-card.collapsed tbody tr:not(.guide-card-header) {
+      display: none;
+    }
+    table.guide-card tbody tr.guide-card-header {
+      cursor: pointer;
+      user-select: none;
+    }
+    table.guide-card tbody tr.guide-card-header:hover {
+      background: rgba(99, 102, 241, 0.04);
+    }
+    .collapse-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 18px;
+      height: 18px;
+      flex-shrink: 0;
+      transition: transform 0.2s ease;
+    }
+    .collapse-icon::before {
+      content: '';
+      display: block;
+      width: 6px;
+      height: 6px;
+      border-right: 2px solid #a5b4fc;
+      border-bottom: 2px solid #a5b4fc;
+      transform: rotate(-45deg);
+      margin-top: -3px;
+      transition: transform 0.2s ease, border-color 0.2s ease;
+    }
+    table.guide-card:not(.collapsed) .collapse-icon::before {
+      transform: rotate(45deg);
+      margin-top: 3px;
+      border-color: #6366f1;
+    }
+    tr.guide-card-header:hover .collapse-icon::before {
+      border-color: #6366f1;
+    }
+    .collapse-hint {
+      font-size: 11px;
+      color: #a5b4fc;
+      font-weight: 400;
+      transition: color 0.2s ease;
+    }
+    table.guide-card:not(.collapsed) .collapse-hint {
+      display: none;
+    }
+    tr.guide-card-header:hover .collapse-hint {
+      color: #6366f1;
+    }
+    table.guide-card tbody,
+    table.guide-card tbody tr {
+      display: block;
+      width: 100%;
+    }
+    table.guide-card tbody td {
+      display: block;
+      width: 100%;
+      padding: 0 24px 14px;
+      border: none;
+      vertical-align: top;
+      line-height: 1.7;
+      color: #475569;
+    }
+    table.guide-card tbody td:first-child {
+      padding: 12px 24px 2px;
+      font-weight: 600;
+      font-size: 12px;
+      color: #6366f1;
+      background: transparent;
+      width: 100%;
+      border: none;
+      letter-spacing: 0.03em;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    table.guide-card tbody td:first-child::before {
+      display: none;
+    }
+    /* Content lists inside cells */
+    table.guide-card tbody td ul {
+      margin: 0;
+      padding-left: 16px;
+      list-style: none;
+    }
+    table.guide-card tbody td > ul > li {
+      position: relative;
+      padding-left: 14px;
+      margin-bottom: 4px;
+      font-size: 13.5px;
+      color: #475569;
+      line-height: 1.7;
+    }
+    table.guide-card tbody td > ul > li::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 10px;
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: #c7d2fe;
+    }
+    table.guide-card tbody td > ul > li:last-child {
+      margin-bottom: 0;
+    }
+    table.guide-card tbody td ul ul {
+      padding-left: 14px;
+      margin-top: 2px;
+    }
+    table.guide-card tbody td ul ul li {
+      position: relative;
+      padding-left: 12px;
+      margin-bottom: 2px;
+      font-size: 13px;
+      color: #64748b;
+      line-height: 1.6;
+    }
+    table.guide-card tbody td ul ul li::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 9px;
+      width: 3px;
+      height: 3px;
+      border-radius: 50%;
+      background: #cbd5e1;
+    }
+    table.guide-card tbody td strong,
+    table.guide-card tbody td:first-child strong {
+      color: #4338ca;
+      font-weight: 600;
+    }
+    table.guide-card tbody td code {
+      background: #eef2ff;
+      color: #6366f1;
+      font-size: 12.5px;
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-weight: 500;
+    }
+
+/* ===== Navigation ===== */
+    .nav {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 48px;
+      padding-top: 24px;
+      border-top: 1px solid #e2e8f0;
+    }
+    
+    .nav a {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 10px 18px;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      color: #475569;
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 500;
+      transition: all 0.15s ease;
+    }
+    
+    .nav a:hover {
+      background: #3b82f6;
+      color: #fff;
+      border-color: #3b82f6;
+    }
+    
+    /* ===== Search Results ===== */
+    .search-results {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.12);
+      max-height: 400px;
+      overflow-y: auto;
+      z-index: 100;
+      display: none;
+      margin: 4px 0 0;
+    }
+    .search-results.active { display: block; }
+    .search-result-item {
+      display: block;
+      padding: 10px 14px;
+      text-decoration: none;
+      border-bottom: 1px solid #f1f5f9;
+      transition: background 0.15s ease;
+    }
+    .search-result-item:last-child { border-bottom: none; }
+    .search-result-item:hover { background: #f8fafc; }
+    .search-result-item .sr-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: #1e293b;
+      margin-bottom: 2px;
+    }
+    .search-result-item .sr-preview {
+      font-size: 12px;
+      color: #64748b;
+      line-height: 1.4;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .search-result-item .sr-path {
+      font-size: 11px;
+      color: #94a3b8;
+      margin-top: 2px;
+    }
+    .search-no-results {
+      padding: 16px;
+      text-align: center;
+      color: #94a3b8;
+      font-size: 13px;
+    }
+    .search-loading {
+      padding: 12px;
+      text-align: center;
+      color: #94a3b8;
+      font-size: 12px;
+    }
+    .sidebar-search { position: relative; }
+
+    /* ===== Copy Code Button ===== */
+    .code-block-wrapper {
+      position: relative;
+    }
+    .copy-code-btn {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      padding: 4px 10px;
+      background: rgba(255,255,255,0.1);
+      color: #94a3b8;
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 6px;
+      font-size: 12px;
+      cursor: pointer;
+      opacity: 0;
+      transition: opacity 0.15s ease, background 0.15s ease, color 0.15s ease;
+    }
+    .markdown-section pre:hover .copy-code-btn,
+    .copy-code-btn:focus {
+      opacity: 1;
+    }
+    .copy-code-btn:hover {
+      background: rgba(255,255,255,0.2);
+      color: #e2e8f0;
+    }
+    .copy-code-btn.copied {
+      background: #22c55e;
+      color: #fff;
+      border-color: #22c55e;
+      opacity: 1;
+    }
+
+    /* ===== Back to Top ===== */
+    .back-to-top {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      width: 40px;
+      height: 40px;
+      background: #3b82f6;
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 12px rgba(59,130,246,0.3);
+      transition: opacity 0.2s ease, transform 0.2s ease;
+      z-index: 80;
+    }
+    .back-to-top.visible { display: flex; }
+    .back-to-top:hover { transform: translateY(-2px); }
+    .back-to-top svg { width: 20px; height: 20px; }
+
+    /* ===== Mobile Menu Toggle ===== */
+    .menu-toggle {
+      display: none;
+      position: fixed;
+      top: 16px;
+      left: 16px;
+      z-index: 200;
+      width: 40px;
+      height: 40px;
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    .menu-toggle svg {
+      width: 20px;
+      height: 20px;
+      color: #475569;
+    }
+    .sidebar-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.3);
+      z-index: 90;
+    }
+    .sidebar-overlay.active { display: block; }
+
+    /* ===== Mobile ===== */
+    @media (max-width: 1024px) {
+      .menu-toggle { display: flex; }
+      .sidebar { transform: translateX(-100%); transition: transform 0.2s ease; z-index: 100; }
+      .sidebar.open { transform: translateX(0); }
+      .content { margin-left: 0; padding: 24px 20px; padding-top: 64px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <nav class="sidebar">
+      <div class="sidebar-header">
+        <a href="../index.html" class="sidebar-brand">
+          <span class="icon">📚</span>
+          LLM Agent 源码学习
+        </a>
+      </div>
+      
+      <div class="sidebar-search">
+        <div class="search-box">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"/>
+            <path d="M21 21l-4.35-4.35"/>
+          </svg>
+          <input type="text" placeholder="搜索文档..." id="searchInput" autocomplete="off">
+        </div>
+        <div class="search-results" id="searchResults"></div>
+      </div>
+      
+      <div class="quick-links">
+        <a href="../index.html">🏠 首页</a>
+        <a href="../SUMMARY.html">📑 目录</a>
+      </div>
+      
+      <div class="sidebar-nav">
+        <div class="sidebar-section">
+        <div class="sidebar-section-header">
+          <span class="section-title">
+            <span class="section-num">1</span>
+            <span class="section-name">Claude Code</span>
+          </span>
+          <svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+        </div>
+        <div class="sidebar-section-items"><ul><li><a href="./01-OVERVIEW.html"><span class="num">1.0</span>全景概览</a></li><li><a href="./02-BOOTSTRAP.html"><span class="num">2.0</span>启动流程</a></li><li><a href="./03-TYPE-SYSTEM.html"><span class="num">3.0</span>类型系统设计</a></li><li><a href="./04-QUERY-ENGINE.html"><span class="num">4.0</span>查询引擎</a></li><li><a href="./05-MESSAGE-SYSTEM.html"><span class="num">5.0</span>消息系统</a></li><li><a href="./06-STREAMING.html"><span class="num">6.0</span>流式处理</a></li><li><a href="./07-TOOL-ARCHITECTURE.html"><span class="num">7.0</span>工具架构</a></li><li><a href="./08-BUILTIN-TOOLS.html"><span class="num">8.0</span>内置工具</a></li><li><a href="./09-TOOL-EXECUTION.html"><span class="num">9.0</span>工具执行</a></li><li><a href="./10-AGENT-MODEL.html"><span class="num">10.0</span>Agent 模型</a></li><li><a href="./11-SUBAGENT.html"><span class="num">11.0</span>子代理</a></li><li><a href="./12-SKILL-SYSTEM.html"><span class="num">12.0</span>技能系统</a></li><li><a href="./13-PERMISSION-MODEL.html"><span class="num">13.0</span>权限模型</a></li><li><a href="./14-BASH-SECURITY.html"><span class="num">14.0</span>Bash 安全</a></li><li><a href="./15-MCP-PROTOCOL.html"><span class="num">15.0</span>MCP 协议</a></li><li><a href="./16-MCP-AUTH.html"><span class="num">16.0</span>MCP 认证</a></li><li><a href="./17-STATE-MANAGEMENT.html"><span class="num">17.0</span>状态管理</a></li><li><a href="./18-CONVERSATION.html"><span class="num">18.0</span>会话管理</a></li><li><a href="./19-INK-REACT.html"><span class="num">19.0</span>Ink React</a></li><li><a href="./20-REPL.html"><span class="num">20.0</span>REPL</a></li><li><a href="./21-PERFORMANCE.html"><span class="num">21.0</span>性能优化</a></li><li><a href="./22-TESTING.html"><span class="num">22.0</span>测试</a></li><li><a href="./23-BUILD-SYSTEM.html"><span class="num">23.0</span>构建系统</a></li><li><a href="./24-DESIGN-PATTERNS.html"><span class="num">24.0</span>设计模式</a></li><li><a href="./25-PHILOSOPHY.html"><span class="num">25.0</span>哲学思想</a></li><li><a href="./26-COGNITIVE-LOOP.html"><span class="num">26.0</span>认知循环</a></li><li><a href="./APPENDIX-A-GLOSSARY.html">附录A 术语表</a></li><li><a href="./APPENDIX-B-SOURCE-MAP.html">附录B 源码导航</a></li></ul></div></div>
+      </div>
+
+      <div class="sidebar-external">
+        <a href="https://github.com/Hyper66666/claude-code-sourcemap" target="_blank">
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+          </svg>
+          GitHub 源码
+        </a>
+      </div>
+    </nav>
+    <button class="back-to-top" id="backToTop" aria-label="回到顶部" title="回到顶部">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M18 15l-6-6-6 6"/>
+      </svg>
+    </button>
+    <button class="menu-toggle" id="menuToggle" aria-label="打开菜单">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M3 12h18M3 6h18M3 18h18"/>
+      </svg>
+    </button>
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+    <main class="content">
+      <article class="markdown-section">
+        <h1>第 9 章：工具执行管线</h1>
+<blockquote>
+<p>&quot;并发不是并行，但并发能让并行成为可能。&quot; —— Rob Pike</p>
+</blockquote>
+<table class="guide-card collapsed">
+<thead>
+<tr>
+<th>思考维度</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody>
+<tr class="guide-card-header"><td colspan="2"><span class="collapse-icon"></span>引导思考 <span class="collapse-hint">展开</span></td></tr><tr>
+<td><strong>它为什么存在</strong></td>
+<td><ul><li>模型在一次响应里可能同时调好几个工具，谁来排优先级、谁先谁后——这就是调度器要干的事</li><li>工具执行是整个查询循环的速度瓶颈，安排好了能省几秒，安排不好用户就干等着</li></ul></td>
+</tr>
+<tr>
+<td><strong>它解决什么问题</strong></td>
+<td><ul><li>并发安全工具（如 Read、Glob）可以并行跑节省时间，非安全的（如 Bash）必须独占——调度器得区分这两种</li><li>工具虽然并行执行但结果必须按调用顺序输出——保持确定性，不然模型就懵了</li><li>Bash 失败了，正在跑的兄弟工具可能就没意义了——级联中止避免浪费算力</li></ul></td>
+</tr>
+<tr>
+<td><strong>它在系统中的位置</strong></td>
+<td><ul><li>StreamingToolExecutor 在 L3 工具执行层，是查询循环中 tool_execution 阶段的调度中枢</li><li>通过 AsyncGenerator 管道与 query.ts 的流式响应处理连接，一头的产出就是另一头的输入</li></ul></td>
+</tr>
+<tr>
+<td><strong>它如何工作</strong></td>
+<td><ul><li>工具经历四个状态：排队 → 执行 → 完成 → 已产出。每个状态转换都有明确的触发条件</li><li>canExecuteTool 检查当前有多少工具在执行以及它们的并发类型，决定是否放新工具进来</li><li>getCompletedResults 先把进度消息清空，再按入队顺序 yield 完成结果——保证实时更新且不乱序</li></ul></td>
+</tr>
+<tr>
+<td><strong>它如何实现</strong></td>
+<td><ul><li>TrackedTool 封装每个工具的元数据、状态和 Promise，调度器通过这个追踪生命周期</li><li>siblingAbortController 是 toolUseContext.abortController 的子控制器——中止兄弟不影响整个查询</li><li>ContentReplacementState 在全局层面管理工具结果的累积预算，超过阈值就替换旧结果</li></ul></td>
+</tr>
+<tr>
+<td><strong>不同平台如何做</strong></td>
+<td><ul><li><strong>Cursor Agent</strong>：工具调用是顺序执行的，不支持并行调度——VS Code 扩展 API 就没这个需求</li><li><strong>OpenClaw</strong>：简化版调度器，支持基本并发但不处理结果保序和错误级联</li><li><strong>Harness Agent</strong>：流水线步骤严格串行，靠编排 DAG 来调度而不是实时并发</li></ul></td>
+</tr>
+<tr>
+<td><strong>优势是什么？</strong></td>
+<td><ul><li><strong>优势</strong><ul><li>并发安全工具并行跑显著减少端到端延迟，用户不用傻等</li><li>getCompletedResults 两阶段 yield（先进度再结果）实现实时更新</li><li>三层防线（单次截断 + 磁盘持久化 + 全局预算）防止工具输出撑爆上下文</li></ul></li></ul></td>
+</tr>
+</tbody></table>
+<p>本章深入分析 <code>StreamingToolExecutor</code> 并发调度器和 <code>toolExecution.ts</code> 执行管线的实现，揭示工具执行从队列入队到结果产出的完整数据通路。</p>
+<p>当模型在一次响应中调用多个工具时，Claude Code 面临一个核心调度问题：哪些工具可以并行？哪些必须串行？如果一个工具失败了，正在运行的兄弟工具怎么办？工具输出太大怎么处理？</p>
+<hr>
+<h2>9.1 StreamingToolExecutor —— 并发调度器的状态机</h2>
+<h3>9.1.1 设计挑战</h3>
+<p>Claude 模型以流式方式生成响应，工具调用也是逐步&quot;流入&quot;的——模型可能先生成第一个工具调用的参数，接着是第二个，然后是第三个。<code>StreamingToolExecutor</code> 需要在工具调用流入的同时就开始执行，而不是等到所有工具调用都生成完毕才开始。</p>
+<p>这带来了几个核心挑战：</p>
+<ol>
+<li>工具调用的到达是渐进的，需要即时调度</li>
+<li>并发安全的工具应该并行执行以提高效率</li>
+<li>非并发安全的工具必须独占执行</li>
+<li>结果必须按到达顺序输出（保持确定性）</li>
+<li>一个工具的失败（特别是 Bash）应该取消正在运行的兄弟工具</li>
+</ol>
+<h3>9.1.2 TrackedTool 与状态机</h3>
+<p>每个进入调度器的工具被封装为 <code>TrackedTool</code>：</p>
+<pre><code class="language-typescript">// src/services/tools/StreamingToolExecutor.ts
+type ToolStatus = 'queued' | 'executing' | 'completed' | 'yielded'
+
+type TrackedTool = {
+  id: string
+  block: ToolUseBlock
+  assistantMessage: AssistantMessage
+  status: ToolStatus
+  isConcurrencySafe: boolean
+  promise?: Promise&lt;void&gt;
+  results?: Message[]
+  pendingProgress: Message[]
+  contextModifiers?: Array&lt;(context: ToolUseContext) =&gt; ToolUseContext&gt;
+}</code></pre><p>工具在其生命周期内经历四个状态：</p>
+<div class="mermaid">%%{init: {"theme": "base", "themeVariables":{"primaryColor":"#3b82f6","primaryTextColor":"#1e293b","primaryBorderColor":"#60a5fa","lineColor":"#94a3b8","secondaryColor":"#f1f5f9","tertiaryColor":"#ffffff","fontFamily":"-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif"}}}%%
+stateDiagram-v2
+    [*] --&gt; queued: addTool()
+    queued --&gt; executing: canExecuteTool() = true
+    queued --&gt; completed: 已中止（合成错误）
+    executing --&gt; completed: 执行完成
+    completed --&gt; yielded: getCompletedResults()
+    yielded --&gt; [*]
+
+    note right of queued
+        等待调度。
+        可能因为有非并发工具
+        正在执行而阻塞。
+    end note
+
+    note right of executing
+        正在运行。
+        进度消息被立即转发。
+    end note
+
+    note right of completed
+        执行完成，结果已缓冲。
+        等待按序输出。
+    end note
+
+    note right of yielded
+        结果已输出给调用方。
+        终态。
+    end note</div><h3>9.1.3 调度器初始化</h3>
+<pre><code class="language-typescript">export class StreamingToolExecutor {
+  private tools: TrackedTool[] = []
+  private toolUseContext: ToolUseContext
+  private hasErrored = false
+  private erroredToolDescription = ''
+  private siblingAbortController: AbortController
+  private discarded = false
+  private progressAvailableResolve?: () =&gt; void
+
+  constructor(
+    private readonly toolDefinitions: Tools,
+    private readonly canUseTool: CanUseToolFn,
+    toolUseContext: ToolUseContext,
+  ) {
+    this.toolUseContext = toolUseContext
+    this.siblingAbortController = createChildAbortController(
+      toolUseContext.abortController,
+    )
+  }
+}</code></pre><p>注意 <code>siblingAbortController</code> 的设计：它是 <code>toolUseContext.abortController</code> 的子控制器。当一个 Bash 工具出错时，<code>siblingAbortController</code> 被中止，这会终止所有正在执行的兄弟工具的子进程，但<strong>不会</strong>中止父控制器——查询循环不会因此结束。</p>
+<h3>9.1.4 工具入队 —— addTool</h3>
+<pre><code class="language-typescript">addTool(block: ToolUseBlock, assistantMessage: AssistantMessage): void {
+  const toolDefinition = findToolByName(this.toolDefinitions, block.name)
+  if (!toolDefinition) {
+    // 未知工具：立即标记为 completed，返回错误
+    this.tools.push({
+      id: block.id, block, assistantMessage,
+      status: 'completed',
+      isConcurrencySafe: true,
+      pendingProgress: [],
+      results: [createUserMessage({
+        content: [{
+          type: 'tool_result',
+          content: `Error: No such tool available: ${block.name}`,
+          is_error: true, tool_use_id: block.id,
+        }],
+      })],
+    })
+    return
+  }
+
+  // 解析输入以确定并发安全性
+  const parsedInput = toolDefinition.inputSchema.safeParse(block.input)
+  const isConcurrencySafe = parsedInput?.success
+    ? (() =&gt; {
+        try {
+          return Boolean(toolDefinition.isConcurrencySafe(parsedInput.data))
+        } catch {
+          return false  // 解析失败 -&gt; 假定不安全
+        }
+      })()
+    : false  // schema 验证失败 -&gt; 假定不安全
+
+  this.tools.push({
+    id: block.id, block, assistantMessage,
+    status: 'queued', isConcurrencySafe,
+    pendingProgress: [],
+  })
+
+  void this.processQueue()
+}</code></pre><p>几个关键设计点：</p>
+<ol>
+<li><strong>未知工具快速失败。</strong> 找不到的工具立即被标记为 <code>completed</code> 并赋予错误结果，不进入队列。</li>
+<li><strong>并发安全性是输入相关的。</strong> <code>isConcurrencySafe</code> 在此时就被计算并固定，因为它取决于具体的输入参数。</li>
+<li><strong>失败关闭。</strong> schema 解析失败或 <code>isConcurrencySafe</code> 抛异常时，默认为 <code>false</code>。</li>
+</ol>
+<h3>9.1.5 调度决策 —— canExecuteTool</h3>
+<pre><code class="language-typescript">private canExecuteTool(isConcurrencySafe: boolean): boolean {
+  const executingTools = this.tools.filter(t =&gt; t.status === 'executing')
+  return (
+    executingTools.length === 0 ||
+    (isConcurrencySafe &amp;&amp; executingTools.every(t =&gt; t.isConcurrencySafe))
+  )
+}</code></pre><p>这个函数定义了核心调度规则，可以用一个简洁的真值表表达：</p>
+<table>
+<thead>
+<tr>
+<th>正在执行的工具</th>
+<th>新工具类型</th>
+<th>能否执行</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>无</td>
+<td>任何</td>
+<td>是</td>
+</tr>
+<tr>
+<td>全部并发安全</td>
+<td>并发安全</td>
+<td>是</td>
+</tr>
+<tr>
+<td>全部并发安全</td>
+<td>非并发安全</td>
+<td>否</td>
+</tr>
+<tr>
+<td>任何非并发安全</td>
+<td>任何</td>
+<td>否</td>
+</tr>
+</tbody></table>
+<p>简言之：<strong>并发安全的工具可以彼此并行，但非并发安全的工具必须独占执行。</strong></p>
+<h3>9.1.6 队列处理 —— processQueue</h3>
+<pre><code class="language-typescript">private async processQueue(): Promise&lt;void&gt; {
+  for (const tool of this.tools) {
+    if (tool.status !== 'queued') continue
+
+    if (this.canExecuteTool(tool.isConcurrencySafe)) {
+      await this.executeTool(tool)
+    } else {
+      // 非并发工具无法执行时，停止扫描后续工具
+      if (!tool.isConcurrencySafe) break
+    }
+  }
+}</code></pre><p>注意 <code>break</code> 的条件：当遇到一个无法执行的<strong>非并发安全</strong>工具时，停止扫描。这是因为非并发工具必须按顺序执行——后续的工具（无论是否并发安全）都不能跳过它先执行。</p>
+<p>但如果无法执行的是并发安全工具（因为当前有非并发工具在执行），循环会继续扫描——可能后面还有其他需要处理的工具。</p>
+<h3>9.1.7 并发执行时序图</h3>
+<div class="mermaid">%%{init: {"theme": "base", "themeVariables":{"primaryColor":"#3b82f6","primaryTextColor":"#1e293b","primaryBorderColor":"#60a5fa","lineColor":"#94a3b8","secondaryColor":"#f1f5f9","tertiaryColor":"#ffffff","fontFamily":"-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif"}}}%%
+sequenceDiagram
+    participant M as 模型流
+    participant STE as StreamingToolExecutor
+    participant T1 as GrepTool (并发安全)
+    participant T2 as GlobTool (并发安全)
+    participant T3 as FileEditTool (非并发)
+
+    M-&gt;&gt;STE: addTool(Grep, ...)
+    STE-&gt;&gt;STE: canExecuteTool(true) = true
+    STE-&gt;&gt;T1: executeTool (并行启动)
+    M-&gt;&gt;STE: addTool(Glob, ...)
+    STE-&gt;&gt;STE: canExecuteTool(true) = true
+    Note right of STE: 当前执行: [Grep(并发), Glob(并发)]
+    STE-&gt;&gt;T2: executeTool (并行启动)
+    M-&gt;&gt;STE: addTool(FileEdit, ...)
+    STE-&gt;&gt;STE: canExecuteTool(false) = false
+    Note right of STE: FileEdit 进入 queued 等待
+
+    T1--&gt;&gt;STE: 完成
+    T2--&gt;&gt;STE: 完成
+    STE-&gt;&gt;STE: processQueue() 重新扫描
+    STE-&gt;&gt;STE: canExecuteTool(false) = true
+    STE-&gt;&gt;T3: executeTool (独占启动)
+    T3--&gt;&gt;STE: 完成
+    STE--&gt;&gt;M: 按序输出所有结果</div><div class="thinking-note"><h3>思考笔记</h3>
+<p>StreamingToolExecutor 是整个工具系统的&quot;交通警察&quot;——它决定哪些工具可以同时跑、哪些必须排队、工具失败了怎么处理。</p>
+<ul>
+<li>四状态模型（排队 → 执行 → 完成 → 已产出）比二状态（等待/完成）更精确：每个状态转换都有明确的触发条件，调度器可以基于状态做精确决策。</li>
+<li>canExecuteTool 检查当前并发量和并发类型，决定新工具是否可以入场——这是调度器的核心决策函数，&quot;拥堵时不让新车上路&quot;。</li>
+<li>结果保序（getCompletedResults）是最容易被忽视但最关键的设计——工具虽然并行执行，但结果必须按发起顺序产出，否则模型会混淆。</li>
+<li>siblingAbortController 通过子控制器实现&quot;中止兄弟不影响父查询&quot;——这比全局 abort 更精细，不会因为一个工具出错而取消整个查询。</li>
+</ul>
+</div><hr>
+<h2>9.2 并发安全性 —— isConcurrencySafe 的语义和调度规则</h2>
+<h3>9.2.1 工具的并发安全分类</h3>
+<p>在 Claude Code 的工具集中，并发安全属性的分布如下：</p>
+<p><strong>始终并发安全：</strong></p>
+<ul>
+<li><code>GlobTool</code> —— 纯文件名搜索，不修改任何状态</li>
+<li><code>GrepTool</code> —— 纯内容搜索</li>
+<li><code>FileReadTool</code> —— 纯读取</li>
+<li><code>WebFetchTool</code> —— HTTP GET，无副作用</li>
+<li><code>TaskCreateTool</code>/<code>TaskGetTool</code>/<code>TaskUpdateTool</code>/<code>TaskListTool</code> —— 任务操作互相独立</li>
+</ul>
+<p><strong>始终非并发安全：</strong></p>
+<ul>
+<li><code>FileEditTool</code> —— 修改文件内容</li>
+<li><code>FileWriteTool</code> —— 创建/覆写文件</li>
+</ul>
+<p><strong>输入相关的并发安全性：</strong></p>
+<ul>
+<li><code>BashTool</code> —— 只有确认为只读的命令才并发安全</li>
+</ul>
+<p>BashTool 的实现值得细看：</p>
+<pre><code class="language-typescript">// BashTool
+isConcurrencySafe(input) {
+  return this.isReadOnly?.(input) ?? false
+},
+isReadOnly(input) {
+  const compoundCommandHasCd = commandHasAnyCd(input.command)
+  const result = checkReadOnlyConstraints(input, compoundCommandHasCd)
+  return result.behavior === 'allow'
+},</code></pre><p>这意味着 <code>ls -la</code> 会被并发执行（只读），但 <code>git push</code> 会独占执行（写操作）。</p>
+<h3>9.2.2 错误级联 —— Bash 特殊待遇</h3>
+<p>当工具执行失败时，<code>StreamingToolExecutor</code> 对 Bash 工具有特殊处理：</p>
+<pre><code class="language-typescript">// 在 executeTool 中
+if (isErrorResult) {
+  thisToolErrored = true
+  // 只有 Bash 错误会取消兄弟工具
+  if (tool.block.name === BASH_TOOL_NAME) {
+    this.hasErrored = true
+    this.erroredToolDescription = this.getToolDescription(tool)
+    this.siblingAbortController.abort('sibling_error')
+  }
+}</code></pre><p>源码注释解释了原因：</p>
+<blockquote>
+<p><em>&quot;Only Bash errors cancel siblings. Bash commands often have implicit dependency chains (e.g. mkdir fails -&gt; subsequent commands pointless). Read/WebFetch/etc are independent —— one failure shouldn&#39;t nuke the rest.&quot;</em></p>
+</blockquote>
+<p>这是一个务实的设计决策：Bash 命令之间经常有隐式依赖（前一个创建目录，后一个在该目录中操作），所以一个 Bash 命令失败通常意味着后续 Bash 命令也会失败。但 Read、Grep 等独立工具彼此无关，一个失败不应影响其他。</p>
+<h3>9.2.3 中断行为 —— interruptBehavior</h3>
+<p>当用户在工具执行过程中提交新消息时，<code>StreamingToolExecutor</code> 需要决定每个工具的命运：</p>
+<pre><code class="language-typescript">private getToolInterruptBehavior(tool: TrackedTool): 'cancel' | 'block' {
+  const definition = findToolByName(this.toolDefinitions, tool.block.name)
+  if (!definition?.interruptBehavior) return 'block'  // 默认：阻塞
+  try {
+    return definition.interruptBehavior()
+  } catch {
+    return 'block'
+  }
+}</code></pre><ul>
+<li><code>&#39;cancel&#39;</code> —— 停止工具，丢弃结果（用于可以安全中断的工具）</li>
+<li><code>&#39;block&#39;</code> —— 继续运行，新消息等待（默认行为）</li>
+</ul>
+<p><code>updateInterruptibleState</code> 方法维护一个全局标志，告诉 UI 是否当前有可中断的工具在运行：</p>
+<pre><code class="language-typescript">private updateInterruptibleState(): void {
+  const executing = this.tools.filter(t =&gt; t.status === 'executing')
+  this.toolUseContext.setHasInterruptibleToolInProgress?.(
+    executing.length &gt; 0 &amp;&amp;
+    executing.every(t =&gt; this.getToolInterruptBehavior(t) === 'cancel'),
+  )
+}</code></pre><p>只有当所有正在执行的工具都是 <code>&#39;cancel&#39;</code> 类型时，UI 才会显示&quot;可中断&quot;状态。</p>
+<div class="thinking-note"><h3>思考笔记</h3>
+<p>并发安全性是工具调度中最微妙的设计——不是&quot;能不能同时跑&quot;的技术判断，而是&quot;同时跑会不会出问题&quot;的语义判断。</p>
+<ul>
+<li>并发安全（isConcurrencySafe）的语义是&quot;工具有副作用就不能并发&quot;——两个 Read 可以同时读同一个文件，但两个 Bash 不能同时在同一个目录执行。</li>
+<li>partitionToolCalls 把工具分成并发安全组和非安全组，后者串行执行——这不是性能优化，而是正确性保障。</li>
+<li>结果保序的实现方式是&quot;按入队顺序 yield&quot;——并发执行但串行产出，消费者看到的效果和执行顺序完全一致。</li>
+<li>一个微妙的点：错误级联（cascading abort）——Bash 失败了，正在跑的 Read/Glob 可能也被中止。这不是 bug，而是&quot;错误传播&quot;的设计决策。</li>
+</ul>
+</div><hr>
+<h2>9.3 工具结果截断 —— maxResultSizeChars 与磁盘持久化</h2>
+<h3>9.3.1 问题背景</h3>
+<p>工具输出可能非常大——一次 <code>grep</code> 可能返回数千行匹配，一个 <code>bash</code> 命令可能产生 MB 级的日志。将所有这些塞入对话消息会迅速耗尽上下文窗口。</p>
+<p>Claude Code 的解决方案是<strong>磁盘持久化</strong>：当工具输出超过阈值时，完整结果保存到磁盘文件，模型只看到一个预览和文件路径。</p>
+<h3>9.3.2 持久化阈值</h3>
+<p>每个工具通过 <code>maxResultSizeChars</code> 声明自己的阈值：</p>
+<table>
+<thead>
+<tr>
+<th>工具</th>
+<th>maxResultSizeChars</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>FileReadTool</td>
+<td>Infinity</td>
+<td>永不持久化（避免循环读取）</td>
+</tr>
+<tr>
+<td>BashTool</td>
+<td>30,000</td>
+<td>30K 字符</td>
+</tr>
+<tr>
+<td>GrepTool</td>
+<td>20,000</td>
+<td>20K 字符</td>
+</tr>
+<tr>
+<td>FileEditTool</td>
+<td>100,000</td>
+<td>100K 字符</td>
+</tr>
+<tr>
+<td>GlobTool</td>
+<td>100,000</td>
+<td>100K 字符</td>
+</tr>
+<tr>
+<td>WebFetchTool</td>
+<td>100,000</td>
+<td>100K 字符</td>
+</tr>
+</tbody></table>
+<p>实际生效的阈值由 <code>getPersistenceThreshold</code> 函数决定：</p>
+<pre><code class="language-typescript">// src/utils/toolResultStorage.ts
+export function getPersistenceThreshold(
+  toolName: string,
+  declaredMaxResultSizeChars: number,
+): number {
+  // Infinity = 硬性豁免（Read 工具）
+  if (!Number.isFinite(declaredMaxResultSizeChars)) {
+    return declaredMaxResultSizeChars
+  }
+  // GrowthBook 覆盖（A/B 测试用）
+  const overrides = getFeatureValue_CACHED_MAY_BE_STALE(
+    'tengu_satin_quoll', {}
+  )
+  const override = overrides?.[toolName]
+  if (typeof override === 'number' &amp;&amp; Number.isFinite(override) &amp;&amp; override &gt; 0) {
+    return override
+  }
+  // 取 min(工具声明值, 全局默认值)
+  return Math.min(declaredMaxResultSizeChars, DEFAULT_MAX_RESULT_SIZE_CHARS)
+}</code></pre><p>这里有三层：</p>
+<ol>
+<li><code>Infinity</code> 豁免——Read 工具永远不会被持久化</li>
+<li>GrowthBook 远程配置覆盖——可以动态调整某个工具的阈值</li>
+<li>取 min(工具声明, 全局默认) —— 确保不超过全局上限</li>
+</ol>
+<h3>9.3.3 持久化流程</h3>
+<pre><code class="language-typescript">// src/utils/toolResultStorage.ts
+export async function persistToolResult(
+  content: NonNullable&lt;ToolResultBlockParam['content']&gt;,
+  toolUseId: string,
+): Promise&lt;PersistedToolResult | PersistToolResultError&gt; {
+  await ensureToolResultsDir()
+  const filepath = getToolResultPath(toolUseId, isJson)
+  const contentStr = isJson ? jsonStringify(content) : content
+
+  // 使用 'wx' 标志 -- 如果文件已存在则跳过
+  try {
+    await writeFile(filepath, contentStr, { encoding: 'utf-8', flag: 'wx' })
+  } catch (error) {
+    if (getErrnoCode(error) !== 'EEXIST') {
+      return { error: getFileSystemErrorMessage(toError(error)) }
+    }
+    // EEXIST: 之前的 turn 已经持久化过
+  }
+
+  const { preview, hasMore } = generatePreview(contentStr, PREVIEW_SIZE_BYTES)
+  return { filepath, originalSize: contentStr.length, isJson, preview, hasMore }
+}</code></pre><p><code>&#39;wx&#39;</code> 标志是一个性能优化——<code>tool_use_id</code> 是唯一的，同一个 ID 的内容是确定性的。使用 <code>wx</code>（独占创建）避免了重复写入，特别是在 microcompact（上下文压缩）重放原始消息时。</p>
+<p>持久化后的结果消息格式：</p>
+<pre><code class="language-typescript">export function buildLargeToolResultMessage(result: PersistedToolResult): string {
+  let message = `${PERSISTED_OUTPUT_TAG}\n`
+  message += `Output too large (${formatFileSize(result.originalSize)}). `
+  message += `Full output saved to: ${result.filepath}\n\n`
+  message += `Preview (first ${formatFileSize(PREVIEW_SIZE_BYTES)}):\n`
+  message += result.preview
+  message += result.hasMore ? '\n...\n' : '\n'
+  message += PERSISTED_OUTPUT_CLOSING_TAG
+  return message
+}</code></pre><p>模型看到的是预览（前 2000 字节）和完整输出的文件路径。如果需要查看更多内容，模型可以使用 FileReadTool 读取持久化文件。</p>
+<div class="mermaid">%%{init: {"theme": "base", "themeVariables":{"primaryColor":"#3b82f6","primaryTextColor":"#1e293b","primaryBorderColor":"#60a5fa","lineColor":"#94a3b8","secondaryColor":"#f1f5f9","tertiaryColor":"#ffffff","fontFamily":"-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif"}}}%%
+flowchart TD
+    A[工具返回结果] --&gt; B{结果大小 &gt; 阈值?}
+    B --&gt;|否| C[直接包含在消息中]
+    B --&gt;|是| D[保存到磁盘]
+    D --&gt; E[生成预览 2000 字节]
+    E --&gt; F[构建引用消息]
+    F --&gt; G[模型看到预览 + 文件路径]
+    G --&gt; H{模型需要更多?}
+    H --&gt;|是| I[调用 FileReadTool 读取文件]
+    H --&gt;|否| J[继续对话]
+
+    style D fill:#ff9,stroke:#333
+    style G fill:#9f9,stroke:#333</div><div class="thinking-note"><h3>思考笔记</h3>
+<p>工具结果截断不是&quot;限制自由&quot;，而是&quot;保护上下文窗口&quot;——一个工具的输出可能撑爆整个上下文，截断是在全局利益和局部自由之间的权衡。</p>
+<ul>
+<li>三层防线（单次截断 → 磁盘持久化 → 全局预算）不是重复设计——每层应对不同粒度的风险：单次输出过大、历史输出累积、全局上下文爆满。</li>
+<li>磁盘持久化的设计最巧妙：工具结果太大时，不截断也不丢弃，而是写到磁盘文件，消息中只保留文件引用路径。这让上下文不会被撑爆，但结果仍然可用。</li>
+<li>maxResultSizeChars 的单次截断阈值避免了&quot;一个工具吃掉所有 token&quot;的问题——每个工具都有公平的 token 配额。</li>
+<li>全局内容替换预算（ContentReplacementState）是最后一道防线：即使每次截断都正常，累加起来也可能太多——全局预算确保总输出不会无限膨胀。</li>
+</ul>
+</div><hr>
+<h2>9.4 工具钩子 —— Pre/Post 拦截器</h2>
+<h3>9.4.1 钩子系统概览</h3>
+<p>Claude Code 的工具执行管线在工具调用前后插入了两类钩子：</p>
+<ul>
+<li><strong>PreToolUse</strong> —— 工具执行前触发，可以修改输入、阻止执行、附加上下文</li>
+<li><strong>PostToolUse</strong> —— 工具执行后触发，可以修改输出、阻止继续</li>
+</ul>
+<p>这些钩子通过 <code>toolHooks.ts</code> 中的函数调度：</p>
+<pre><code class="language-typescript">// src/services/tools/toolHooks.ts
+export async function* runPreToolUseHooks(
+  toolUseContext: ToolUseContext,
+  tool: Tool,
+  processedInput: Record&lt;string, unknown&gt;,
+  toolUseID: string,
+  messageId: string,
+  // ...
+): AsyncGenerator&lt;PreToolHookResult&gt; {
+  for await (const result of executePreToolHooks(
+    tool.name, toolUseID, processedInput,
+    toolUseContext, permissionMode,
+    toolUseContext.abortController.signal,
+  )) {
+    // 处理各种钩子结果...
+  }
+}</code></pre><h3>9.4.2 PreToolUse 钩子的结果类型</h3>
+<p>PreToolUse 钩子可以产生多种类型的结果：</p>
+<pre><code class="language-typescript">// toolExecution.ts 中处理的结果类型
+switch (result.type) {
+  case 'message':         // 钩子产生的消息（进度或附件）
+  case 'hookPermissionResult':  // 钩子做出的权限决策
+  case 'hookUpdatedInput':      // 钩子修改了输入
+  case 'preventContinuation':   // 钩子要求停止
+  case 'stopReason':            // 停止原因
+  case 'additionalContext':     // 额外上下文
+  case 'stop':                  // 立即停止
+}</code></pre><p><strong>hookPermissionResult</strong> 是最有趣的——钩子可以替代标准权限系统做出决策。这在 CI/CD 环境中特别有用，自定义钩子可以根据项目规则自动批准或拒绝工具调用。</p>
+<p><strong>hookUpdatedInput</strong> 允许钩子在不做权限决策的情况下修改输入。例如，一个钩子可以将相对路径转为绝对路径，或者添加安全标志。</p>
+<h3>9.4.3 PostToolUse 钩子</h3>
+<pre><code class="language-typescript">export async function* runPostToolUseHooks&lt;Input extends AnyObject, Output&gt;(
+  toolUseContext: ToolUseContext,
+  tool: Tool&lt;Input, Output&gt;,
+  toolUseID: string,
+  messageId: string,
+  toolInput: Record&lt;string, unknown&gt;,
+  toolResponse: Output,
+  // ...
+): AsyncGenerator&lt;PostToolUseHooksResult&lt;Output&gt;&gt; {
+  for await (const result of executePostToolHooks(
+    tool.name, toolUseID, toolInput, toolOutput,
+    toolUseContext, permissionMode,
+    toolUseContext.abortController.signal,
+  )) {
+    // 处理各种钩子结果...
+    // PostToolUse 钩子可以修改 MCP 工具的输出
+    if (result.updatedOutput) {
+      toolOutput = result.updatedOutput
+      yield { updatedMCPToolOutput: toolOutput }
+    }
+  }
+}</code></pre><p>PostToolUse 钩子的一个特殊能力是修改 MCP 工具的输出——这对于过滤敏感信息或规范化输出格式非常有用。</p>
+<h3>9.4.4 钩子执行的性能监控</h3>
+<pre><code class="language-typescript">// src/services/tools/toolExecution.ts
+export const HOOK_TIMING_DISPLAY_THRESHOLD_MS = 500
+const SLOW_PHASE_LOG_THRESHOLD_MS = 2000
+
+// 钩子执行后
+const preToolHookDurationMs = Date.now() - preToolHookStart
+if (preToolHookDurationMs &gt;= SLOW_PHASE_LOG_THRESHOLD_MS) {
+  logForDebugging(
+    `Slow PreToolUse hooks: ${preToolHookDurationMs}ms for ${tool.name}`,
+    { level: 'info' },
+  )
+}
+
+// 显示钩子执行摘要
+if (preToolHookDurationMs &gt; HOOK_TIMING_DISPLAY_THRESHOLD_MS) {
+  resultingMessages.push({
+    message: createStopHookSummaryMessage(
+      preToolHookInfos.length, preToolHookInfos,
+      /* ... timing info ... */
+    ),
+  })
+}</code></pre><p>当钩子执行时间超过 500ms 时，UI 会显示一个摘要；超过 2000ms 时，会记录调试日志。这帮助用户识别性能瓶颈。</p>
+<h3>9.4.5 完整的工具执行管线</h3>
+<div class="mermaid">%%{init: {"theme": "base", "themeVariables":{"primaryColor":"#3b82f6","primaryTextColor":"#1e293b","primaryBorderColor":"#60a5fa","lineColor":"#94a3b8","secondaryColor":"#f1f5f9","tertiaryColor":"#ffffff","fontFamily":"-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif"}}}%%
+sequenceDiagram
+    participant STE as StreamingToolExecutor
+    participant TE as toolExecution
+    participant Pre as PreToolUse Hooks
+    participant Perm as 权限系统
+    participant Tool as 工具实现
+    participant Post as PostToolUse Hooks
+    participant Persist as 结果持久化
+
+    STE-&gt;&gt;TE: runToolUse(block, msg, canUseTool, ctx)
+    TE-&gt;&gt;TE: findToolByName / 别名回退
+    TE-&gt;&gt;TE: Zod safeParse(input)
+    TE-&gt;&gt;TE: tool.validateInput(input)
+    TE-&gt;&gt;TE: 推测性启动分类器(Bash)
+    TE-&gt;&gt;TE: backfillObservableInput(clone)
+
+    TE-&gt;&gt;Pre: runPreToolUseHooks
+    Note right of Pre: 返回: hookPermissionResult? / hookUpdatedInput? / stop?
+    TE-&gt;&gt;Perm: resolveHookPermissionDecision
+    Note right of Perm: hook 决策 &gt; 规则匹配 &gt; 分类器 &gt; 用户交互
+    Perm--&gt;&gt;TE: allow / deny / ask
+
+    alt 权限拒绝
+        TE--&gt;&gt;STE: 错误消息
+    else 权限允许
+        TE-&gt;&gt;TE: startToolSpan (OTel)
+        TE-&gt;&gt;Tool: tool.call(input, ctx, canUseTool, msg, onProgress)
+        Tool--&gt;&gt;TE: ToolResult { data, newMessages?, contextModifier? }
+
+        TE-&gt;&gt;Post: runPostToolUseHooks
+        Post--&gt;&gt;TE: updatedOutput? / blockingError?
+
+        TE-&gt;&gt;Persist: processToolResultBlock(tool, result, id)
+        Note right of Persist: 大于阈值? 保存到磁盘, 返回预览
+        Persist--&gt;&gt;TE: ToolResultBlockParam
+
+        TE--&gt;&gt;STE: yield MessageUpdate
+    end</div><div class="thinking-note"><h3>思考笔记</h3>
+<p>Pre/Post 工具钩子是 Claude Code 最灵活的扩展机制——在工具执行前后插入自定义逻辑，不需要修改工具的代码。</p>
+<ul>
+<li>PreToolUse 钩子在工具执行前触发，可以修改输入、阻止执行或记录审计日志——像是 Web 框架的&quot;请求中间件&quot;。</li>
+<li>PostToolUse 钩子在工具执行后触发，可以检查结果、记录日志或触发后续操作——像是 Web 框架的&quot;响应中间件&quot;。</li>
+<li>钩子系统的同步/异步分离是关键设计：大部分钩子是同步的（不阻塞工具执行），少数关键钩子是异步的（等待钩子完成才继续）。</li>
+<li>对比：Web 框架的中间件和 Agent 工具的钩子本质上是同一模式——&quot;在核心逻辑周围插入横切关注点&quot;。权限检查、审计日志、速率限制都是通过钩子实现的。</li>
+</ul>
+</div><hr>
+<h2>9.5 内容替换预算 —— ContentReplacementState 的设计</h2>
+<h3>9.5.1 问题：上下文窗口膨胀</h3>
+<p>即使有了 <code>maxResultSizeChars</code> 的单次截断，长对话中累积的工具结果仍然会逐渐填满上下文窗口。每次 API 调用都需要发送完整的消息历史，其中大量旧的工具输出可能已经不再相关。</p>
+<p><code>ContentReplacementState</code> 实现了一个<strong>全局工具结果预算</strong>——在总量超标时，自动将旧的工具结果替换为简短摘要。</p>
+<h3>9.5.2 核心数据结构</h3>
+<pre><code class="language-typescript">// src/utils/toolResultStorage.ts
+export type ContentReplacementState = {
+  seenIds: Set&lt;string&gt;           // 已经处理过的 tool_use_id
+  replacements: Map&lt;string, string&gt;  // id -&gt; 替换后的内容
+}
+
+export function createContentReplacementState(): ContentReplacementState {
+  return { seenIds: new Set(), replacements: new Map() }
+}</code></pre><p>结构非常简洁：</p>
+<ul>
+<li><code>seenIds</code> 跟踪所有已评估过的工具结果 ID</li>
+<li><code>replacements</code> 存储决定替换的结果及其替换内容</li>
+</ul>
+<h3>9.5.3 替换决策算法</h3>
+<pre><code class="language-typescript">export async function enforceToolResultBudget(
+  messages: Message[],
+  state: ContentReplacementState,
+  skipToolNames: ReadonlySet&lt;string&gt; = new Set(),
+): Promise&lt;{
+  messages: Message[]
+  newlyReplaced: ToolResultReplacementRecord[]
+}&gt; {
+  // 1. 收集所有候选工具结果
+  // 2. 按先前决策分区：已替换 / 已冻结 / 新增
+  // 3. 对新增候选者，根据预算决定是否替换
+  // 4. 应用替换到消息中
+}</code></pre><p><code>enforceToolResultBudget</code> 的核心逻辑将候选工具结果分为三类：</p>
+<ol>
+<li><strong>已替换（replaced）</strong> —— 之前的调用已经决定替换，重新应用相同替换</li>
+<li><strong>已冻结（frozen）</strong> —— 已经在 seenIds 中但没有被替换，保持原样</li>
+<li><strong>新增（fresh）</strong> —— 从未见过，需要做替换决策</li>
+</ol>
+<p>对于新增候选者，算法根据剩余预算和结果大小决定是否替换。较旧的、较大的结果优先被替换。</p>
+<h3>9.5.4 与子代理的交互</h3>
+<p><code>ContentReplacementState</code> 在子代理场景下有特殊的行为：</p>
+<pre><code class="language-typescript">// 克隆状态用于缓存共享的 fork
+export function cloneContentReplacementState(
+  source: ContentReplacementState,
+): ContentReplacementState {
+  return {
+    seenIds: new Set(source.seenIds),
+    replacements: new Map(source.replacements),
+  }
+}
+
+// 从消息历史重建状态（用于子代理恢复）
+export function reconstructContentReplacementState(
+  messages: Message[],
+  records: ContentReplacementRecord[],
+  inheritedReplacements?: ReadonlyMap&lt;string, string&gt;,
+): ContentReplacementState {
+  const state = createContentReplacementState()
+  // 收集所有候选 ID
+  // 从 records 重建替换映射
+  // 合并父代理的替换
+  return state
+}</code></pre><p><strong>fork 子代理</strong>（如 agentSummary）需要与父代理做出相同的替换决策，以保证 prompt cache 命中。所以它们克隆父代理的状态。</p>
+<p><strong>恢复的子代理</strong>（如后台任务恢复）需要从 transcript 中记录的 <code>ContentReplacementRecord</code> 重建状态，因为它们没有父代理的活跃内存。</p>
+<h3>9.5.5 预算在 API 调用中的应用</h3>
+<pre><code class="language-typescript">// 在 query.ts 的 API 调用前应用
+export async function applyToolResultBudget(
+  messages: Message[],
+  state: ContentReplacementState | undefined,
+  writeToTranscript?: (records) =&gt; void,
+  skipToolNames?: ReadonlySet&lt;string&gt;,
+): Promise&lt;Message[]&gt; {
+  if (!state) return messages
+  const result = await enforceToolResultBudget(messages, state, skipToolNames)
+  if (result.newlyReplaced.length &gt; 0 &amp;&amp; writeToTranscript) {
+    writeToTranscript(result.newlyReplaced)
+  }
+  return result.messages
+}</code></pre><p>这个函数在每次 API 调用前被调用：</p>
+<ol>
+<li>如果功能未启用（<code>state</code> 为 <code>undefined</code>），直接返回原消息</li>
+<li>否则，执行预算强制，可能替换某些工具结果</li>
+<li>新的替换决策被写入 transcript，以便后续恢复</li>
+</ol>
+<h3>9.5.6 替换预算的工作流</h3>
+<div class="mermaid">%%{init: {"theme": "base", "themeVariables":{"primaryColor":"#3b82f6","primaryTextColor":"#1e293b","primaryBorderColor":"#60a5fa","lineColor":"#94a3b8","secondaryColor":"#f1f5f9","tertiaryColor":"#ffffff","fontFamily":"-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif"}}}%%
+flowchart TD
+    A[API 调用前] --&gt; B{ContentReplacementState 存在?}
+    B --&gt;|否| C[直接使用原消息]
+    B --&gt;|是| D[collectCandidatesByMessage]
+    D --&gt; E[partitionByPriorDecision]
+    E --&gt; F[已替换: 重新应用]
+    E --&gt; G[已冻结: 保持原样]
+    E --&gt; H[新增: 评估预算]
+    H --&gt; I{总量 &gt; 预算?}
+    I --&gt;|否| J[标记为 frozen]
+    I --&gt;|是| K[替换为摘要]
+    F --&gt; L[合并结果]
+    G --&gt; L
+    J --&gt; L
+    K --&gt; L
+    L --&gt; M[返回修改后的消息]
+    K --&gt; N[写入 transcript 记录]
+
+    style K fill:#fbb,stroke:#333
+    style J fill:#9f9,stroke:#333</div><div class="thinking-note"><h3>思考笔记</h3>
+<p>内容替换预算（ContentReplacementState）是防止工具输出无限膨胀的最后防线。</p>
+<ul>
+<li>即使每次工具结果都做了截断，累加起来也可能撑爆上下文——全局预算确保总输出不会无限膨胀。</li>
+<li>旧结果被替换为占位符而非直接截断——模型知道这里曾有结果，只是看不到了。</li>
+<li>&quot;全局视角优于局部视角&quot;——每个工具只看自己的输出，但系统需要看总和。</li>
+<li>三层防线（单次截断 + 磁盘持久化 + 全局预算）层层补充，每一层覆盖上一层的盲区。</li>
+</ul>
+</div><hr>
+<h2>9.6 完整的工具执行生命周期</h2>
+<p>将前面各节的内容综合起来，一个工具从模型生成到结果返回的完整生命周期如下：</p>
+<div class="mermaid">%%{init: {"theme": "base", "themeVariables":{"primaryColor":"#3b82f6","primaryTextColor":"#1e293b","primaryBorderColor":"#60a5fa","lineColor":"#94a3b8","secondaryColor":"#f1f5f9","tertiaryColor":"#ffffff","fontFamily":"-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif"}}}%%
+flowchart TD
+    A[模型流式生成 tool_use block] --&gt; B[StreamingToolExecutor.addTool]
+    B --&gt; C{findToolByName?}
+    C --&gt;|未找到| D[立即 completed + 错误]
+    C --&gt;|找到| E[计算 isConcurrencySafe]
+    E --&gt; F[状态: queued]
+    F --&gt; G{canExecuteTool?}
+    G --&gt;|否| H[等待]
+    G --&gt;|是| I[状态: executing]
+
+    I --&gt; J[runToolUse]
+    J --&gt; K[Zod schema 验证]
+    K --&gt;|失败| L[返回 InputValidationError]
+    K --&gt;|成功| M[validateInput]
+    M --&gt;|失败| L
+    M --&gt;|成功| N[PreToolUse hooks]
+    N --&gt; O[权限检查]
+    O --&gt;|拒绝| P[返回权限错误]
+    O --&gt;|允许| Q[tool.call 执行]
+    Q --&gt; R[PostToolUse hooks]
+    R --&gt; S[processToolResultBlock]
+    S --&gt; T{结果 &gt; 阈值?}
+    T --&gt;|否| U[直接返回]
+    T --&gt;|是| V[持久化到磁盘]
+    V --&gt; W[返回预览 + 路径]
+
+    U --&gt; X[状态: completed]
+    W --&gt; X
+    L --&gt; X
+    P --&gt; X
+    D --&gt; X
+
+    X --&gt; Y[getCompletedResults]
+    Y --&gt; Z[状态: yielded]
+    Z --&gt; AA[应用 contextModifier]
+    AA --&gt; BB[结果返回 query.ts]
+    BB --&gt; CC[applyToolResultBudget]
+    CC --&gt; DD[发送到 API]
+
+    H -.-&gt;|前置工具完成后| G
+
+    style F fill:#ff9,stroke:#333
+    style I fill:#9bf,stroke:#333
+    style X fill:#9f9,stroke:#333
+    style Z fill:#ddd,stroke:#333</div><div class="thinking-note"><h3>思考笔记</h3>
+<p>工具执行从入队到结果产出是一条完整的数据通路，每一阶段都有明确的职责。</p>
+<ul>
+<li>排队 → 并发检查 → 执行 → 钩子 → 截断 → 产出——每个阶段都是可插拔的，可以独立修改。</li>
+<li>钩子系统（Pre/Post）在核心执行逻辑周围提供扩展点——权限检查、审计日志、指标收集都通过钩子实现。</li>
+<li>内容替换预算在最后阶段兜底——确保即使前面所有阶段都正常，整体输出也不会失控。</li>
+<li>整个生命周期由 AsyncGenerator 串联——每阶段的产出都被惰性消费，天然背压。</li>
+</ul>
+</div><hr>
+<h2>本章小结</h2>
+<p>工具执行管线是 Claude Code 中工程复杂度最高的子系统之一。其核心设计决策包括：</p>
+<ol>
+<li><strong>StreamingToolExecutor 的四态状态机</strong>（queued -&gt; executing -&gt; completed -&gt; yielded）实现了渐进式调度，工具在流入的同时就开始执行</li>
+<li><strong>并发安全性基于输入</strong>而非工具类型，允许同一工具（如 BashTool）在不同输入下表现不同的并发行为</li>
+<li><strong>Bash 错误级联</strong>是唯一会取消兄弟工具的错误类型，其他工具的失败是独立的</li>
+<li><strong>磁盘持久化</strong>在单次调用层面控制工具输出大小，<code>maxResultSizeChars: Infinity</code> 豁免机制防止循环读取</li>
+<li><strong>Pre/Post 钩子</strong>提供了完整的拦截能力，支持权限覆盖、输入修改、输出过滤</li>
+<li><strong>ContentReplacementState</strong> 在全局层面管理工具结果的累积预算，通过替换旧结果保持上下文窗口在可控范围内</li>
+</ol>
+<p>这三层防线——单次截断（maxResultSizeChars）、磁盘持久化（persistToolResult）和全局预算（enforceToolResultBudget）——共同确保了即使在长对话中，工具输出也不会压垮上下文窗口。</p>
+
+      </article>
+    </main>
+  </div>
+  
+  <!-- Syntax highlighting -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script>hljs.highlightAll();</script>
+
+  <script>
+    // Collapsible sidebar sections
+    document.querySelectorAll('.sidebar-section-header').forEach(header => {
+      header.addEventListener('click', () => {
+        const items = header.nextElementSibling;
+        const isCollapsed = items.classList.contains('collapsed');
+        // If collapsed, uncollapse; if visible, collapse
+        items.classList.toggle('collapsed');
+        header.classList.toggle('open');
+      });
+    });
+
+    // Auto-open current page's section + highlight active link
+    const currentPath = window.location.pathname;
+    const currentFilename = currentPath.split('/').pop();
+    let foundMatch = false;
+    document.querySelectorAll('.sidebar-section-items a').forEach(link => {
+      const href = link.getAttribute('href');
+      const linkFilename = href.split('/').pop();
+      if (linkFilename === currentFilename) {
+        link.classList.add('active');
+        const section = link.closest('.sidebar-section-items');
+        const header = section ? section.previousElementSibling : null;
+        if (section) section.classList.remove('collapsed');
+        if (header) header.classList.add('open');
+        foundMatch = true;
+      }
+    });
+    
+    // Full-text search
+    (function() {
+      const searchInput = document.getElementById('searchInput');
+      const searchResults = document.getElementById('searchResults');
+      if (!searchInput || !searchResults) return;
+
+      let searchIndex = [];
+      let indexLoaded = false;
+
+      // Compute root path for loading search-index.json
+      const currentScript = document.currentScript;
+      const rootPath = '../';
+
+      function loadIndex() {
+        if (indexLoaded) return;
+        indexLoaded = true;
+        fetch(rootPath + 'search-index.json')
+          .then(r => r.json())
+          .then(data => { searchIndex = data; })
+          .catch(() => { searchIndex = []; });
+      }
+
+      function highlight(text, query) {
+        const re = new RegExp('(' + query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi');
+        return text.replace(re, '<mark style="background:#fde047;padding:0 2px;border-radius:2px;">$1</mark>');
+      }
+
+      function search(query) {
+        if (!query || !searchIndex.length) return [];
+        const terms = query.toLowerCase().split(/\s+/).filter(t => t.length > 0);
+        if (!terms.length) return [];
+
+        const results = searchIndex.map(doc => {
+          const titleLower = doc.title.toLowerCase();
+          const textLower = doc.text.toLowerCase();
+          let score = 0;
+
+          for (const term of terms) {
+            if (titleLower.includes(term)) score += 10;
+            if (textLower.includes(term)) score += 1;
+          }
+
+          if (score === 0) return null;
+
+          // Find best snippet
+          let snippet = doc.text.slice(0, 120);
+          for (const term of terms) {
+            const idx = doc.text.toLowerCase().indexOf(term);
+            if (idx !== -1) {
+              const start = Math.max(0, idx - 40);
+              snippet = doc.text.slice(start, start + 120);
+              break;
+            }
+          }
+
+          return { ...doc, score, snippet };
+        }).filter(Boolean);
+
+        return results.sort((a, b) => b.score - a.score).slice(0, 10);
+      }
+
+      function render(results, query) {
+        if (!query) {
+          searchResults.classList.remove('active');
+          searchResults.innerHTML = '';
+          return;
+        }
+        if (!results.length) {
+          searchResults.innerHTML = '<div class="search-no-results">未找到相关文档</div>';
+          searchResults.classList.add('active');
+          return;
+        }
+
+        let html = '';
+        for (const r of results) {
+          const title = highlight(r.title, query);
+          const preview = highlight(r.snippet.replace(/\s+/g, ' '), query);
+          html += `<a href="${rootPath + r.path}" class="search-result-item">
+            <div class="sr-title">${title}</div>
+            <div class="sr-preview">${preview}...</div>
+          </a>`;
+        }
+        searchResults.innerHTML = html;
+        searchResults.classList.add('active');
+      }
+
+      let debounce;
+      searchInput.addEventListener('input', (e) => {
+        loadIndex();
+        clearTimeout(debounce);
+        const query = e.target.value.trim();
+        if (!query) {
+          render([], '');
+          return;
+        }
+        searchResults.innerHTML = '<div class="search-loading">搜索中...</div>';
+        searchResults.classList.add('active');
+        debounce = setTimeout(() => {
+          render(search(query), query);
+        }, 150);
+      });
+
+      // Close results on click outside
+      document.addEventListener('click', (e) => {
+        if (!e.target.closest('.sidebar-search')) {
+          searchResults.classList.remove('active');
+        }
+      });
+
+      // Keyboard navigation
+      searchInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          searchResults.classList.remove('active');
+          searchInput.blur();
+        }
+      });
+    })();
+    
+    // Back to top
+    (function() {
+      const btn = document.getElementById('backToTop');
+      if (!btn) return;
+      const toggle = () => {
+        btn.classList.toggle('visible', window.scrollY > 400);
+      };
+      window.addEventListener('scroll', toggle, { passive: true });
+      btn.addEventListener('click', () => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+    })();
+
+    // Mobile menu toggle
+    (function() {
+      const menuToggle = document.getElementById('menuToggle');
+      const sidebar = document.querySelector('.sidebar');
+      const overlay = document.getElementById('sidebarOverlay');
+      if (!menuToggle || !sidebar || !overlay) return;
+
+      menuToggle.addEventListener('click', () => {
+        sidebar.classList.toggle('open');
+        overlay.classList.toggle('active');
+      });
+
+      overlay.addEventListener('click', () => {
+        sidebar.classList.remove('open');
+        overlay.classList.remove('active');
+      });
+
+      // Close sidebar when a nav link is clicked (mobile)
+      sidebar.querySelectorAll('a').forEach(link => {
+        link.addEventListener('click', () => {
+          if (window.innerWidth <= 1024) {
+            sidebar.classList.remove('open');
+            overlay.classList.remove('active');
+          }
+        });
+      });
+    })();
+
+    // Copy code buttons
+    (function() {
+      document.querySelectorAll('.markdown-section pre').forEach(pre => {
+        const btn = document.createElement('button');
+        btn.className = 'copy-code-btn';
+        btn.textContent = '复制';
+        btn.addEventListener('click', () => {
+          const code = pre.querySelector('code')?.textContent || pre.textContent;
+          navigator.clipboard.writeText(code).then(() => {
+            btn.textContent = '已复制';
+            btn.classList.add('copied');
+            setTimeout(() => {
+              btn.textContent = '复制';
+              btn.classList.remove('copied');
+            }, 1500);
+          }).catch(() => {
+            btn.textContent = '失败';
+            setTimeout(() => { btn.textContent = '复制'; }, 1500);
+          });
+        });
+        pre.style.position = 'relative';
+        pre.appendChild(btn);
+      });
+    })();
+
+    // 引导思考 collapsible card
+    (function() {
+      document.querySelectorAll('.guide-card-header').forEach(function(header) {
+        header.addEventListener('click', function() {
+          var table = header.closest('.guide-card');
+          table.classList.toggle('collapsed');
+        });
+      });
+    })();
+
+    // Mermaid: Load dynamically + zoomable containers
+    (function() {
+      var mermaidDivs = document.querySelectorAll('.mermaid');
+      if (mermaidDivs.length === 0) return;
+
+      var cdns = [
+        '../mermaid.min.js',
+        'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js',
+        'https://unpkg.com/mermaid@10/dist/mermaid.min.js'
+      ];
+      var cdnIndex = 0;
+
+      function showError(msg) {
+        mermaidDivs.forEach(function(div) {
+          div.innerHTML = '<div class="mermaid-error" style="padding:16px;color:#dc2626;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;margin:20px 0;">' + msg + '</div>';
+          div.classList.add('rendered');
+        });
+      }
+
+      function wrapZoomable(div) {
+        if (div.parentNode.classList.contains('mermaid-zoom-container')) return;
+        if (!div.querySelector('svg')) return;
+        div.classList.add('rendered');
+
+        var wrapper = document.createElement('div');
+        wrapper.className = 'mermaid-zoom-container';
+        div.parentNode.insertBefore(wrapper, div);
+        wrapper.appendChild(div);
+
+        // Click overlay hint
+        var overlay = document.createElement('div');
+        overlay.className = 'mermaid-expand-overlay';
+        overlay.innerHTML = '<span><span class="expand-icon">⛶</span> 点击查看全图</span>';
+        wrapper.appendChild(overlay);
+
+        // Click (or double-click) to open modal
+        wrapper.addEventListener('click', function() { openMermaidModal(div); });
+      }
+
+      // ---- Mermaid Modal (full-screen viewer) ----
+      var modalInstance = null;
+
+      function openMermaidModal(sourceDiv) {
+        closeMermaidModal();
+        var clone = sourceDiv.cloneNode(true);
+        var svg = clone.querySelector('svg');
+        if (!svg) return;
+
+        // Let SVG fill width, height follows viewBox aspect ratio
+        svg.removeAttribute('width');
+        svg.removeAttribute('height');
+        svg.style.width = '100%';
+        svg.style.height = 'auto';
+        svg.style.maxWidth = 'none';
+
+        // Build modal: simple header + scrollable body
+        var modal = document.createElement('div');
+        modal.className = 'mermaid-modal active';
+
+        var content = document.createElement('div');
+        content.className = 'mermaid-modal-content';
+
+        var header = document.createElement('div');
+        header.className = 'mermaid-modal-header';
+        var chapterHint = '';
+        var prev = sourceDiv.closest('.markdown-section');
+        if (prev) {
+          var heading = prev.querySelector('h2, h3');
+          if (heading) chapterHint = heading.textContent.replace(/[#\d.]/g,'').trim().slice(0, 30);
+        }
+        header.innerHTML =
+          '<div class="modal-title-wrap">' +
+            '<span class="modal-icon">⬡</span>' +
+            '<span class="modal-title">' + (chapterHint || '图表') + '</span>' +
+          '</div>' +
+          '<button class="modal-close" title="关闭 (ESC)">✕</button>';
+
+        var body = document.createElement('div');
+        body.className = 'mermaid-modal-body';
+        body.appendChild(clone);
+
+        content.appendChild(header);
+        content.appendChild(body);
+        modal.appendChild(content);
+        document.body.appendChild(modal);
+
+        // Close handlers
+        header.querySelector('.modal-close').addEventListener('click', closeMermaidModal);
+        modal.addEventListener('click', function(e) {
+          if (e.target === modal) closeMermaidModal();
+        });
+
+        modalInstance = modal;
+      }
+
+      function closeMermaidModal() {
+        if (modalInstance) {
+          modalInstance.remove();
+          modalInstance = null;
+        }
+      }
+
+      document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') closeMermaidModal();
+      });
+
+      function tryLoadMermaid() {
+        if (cdnIndex >= cdns.length) {
+          showError('❌ 无法加载图表库，请检查网络连接后刷新页面');
+          return;
+        }
+
+        var script = document.createElement('script');
+        script.src = cdns[cdnIndex];
+        script.onload = function() {
+          if (typeof mermaid === 'undefined') {
+            showError('❌ 图表库加载失败');
+            return;
+          }
+          try {
+            mermaid.initialize({
+              startOnLoad: false,
+              theme: 'base',
+              themeVariables: {
+                fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif',
+                primaryColor: '#ffffff',
+                primaryTextColor: '#1e293b',
+                primaryBorderColor: '#e2e8f0',
+                lineColor: '#64748b',
+                secondaryColor: '#f1f5f9',
+                tertiaryColor: '#f8fafc',
+              },
+              securityLevel: 'loose',
+              flowchart: {
+                curve: 'basis',
+                padding: 15,
+                nodeSpacing: 50,
+                rankSpacing: 80,
+              },
+              maxTextSize: 50000,
+            });
+            mermaid.run({ querySelector: '.mermaid' }).then(function() {
+              mermaidDivs.forEach(wrapZoomable);
+            });
+          } catch(e) {
+            showError('❌ 图表渲染失败: ' + e.message);
+          }
+        };
+        script.onerror = function() {
+          cdnIndex++;
+          tryLoadMermaid();
+        };
+        document.head.appendChild(script);
+      }
+
+      tryLoadMermaid();
+    })();
+
+  </script>
+</body>
+</html>

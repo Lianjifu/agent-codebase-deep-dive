@@ -1,0 +1,2002 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Claude Code — 启动流程</title>
+  <style>
+    /* ===== Reset & Base ===== */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { font-size: 62.5%; }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+      font-size: 15px;
+      color: #1e293b;
+      line-height: 1.7;
+      background: #ffffff;
+      -webkit-font-smoothing: antialiased;
+    }
+    
+    /* ===== Layout ===== */
+    .app {
+      display: flex;
+      min-height: 100vh;
+    }
+    
+    /* ===== Sidebar ===== */
+    .sidebar {
+      width: 280px;
+      min-width: 280px;
+      background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+      border-right: 1px solid #e2e8f0;
+      position: fixed;
+      top: 0;
+      left: 0;
+      bottom: 0;
+      display: flex;
+      flex-direction: column;
+    }
+    .sidebar::-webkit-scrollbar { width: 4px; }
+    .sidebar::-webkit-scrollbar-track { background: transparent; }
+    .sidebar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+    .sidebar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+    .sidebar-header {
+      padding: 20px 20px 14px;
+      border-bottom: 1px solid #e2e8f0;
+      flex-shrink: 0;
+    }
+
+    .sidebar-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 15px;
+      font-weight: 700;
+      color: #0f172a;
+      text-decoration: none;
+      letter-spacing: -0.02em;
+    }
+
+    .sidebar-brand .icon {
+      width: 30px;
+      height: 30px;
+      background: linear-gradient(135deg, #3b82f6 0%, #0ea5e9 100%);
+      border-radius: 7px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 15px;
+      flex-shrink: 0;
+    }
+
+    .sidebar-search {
+      padding: 12px 20px;
+      flex-shrink: 0;
+    }
+
+    .search-box {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 8px 12px;
+      transition: all 0.2s ease;
+    }
+
+    .search-box:focus-within {
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+
+    .search-box input {
+      flex: 1;
+      border: none;
+      outline: none;
+      font-size: 13px;
+      color: #1e293b;
+      background: transparent;
+    }
+
+    .search-box input::placeholder {
+      color: #94a3b8;
+    }
+
+    .search-box svg {
+      width: 15px;
+      height: 15px;
+      color: #94a3b8;
+      flex-shrink: 0;
+    }
+
+    .sidebar-nav {
+      flex: 1;
+      padding: 4px 8px;
+      overflow-y: auto;
+    }
+
+    .sidebar-nav ul, .sidebar-nav li {
+      list-style: none;
+    }
+
+    .quick-links {
+      display: flex;
+      gap: 6px;
+      padding: 0 8px 10px;
+      flex-shrink: 0;
+    }
+
+    .quick-links a {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      padding: 7px 10px;
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 7px;
+      font-size: 12px;
+      font-weight: 500;
+      color: #64748b;
+      text-decoration: none;
+      transition: all 0.15s ease;
+    }
+
+    .quick-links a:hover {
+      color: #3b82f6;
+      border-color: #3b82f6;
+      background: #eff6ff;
+    }
+
+    .quick-links a .ql-icon {
+      font-size: 13px;
+      line-height: 1;
+    }
+
+    .sidebar-section {
+      margin-bottom: 2px;
+    }
+
+    .sidebar-section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 9px 12px 9px 14px;
+      cursor: pointer;
+      user-select: none;
+      border-radius: 8px;
+      margin: 0 2px;
+      transition: background 0.15s ease;
+    }
+
+    .sidebar-section-header:hover {
+      background: rgba(59, 130, 246, 0.06);
+    }
+
+    .sidebar-section-header.open {
+      background: rgba(59, 130, 246, 0.08);
+    }
+
+    .section-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+    }
+
+    .section-num {
+      width: 22px;
+      height: 22px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #3b82f6 0%, #0ea5e9 100%);
+      border-radius: 5px;
+      font-size: 10px;
+      font-weight: 700;
+      color: #ffffff;
+      flex-shrink: 0;
+    }
+
+    .section-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: #1e293b;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .sidebar-section-header .arrow {
+      width: 16px;
+      height: 16px;
+      color: #94a3b8;
+      transition: transform 0.2s ease, color 0.15s ease;
+      flex-shrink: 0;
+    }
+
+    .sidebar-section-header:hover .arrow {
+      color: #64748b;
+    }
+
+    .sidebar-section-header.open .arrow {
+      transform: rotate(90deg);
+      color: #3b82f6;
+    }
+
+    .sidebar-section-items {
+      overflow: hidden;
+      transition: max-height 0.2s ease, opacity 0.15s ease;
+      max-height: 2000px;
+      opacity: 1;
+    }
+    .sidebar-section-items.collapsed {
+      max-height: 0;
+      opacity: 0;
+    }
+
+    .sidebar-section-items ul {
+      padding: 2px 6px 6px;
+    }
+
+    .sidebar-section-items li {
+      margin: 1px 0;
+    }
+
+    .sidebar-section-items a {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 10px;
+      font-size: 13px;
+      color: #64748b;
+      text-decoration: none;
+      border-radius: 6px;
+      transition: all 0.15s ease;
+      position: relative;
+    }
+
+    .sidebar-section-items a:hover {
+      color: #3b82f6;
+      background: rgba(59, 130, 246, 0.06);
+    }
+
+    .sidebar-section-items a.active {
+      color: #1e293b;
+      background: rgba(59, 130, 246, 0.1);
+      font-weight: 500;
+    }
+    .sidebar-section-items a.active::before {
+      content: '';
+      position: absolute;
+      left: -6px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 3px;
+      height: 18px;
+      border-radius: 2px;
+      background: #3b82f6;
+    }
+    .sidebar-section-items a.active .num {
+      color: #3b82f6;
+    }
+    .sidebar-section-items a[href*="APPENDIX"] {
+      font-size: 12px;
+      color: #94a3b8;
+      padding-left: 14px;
+    }
+    .sidebar-section-items a[href*="APPENDIX"]:hover {
+      color: #3b82f6;
+    }
+    .sidebar-section-items a[href*="APPENDIX"] .num {
+      display: none;
+    }
+
+    .sidebar-section-items a .num {
+      font-size: 11px;
+      font-weight: 500;
+      color: #94a3b8;
+      min-width: 26px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .sidebar-divider {
+      height: 1px;
+      background: linear-gradient(90deg, transparent, #e2e8f0, transparent);
+      margin: 6px 10px 10px;
+    }
+
+    .sidebar-external {
+      padding: 0 8px 12px;
+      flex-shrink: 0;
+    }
+
+    .sidebar-external a {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 9px 12px;
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 500;
+      color: #475569;
+      text-decoration: none;
+      transition: all 0.15s ease;
+    }
+
+    .sidebar-external a:hover {
+      border-color: #3b82f6;
+      color: #3b82f6;
+      background: #eff6ff;
+    }
+
+    .sidebar-external a svg {
+      width: 15px;
+      height: 15px;
+      opacity: 0.5;
+      flex-shrink: 0;
+    }
+    .sidebar-external a:hover svg {
+      opacity: 0.8;
+    }
+    
+    /* ===== Content ===== */
+    .content {
+      flex: 1;
+      margin-left: 280px;
+      padding: 48px 64px;
+      min-height: 100vh;
+      max-width: 1400px;
+    }
+
+    /* ===== Typography ===== */
+    .markdown-section h1 {
+      font-size: 28px;
+      font-weight: 700;
+      color: #0f172a;
+      letter-spacing: -0.02em;
+      margin: 0 0 24px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    
+    .markdown-section h2 {
+      font-size: 20px;
+      font-weight: 600;
+      color: #1e293b;
+      letter-spacing: -0.01em;
+      margin: 40px 0 16px;
+    }
+    
+    .markdown-section h3 {
+      font-size: 16px;
+      font-weight: 600;
+      color: #3b82f6;
+      margin: 28px 0 12px;
+    }
+    
+    .markdown-section h4 {
+      font-size: 15px;
+      font-weight: 600;
+      color: #1e293b;
+      margin: 20px 0 8px;
+    }
+    .markdown-section h1, .markdown-section h2, .markdown-section h3, .markdown-section h4 {
+      position: relative;
+    }
+    .markdown-section .heading-anchor {
+      position: absolute;
+      left: -20px;
+      top: 50%;
+      transform: translateY(-50%);
+      opacity: 0;
+      color: #94a3b8;
+      text-decoration: none;
+      font-size: 0.8em;
+      font-weight: 400;
+      transition: opacity 0.15s ease;
+      padding-right: 4px;
+    }
+    .markdown-section h1:hover .heading-anchor,
+    .markdown-section h2:hover .heading-anchor,
+    .markdown-section h3:hover .heading-anchor,
+    .markdown-section h4:hover .heading-anchor {
+      opacity: 1;
+    }
+    
+    .markdown-section p {
+      margin: 12px 0;
+      color: #475569;
+    }
+
+    /* ===== Thinking Note ===== */
+    .thinking-note {
+      background: #fffbeb;
+      border-left: 4px solid #f59e0b;
+      border-radius: 0 12px 12px 0;
+      padding: 20px 24px;
+      margin: 24px 0;
+    }
+    .thinking-note h3 {
+      margin: 0 0 12px;
+      padding: 0;
+      border: none;
+      font-size: 14px;
+      font-weight: 700;
+      color: #d97706;
+      letter-spacing: 0.03em;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .thinking-note p {
+      margin: 8px 0;
+      font-size: 14px;
+      line-height: 1.8;
+      color: #78350f;
+    }
+    .thinking-note strong {
+      display: inline-block;
+      margin-top: 6px;
+      color: #92400e;
+    }
+    .thinking-note strong:first-of-type {
+      margin-top: 0;
+    }
+    .thinking-note ul {
+      margin: 4px 0 4px 0;
+      padding-left: 18px;
+      list-style: none;
+    }
+    .thinking-note li {
+      margin: 4px 0;
+      padding-left: 14px;
+      position: relative;
+      color: #78350f;
+      font-size: 14px;
+      line-height: 1.7;
+    }
+    .thinking-note li::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 10px;
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: #d97706;
+      opacity: 0.5;
+    }
+    .thinking-note li strong {
+      color: #92400e;
+    }
+
+    .markdown-section a {
+      color: #3b82f6;
+      text-decoration: none;
+      font-weight: 500;
+    }
+    
+    .markdown-section a:hover {
+      text-decoration: underline;
+    }
+    
+    .markdown-section code {
+      background: #f1f5f9;
+      color: #0f172a;
+      padding: 2px 6px;
+      font-size: 13px;
+      border-radius: 4px;
+      font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Consolas', monospace;
+    }
+    
+    .markdown-section pre {
+      background: #1e293b;
+      border-radius: 12px;
+      padding: 20px 24px;
+      overflow-x: auto;
+      margin: 20px 0;
+    }
+    
+    .markdown-section pre code {
+      background: transparent;
+      color: #e2e8f0;
+      padding: 0;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+    
+    .markdown-section blockquote {
+      background: #f8fafc;
+      border-left: 4px solid #3b82f6;
+      border-radius: 0 8px 8px 0;
+      padding: 16px 20px;
+      margin: 20px 0;
+    }
+    
+    .markdown-section blockquote p {
+      margin: 0;
+      color: #475569;
+    }
+    
+    .markdown-section table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0;
+      font-size: 14px;
+      border-radius: 12px;
+      
+      border: 1px solid #e2e8f0;
+    }
+    
+    .markdown-section table th {
+      background: #f8fafc;
+      font-weight: 600;
+      text-align: left;
+      padding: 12px 16px;
+      color: #475569;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    
+    .markdown-section table td {
+      padding: 12px 16px;
+      border-top: 1px solid #e2e8f0;
+    }
+    
+    .markdown-section table tr:nth-child(2n) td {
+      background: #f8fafc;
+    }
+    
+    .markdown-section ul, .markdown-section ol {
+      padding-left: 24px;
+      margin: 12px 0;
+    }
+    
+    .markdown-section li {
+      margin: 6px 0;
+      color: #475569;
+    }
+    
+    .markdown-section hr {
+      height: 1px;
+      background: #e2e8f0;
+      border: none;
+      margin: 32px 0;
+    }
+    
+    .markdown-section img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 8px;
+    }
+    
+    /* ===== Mermaid Diagrams ===== */
+    .mermaid {
+      background: #f8fafc;
+      border-radius: 12px;
+      padding: 24px;
+      margin: 20px 0;
+      overflow-x: auto;
+      border: 1px solid #e2e8f0;
+      display: block;
+    }
+    .mermaid.rendered {
+      display: block;
+    }
+    .mermaid svg {
+      max-width: 100%;
+      height: auto;
+    }
+    .mermaid-error {
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      border-radius: 8px;
+      padding: 16px;
+      color: #dc2626;
+      margin: 20px 0;
+    }
+    .mermaid-loading {
+      background: #f8fafc;
+      border: 1px dashed #e2e8f0;
+      border-radius: 12px;
+      padding: 24px;
+      margin: 20px 0;
+      color: #64748b;
+      text-align: center;
+    }
+
+    
+    
+
+/* ===== Click-to-Expand Mermaid ===== */
+    .mermaid-zoom-container {
+      position: relative;
+      overflow: hidden;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      margin: 20px 0;
+      background: #f8fafc;
+      cursor: pointer;
+      min-height: 100px;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+    .mermaid-zoom-container:hover {
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 2px rgba(59,130,246,0.1);
+    }
+    .mermaid-zoom-container .mermaid {
+      margin: 0;
+      border: none;
+      border-radius: 0;
+      background: transparent;
+    }
+    .mermaid-zoom-container .mermaid svg {
+      display: block;
+    }
+    .mermaid-expand-overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+      background: rgba(15,23,42,0.03);
+    }
+    .mermaid-zoom-container:hover .mermaid-expand-overlay {
+      opacity: 1;
+    }
+    .mermaid-expand-overlay span {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 18px;
+      background: rgba(255,255,255,0.95);
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 500;
+      color: #3b82f6;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+      backdrop-filter: blur(4px);
+      pointer-events: none;
+      transition: transform 0.15s ease;
+    }
+    .mermaid-zoom-container:hover .mermaid-expand-overlay span {
+      transform: translateY(-2px);
+    }
+    .mermaid-expand-overlay .expand-icon {
+      font-size: 15px;
+    }
+
+    /* ===== Mermaid Modal ===== */
+    @keyframes modal-fade-in {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    @keyframes modal-content-in {
+      from { opacity: 0; transform: scale(0.95) translateY(8px); }
+      to { opacity: 1; transform: scale(1) translateY(0); }
+    }
+    .mermaid-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 1000;
+      background: rgba(15, 23, 42, 0.65);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      animation: modal-fade-in 0.2s ease;
+    }
+    .mermaid-modal.active {
+      display: flex;
+    }
+    .mermaid-modal-content {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      max-width: 90vw;
+      max-height: 90vh;
+      background: #fff;
+      border-radius: 14px;
+      box-shadow: 0 25px 80px rgba(0,0,0,0.3);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      animation: modal-content-in 0.2s ease;
+    }
+    .mermaid-modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 20px;
+      border-bottom: 1px solid #e2e8f0;
+      flex-shrink: 0;
+      background: #fafbfc;
+      gap: 12px;
+    }
+    .mermaid-modal-header .modal-title-wrap {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+    }
+    .mermaid-modal-header .modal-icon {
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      background: linear-gradient(135deg, #3b82f6, #0ea5e9);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      flex-shrink: 0;
+    }
+    .mermaid-modal-header .modal-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: #1e293b;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .mermaid-modal-header .modal-hint {
+      font-size: 12px;
+      color: #94a3b8;
+      font-weight: 400;
+      margin-left: 4px;
+    }
+    .mermaid-modal-header .modal-actions {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      flex-shrink: 0;
+    }
+    .mermaid-modal-header .modal-close {
+      width: 30px;
+      height: 30px;
+      border: none;
+      border-radius: 6px;
+      background: transparent;
+      color: #94a3b8;
+      font-size: 17px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s ease;
+      margin-left: 4px;
+    }
+    .mermaid-modal-header .modal-close:hover {
+      background: #fee2e2;
+      color: #dc2626;
+    }
+    .mermaid-modal-body {
+      flex: 1;
+      overflow: auto;
+      position: relative;
+      user-select: auto;
+      background: #f8fafc
+        repeating-linear-gradient(
+          0deg, transparent, transparent 23px, #f1f5f9 23px, #f1f5f9 24px
+        ),
+        repeating-linear-gradient(
+          90deg, transparent, transparent 23px, #f1f5f9 23px, #f1f5f9 24px
+        );
+    }
+    .mermaid-modal-body svg {
+      display: block;
+    }
+    @media (max-width: 768px) {
+      .mermaid-modal { padding: 12px; }
+      .mermaid-modal-content { max-width: 100vw; max-height: 100vh; border-radius: 10px; }
+      .mermaid-modal-header { padding: 10px 14px; }
+    }
+    @media (max-width: 480px) {
+      .mermaid-modal { padding: 0; }
+      .mermaid-modal-content { border-radius: 0; max-width: 100vw; max-height: 100vh; }
+    }
+
+
+/* ===== 引导思考 - Note-style Card ===== */
+    tr.guide-card-header td {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      width: 100%;
+      padding: 12px 24px !important;
+      font-size: 13px;
+      font-weight: 700;
+      color: #6366f1;
+      letter-spacing: 0.04em;
+      background: transparent !important;
+      border: none !important;
+    }
+    table.guide-card {
+      border-collapse: separate;
+      border-spacing: 0;
+      font-size: 14px;
+      margin: 0 0 24px;
+      overflow: hidden;
+      display: block;
+      width: 100%;
+      background: #f8faff;
+      border-left: 4px solid #6366f1;
+      border-radius: 0 12px 12px 0;
+      box-shadow: 0 1px 3px rgba(99, 102, 241, 0.08);
+    }
+    /* Hide original table header ("思考维度 | 内容") */
+    table.guide-card thead {
+      display: none;
+    }
+    /* Collapse/expand behavior */
+    table.guide-card.collapsed tbody tr:not(.guide-card-header) {
+      display: none;
+    }
+    table.guide-card tbody tr.guide-card-header {
+      cursor: pointer;
+      user-select: none;
+    }
+    table.guide-card tbody tr.guide-card-header:hover {
+      background: rgba(99, 102, 241, 0.04);
+    }
+    .collapse-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 18px;
+      height: 18px;
+      flex-shrink: 0;
+      transition: transform 0.2s ease;
+    }
+    .collapse-icon::before {
+      content: '';
+      display: block;
+      width: 6px;
+      height: 6px;
+      border-right: 2px solid #a5b4fc;
+      border-bottom: 2px solid #a5b4fc;
+      transform: rotate(-45deg);
+      margin-top: -3px;
+      transition: transform 0.2s ease, border-color 0.2s ease;
+    }
+    table.guide-card:not(.collapsed) .collapse-icon::before {
+      transform: rotate(45deg);
+      margin-top: 3px;
+      border-color: #6366f1;
+    }
+    tr.guide-card-header:hover .collapse-icon::before {
+      border-color: #6366f1;
+    }
+    .collapse-hint {
+      font-size: 11px;
+      color: #a5b4fc;
+      font-weight: 400;
+      transition: color 0.2s ease;
+    }
+    table.guide-card:not(.collapsed) .collapse-hint {
+      display: none;
+    }
+    tr.guide-card-header:hover .collapse-hint {
+      color: #6366f1;
+    }
+    table.guide-card tbody,
+    table.guide-card tbody tr {
+      display: block;
+      width: 100%;
+    }
+    table.guide-card tbody td {
+      display: block;
+      width: 100%;
+      padding: 0 24px 14px;
+      border: none;
+      vertical-align: top;
+      line-height: 1.7;
+      color: #475569;
+    }
+    table.guide-card tbody td:first-child {
+      padding: 12px 24px 2px;
+      font-weight: 600;
+      font-size: 12px;
+      color: #6366f1;
+      background: transparent;
+      width: 100%;
+      border: none;
+      letter-spacing: 0.03em;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    table.guide-card tbody td:first-child::before {
+      display: none;
+    }
+    /* Content lists inside cells */
+    table.guide-card tbody td ul {
+      margin: 0;
+      padding-left: 16px;
+      list-style: none;
+    }
+    table.guide-card tbody td > ul > li {
+      position: relative;
+      padding-left: 14px;
+      margin-bottom: 4px;
+      font-size: 13.5px;
+      color: #475569;
+      line-height: 1.7;
+    }
+    table.guide-card tbody td > ul > li::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 10px;
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: #c7d2fe;
+    }
+    table.guide-card tbody td > ul > li:last-child {
+      margin-bottom: 0;
+    }
+    table.guide-card tbody td ul ul {
+      padding-left: 14px;
+      margin-top: 2px;
+    }
+    table.guide-card tbody td ul ul li {
+      position: relative;
+      padding-left: 12px;
+      margin-bottom: 2px;
+      font-size: 13px;
+      color: #64748b;
+      line-height: 1.6;
+    }
+    table.guide-card tbody td ul ul li::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 9px;
+      width: 3px;
+      height: 3px;
+      border-radius: 50%;
+      background: #cbd5e1;
+    }
+    table.guide-card tbody td strong,
+    table.guide-card tbody td:first-child strong {
+      color: #4338ca;
+      font-weight: 600;
+    }
+    table.guide-card tbody td code {
+      background: #eef2ff;
+      color: #6366f1;
+      font-size: 12.5px;
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-weight: 500;
+    }
+
+/* ===== Navigation ===== */
+    .nav {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 48px;
+      padding-top: 24px;
+      border-top: 1px solid #e2e8f0;
+    }
+    
+    .nav a {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 10px 18px;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      color: #475569;
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 500;
+      transition: all 0.15s ease;
+    }
+    
+    .nav a:hover {
+      background: #3b82f6;
+      color: #fff;
+      border-color: #3b82f6;
+    }
+    
+    /* ===== Search Results ===== */
+    .search-results {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.12);
+      max-height: 400px;
+      overflow-y: auto;
+      z-index: 100;
+      display: none;
+      margin: 4px 0 0;
+    }
+    .search-results.active { display: block; }
+    .search-result-item {
+      display: block;
+      padding: 10px 14px;
+      text-decoration: none;
+      border-bottom: 1px solid #f1f5f9;
+      transition: background 0.15s ease;
+    }
+    .search-result-item:last-child { border-bottom: none; }
+    .search-result-item:hover { background: #f8fafc; }
+    .search-result-item .sr-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: #1e293b;
+      margin-bottom: 2px;
+    }
+    .search-result-item .sr-preview {
+      font-size: 12px;
+      color: #64748b;
+      line-height: 1.4;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .search-result-item .sr-path {
+      font-size: 11px;
+      color: #94a3b8;
+      margin-top: 2px;
+    }
+    .search-no-results {
+      padding: 16px;
+      text-align: center;
+      color: #94a3b8;
+      font-size: 13px;
+    }
+    .search-loading {
+      padding: 12px;
+      text-align: center;
+      color: #94a3b8;
+      font-size: 12px;
+    }
+    .sidebar-search { position: relative; }
+
+    /* ===== Copy Code Button ===== */
+    .code-block-wrapper {
+      position: relative;
+    }
+    .copy-code-btn {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      padding: 4px 10px;
+      background: rgba(255,255,255,0.1);
+      color: #94a3b8;
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 6px;
+      font-size: 12px;
+      cursor: pointer;
+      opacity: 0;
+      transition: opacity 0.15s ease, background 0.15s ease, color 0.15s ease;
+    }
+    .markdown-section pre:hover .copy-code-btn,
+    .copy-code-btn:focus {
+      opacity: 1;
+    }
+    .copy-code-btn:hover {
+      background: rgba(255,255,255,0.2);
+      color: #e2e8f0;
+    }
+    .copy-code-btn.copied {
+      background: #22c55e;
+      color: #fff;
+      border-color: #22c55e;
+      opacity: 1;
+    }
+
+    /* ===== Back to Top ===== */
+    .back-to-top {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      width: 40px;
+      height: 40px;
+      background: #3b82f6;
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 12px rgba(59,130,246,0.3);
+      transition: opacity 0.2s ease, transform 0.2s ease;
+      z-index: 80;
+    }
+    .back-to-top.visible { display: flex; }
+    .back-to-top:hover { transform: translateY(-2px); }
+    .back-to-top svg { width: 20px; height: 20px; }
+
+    /* ===== Mobile Menu Toggle ===== */
+    .menu-toggle {
+      display: none;
+      position: fixed;
+      top: 16px;
+      left: 16px;
+      z-index: 200;
+      width: 40px;
+      height: 40px;
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    .menu-toggle svg {
+      width: 20px;
+      height: 20px;
+      color: #475569;
+    }
+    .sidebar-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.3);
+      z-index: 90;
+    }
+    .sidebar-overlay.active { display: block; }
+
+    /* ===== Mobile ===== */
+    @media (max-width: 1024px) {
+      .menu-toggle { display: flex; }
+      .sidebar { transform: translateX(-100%); transition: transform 0.2s ease; z-index: 100; }
+      .sidebar.open { transform: translateX(0); }
+      .content { margin-left: 0; padding: 24px 20px; padding-top: 64px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <nav class="sidebar">
+      <div class="sidebar-header">
+        <a href="../index.html" class="sidebar-brand">
+          <span class="icon">📚</span>
+          LLM Agent 源码学习
+        </a>
+      </div>
+      
+      <div class="sidebar-search">
+        <div class="search-box">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"/>
+            <path d="M21 21l-4.35-4.35"/>
+          </svg>
+          <input type="text" placeholder="搜索文档..." id="searchInput" autocomplete="off">
+        </div>
+        <div class="search-results" id="searchResults"></div>
+      </div>
+      
+      <div class="quick-links">
+        <a href="../index.html">🏠 首页</a>
+        <a href="../SUMMARY.html">📑 目录</a>
+      </div>
+      
+      <div class="sidebar-nav">
+        <div class="sidebar-section">
+        <div class="sidebar-section-header">
+          <span class="section-title">
+            <span class="section-num">1</span>
+            <span class="section-name">Claude Code</span>
+          </span>
+          <svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+        </div>
+        <div class="sidebar-section-items"><ul><li><a href="./01-OVERVIEW.html"><span class="num">1.0</span>全景概览</a></li><li><a href="./02-BOOTSTRAP.html"><span class="num">2.0</span>启动流程</a></li><li><a href="./03-TYPE-SYSTEM.html"><span class="num">3.0</span>类型系统设计</a></li><li><a href="./04-QUERY-ENGINE.html"><span class="num">4.0</span>查询引擎</a></li><li><a href="./05-MESSAGE-SYSTEM.html"><span class="num">5.0</span>消息系统</a></li><li><a href="./06-STREAMING.html"><span class="num">6.0</span>流式处理</a></li><li><a href="./07-TOOL-ARCHITECTURE.html"><span class="num">7.0</span>工具架构</a></li><li><a href="./08-BUILTIN-TOOLS.html"><span class="num">8.0</span>内置工具</a></li><li><a href="./09-TOOL-EXECUTION.html"><span class="num">9.0</span>工具执行</a></li><li><a href="./10-AGENT-MODEL.html"><span class="num">10.0</span>Agent 模型</a></li><li><a href="./11-SUBAGENT.html"><span class="num">11.0</span>子代理</a></li><li><a href="./12-SKILL-SYSTEM.html"><span class="num">12.0</span>技能系统</a></li><li><a href="./13-PERMISSION-MODEL.html"><span class="num">13.0</span>权限模型</a></li><li><a href="./14-BASH-SECURITY.html"><span class="num">14.0</span>Bash 安全</a></li><li><a href="./15-MCP-PROTOCOL.html"><span class="num">15.0</span>MCP 协议</a></li><li><a href="./16-MCP-AUTH.html"><span class="num">16.0</span>MCP 认证</a></li><li><a href="./17-STATE-MANAGEMENT.html"><span class="num">17.0</span>状态管理</a></li><li><a href="./18-CONVERSATION.html"><span class="num">18.0</span>会话管理</a></li><li><a href="./19-INK-REACT.html"><span class="num">19.0</span>Ink React</a></li><li><a href="./20-REPL.html"><span class="num">20.0</span>REPL</a></li><li><a href="./21-PERFORMANCE.html"><span class="num">21.0</span>性能优化</a></li><li><a href="./22-TESTING.html"><span class="num">22.0</span>测试</a></li><li><a href="./23-BUILD-SYSTEM.html"><span class="num">23.0</span>构建系统</a></li><li><a href="./24-DESIGN-PATTERNS.html"><span class="num">24.0</span>设计模式</a></li><li><a href="./25-PHILOSOPHY.html"><span class="num">25.0</span>哲学思想</a></li><li><a href="./26-COGNITIVE-LOOP.html"><span class="num">26.0</span>认知循环</a></li><li><a href="./APPENDIX-A-GLOSSARY.html">附录A 术语表</a></li><li><a href="./APPENDIX-B-SOURCE-MAP.html">附录B 源码导航</a></li></ul></div></div>
+      </div>
+
+      <div class="sidebar-external">
+        <a href="https://github.com/Hyper66666/claude-code-sourcemap" target="_blank">
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+          </svg>
+          GitHub 源码
+        </a>
+      </div>
+    </nav>
+    <button class="back-to-top" id="backToTop" aria-label="回到顶部" title="回到顶部">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M18 15l-6-6-6 6"/>
+      </svg>
+    </button>
+    <button class="menu-toggle" id="menuToggle" aria-label="打开菜单">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M3 12h18M3 6h18M3 18h18"/>
+      </svg>
+    </button>
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+    <main class="content">
+      <article class="markdown-section">
+        <h1>Claude Code — 启动流程</h1>
+<blockquote>
+<p>“一个 CLI 工具的启动时间决定了它能否被程序员日常使用。每多 100 毫秒的等待，就多一份切换回浏览器的冲动。”</p>
+</blockquote>
+<table class="guide-card collapsed">
+<thead>
+<tr>
+<th>思考维度</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody>
+<tr class="guide-card-header"><td colspan="2"><span class="collapse-icon"></span>引导思考 <span class="collapse-hint">展开</span></td></tr><tr>
+<td><strong>它为什么存在</strong></td>
+<td><ul><li>用户敲完 claude 到出现提示符这 300ms 里发生了什么——这章就是在讲这个</li><li>一个 CLI 工具怎么从进程启动到完全就绪——编译时优化、并行预取、延迟加载，300ms 内全搞定</li></ul></td>
+</tr>
+<tr>
+<td><strong>它解决什么问题</strong></td>
+<td><ul><li>没有优化的 Node CLI 要 1-2 秒——等得人心烦</li><li>Claude Code 通过各种技术压到 300ms——到了&quot;瞬间响应&quot;的感知阈值</li></ul></td>
+</tr>
+<tr>
+<td><strong>它在系统中的位置</strong></td>
+<td><ul><li>沿 entrypoints/cli.tsx → main.tsx → init() 这条路径展开</li><li>在五层架构的 L5 层，REPL 交互开始之前——后面所有功能都依赖这个阶段完成的初始化</li></ul></td>
+</tr>
+<tr>
+<td><strong>它如何工作</strong></td>
+<td><ul><li>快速路径优先：--version 直接返回，连模块都不加载——零成本</li><li>并行预取：import 链在走的时候，后台已经把 MDM 和 Keychain 数据读好了——等待时间被藏起来了</li><li>分阶段：安全变量在信任确认前设好，完整变量在确认后设，迁移在配置加载后——每一步时序都有道理</li></ul></td>
+</tr>
+<tr>
+<td><strong>它如何实现</strong></td>
+<td><ul><li>cli.tsx 先判断你是要 --version、--mcp 还是正常启动，不同路径不同处理</li><li>main.tsx 在最顶部就启动了异步 I/O——利用 import 链的执行窗口</li><li>init() 被 memoize 保证只跑一次，里面是 enableConfigs → applySafeConfig → preconnectAnthropicApi 等 13+ 步</li><li>feature() 编译时把没启用的代码分支整个砍掉——内部特性不可能出现在外部产物里</li></ul></td>
+</tr>
+<tr>
+<td><strong>不同平台如何做</strong></td>
+<td>在启动策略上，四个平台选择了截然不同的路径：<br><br><ul><li><strong>Claude Code</strong>——Bun 单二进制，编译时 DCE，启动时并行预取 + 预连接，~300ms。核心思路：把能并行的都塞进 import 链的间隙</li><li><strong>Cursor Agent</strong>——Electron 壳层 + 编辑器体系，冷启动 2-5 秒，但后续复用长连接</li><li><strong>OpenClaw</strong>——发现节点、建集群、同步记忆，秒级到十秒级，但加入后就能被调度</li><li><strong>Harness Agent</strong>——嵌入式 CI/CD 组件，启动时间受流水线复杂度影响，但对冷启动没那么敏感</li></ul></td>
+</tr>
+<tr>
+<td><strong>优势是什么？</strong></td>
+<td><ul><li><strong>优势</strong><ul><li>300ms 几乎感觉不到等待</li><li>并行预取把 I/O 藏进 import 链，设计很巧妙</li><li>feature() 宏又是安全又是性能——一举两得</li><li>迁移系统让跨版本升级不炸</li></ul></li></ul></td>
+</tr>
+</tbody></table>
+<hr>
+<h2>2.1 入口点：从 cli.tsx 到 main.tsx</h2>
+<p>启动流程始于 <code>src/entrypoints/cli.tsx</code>，设计体现<strong>快速路径优先</strong>原则：</p>
+<pre><code class="language-typescript">// src/entrypoints/cli.tsx
+async function main(): Promise&lt;void&gt; {
+  const args = process.argv.slice(2);
+
+  // 快速路径：--version 零模块加载
+  if (args.length === 1 &amp;&amp; (args[0] === '--version' || args[0] === '-v')) {
+    console.log(`${MACRO.VERSION} (Claude Code)`);
+    return;  // 零动态 import
+  }
+
+  const { main } = await import('../main.js');
+  await main();
+}</code></pre><p><code>--version</code> 甚至不加载 <code>startupProfiler</code> 模块，<code>MACRO.VERSION</code> 是构建时内联常量。</p>
+<p><strong>环境预设</strong>（任何模块加载前执行）：</p>
+<pre><code class="language-typescript">// 远程容器环境下增大 V8 堆上限
+if (process.env.CLAUDE_CODE_REMOTE === 'true') {
+  process.env.NODE_OPTIONS = `--max-old-space-size=8192`;
+}</code></pre><h3>启动路径分流</h3>
+<div class="mermaid">%%{init: {"theme": "base", "themeVariables":{"primaryColor":"#3b82f6","primaryTextColor":"#1e293b","primaryBorderColor":"#60a5fa","lineColor":"#94a3b8","secondaryColor":"#f1f5f9","tertiaryColor":"#ffffff","fontFamily":"-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif"}}}%%
+graph TD
+    A["cli.tsx&lt;br/&gt;二进制入口"] --&gt;|"--version"| B["直接输出&lt;br/&gt;零 import"]
+    A --&gt;|"--dump-system-prompt"| C["加载最小依赖&lt;br/&gt;输出提示后退出"]
+    A --&gt;|"--claude-in-chrome-mcp"| D["启动 Chrome MCP&lt;br/&gt;独立服务"]
+    A --&gt;|"默认路径"| E["import main.tsx"]
+    E --&gt; F["main()"]
+    F --&gt; G["eagerLoadSettings()"]
+    G --&gt; H["Commander.js 解析"]
+    H --&gt;|"交互模式"| I["setup() → launchRepl()"]
+    H --&gt;|"-p/--print"| J["runHeadless()"]
+    H --&gt;|"mcp serve"| K["MCP 服务端"]</div><div class="thinking-note"><h3>思考笔记</h3>
+<p>&quot;快速路径优先&quot;是 CLI 设计的黄金法则——不是优化问题，而是用户体验的分水岭。</p>
+<ul>
+<li><code>--version</code> 零模块加载看起来简单，但实际上决定了用户对 CLI 的第一印象。300ms vs 2 秒，区别就是&quot;瞬间&quot;和&quot;等一会儿&quot;。</li>
+<li>入口点分流的设计意味着不同使用场景走完全不同的代码路径——<code>--version</code>、<code>--mcp</code>、交互模式各有各的入口，互不干扰。</li>
+<li>这个看似简单的分叉逻辑，是整个启动优化的根基——没有这个，后面的所有优化都只能靠&quot;把一切加载快点&quot;这种单一思路。</li>
+</ul>
+</div><hr>
+<h2>2.2 并行预取：与时间赛跑</h2>
+<p><code>main.tsx</code> 前 20 行利用 <strong>ES 模块 import 同步求值但内部异步操作后台执行</strong> 的特性：</p>
+<pre><code class="language-typescript">// src/main.tsx — 文件最顶部（所有 import 之前）
+import { profileCheckpoint, profileReport } from './utils/startupProfiler.js';
+profileCheckpoint('main_tsx_entry');
+
+import { startMdmRawRead } from './utils/settings/mdm/rawRead.js';
+startMdmRawRead();  // 启动 MDM 子进程（异步）
+
+import { startKeychainPrefetch } from './utils/secureStorage/keychainPrefetch.js';
+startKeychainPrefetch();  // 并行启动两个 keychain 读取</code></pre><h3>并行预取时间线</h3>
+<div class="mermaid">%%{init: {"theme": "base", "themeVariables":{"primaryColor":"#3b82f6","primaryTextColor":"#1e293b","primaryBorderColor":"#60a5fa","lineColor":"#94a3b8","secondaryColor":"#f1f5f9","tertiaryColor":"#ffffff","fontFamily":"-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif"}}}%%
+sequenceDiagram
+    participant M as main.tsx 模块加载
+    participant MDM as MDM 子进程
+    participant KC as Keychain 读取
+    participant Imports as 后续 import 链
+
+    Note over M: profileCheckpoint('main_tsx_entry')
+    M-&gt;&gt;MDM: startMdmRawRead()
+    Note over MDM: 异步：plutil/reg query
+    M-&gt;&gt;KC: startKeychainPrefetch()
+    Note over KC: 异步：security find-generic-password
+    M-&gt;&gt;Imports: 继续同步 import 链 (~135ms)
+
+    Note over M,Imports: 并行执行
+
+    Imports--&gt;&gt;M: 所有 import 完成
+    MDM--&gt;&gt;M: MDM 数据就绪
+    KC--&gt;&gt;M: Keychain 数据就绪
+
+    Note over M: profileCheckpoint('main_tsx_imports_loaded')</div><p><strong>关键洞察</strong>：两个 keychain 读取（OAuth + legacy API key）在 <code>applySafeConfigEnvironmentVariables()</code> 中会同步串行执行（约 65ms）。通过预取，这 65ms 被完全隐藏在后续 135ms import 之内。</p>
+<h3>延迟预取（首次渲染后）</h3>
+<pre><code class="language-typescript">export function startDeferredPrefetches(): void {
+  if (isEnvTruthy(process.env.CLAUDE_CODE_EXIT_AFTER_FIRST_RENDER) || isBareMode()) {
+    return;
+  }
+  // 进程级预取（用户输入前完成）
+  void initUser();
+  void getUserContext();
+  prefetchSystemContextIfSafe();
+  // 云凭证预取
+  if (isEnvTruthy(process.env.CLAUDE_CODE_USE_BEDROCK))
+    void prefetchAwsCredentialsAndBedRockInfoIfSafe();
+  // 文件计数（ripgrep，3秒超时）
+  void countFilesRoundedRg(getCwd(), AbortSignal.timeout(3000), []);
+}</code></pre><p>全部 <code>void</code> 前缀，fire-and-forget，不阻塞 REPL 首次渲染。</p>
+<div class="thinking-note"><h3>思考笔记</h3>
+<p>并行预取是&quot;利用系统特性藏延迟&quot;的教科书案例。</p>
+<ul>
+<li>ES Module 的 import 求值窗口是一个天然的时间缝隙——main.tsx 在最顶部就启动异步 I/O，恰好利用了后续 import 链的执行时间。</li>
+<li>两个 keychain 读取如果能从同步改成异步预取，65ms 就被完全隐藏。这不是什么高深的技术，但需要你意识到&quot;这个窗口可以藏东西&quot;。</li>
+<li>startDeferredPrefetches 里的 fire-and-forget 模式进一步说明：不是所有事情都要在启动时做完，用户看到界面后的 100ms 也是可以利用的。</li>
+</ul>
+</div><hr>
+<h2>2.3 Feature Flag：编译时死代码消除</h2>
+<p><code>feature()</code> 函数来自 Bun 的 <code>bun:bundle</code>，在编译期被求值为布尔常量：</p>
+<pre><code class="language-typescript">import { feature } from 'bun:bundle'
+
+const WebBrowserTool = feature('WEB_BROWSER_TOOL')
+  ? require('./tools/WebBrowserTool/WebBrowserTool.js').WebBrowserTool
+  : null  // 整个模块树被 tree-shake 移除</code></pre><div class="mermaid">%%{init: {"theme": "base", "themeVariables":{"primaryColor":"#3b82f6","primaryTextColor":"#1e293b","primaryBorderColor":"#60a5fa","lineColor":"#94a3b8","secondaryColor":"#f1f5f9","tertiaryColor":"#ffffff","fontFamily":"-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif"}}}%%
+graph LR
+    subgraph "源码"
+        S1["feature('X')&lt;br/&gt;? require(ModuleX)&lt;br/&gt;: null"]
+    end
+    subgraph "Bundler (feature X = true)"
+        B1["require(ModuleX)"]
+    end
+    subgraph "Bundler (feature X = false)"
+        B2["null"]
+        B3["ModuleX 整个模块树&lt;br/&gt;被移除"]
+    end
+    S1 --&gt;|"构建 ant 版本"| B1
+    S1 --&gt;|"构建 external 版本"| B2
+    B2 -.-&gt;|"tree-shake"| B3</div><h3>feature() vs process.env 运行时检查</h3>
+<table>
+<thead>
+<tr>
+<th>维度</th>
+<th><code>feature()</code> 编译时消除</th>
+<th><code>process.env.X</code> 运行时检查</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>产物大小</td>
+<td>未使用代码物理移除</td>
+<td>全部代码打包</td>
+</tr>
+<tr>
+<td>运行时开销</td>
+<td>零</td>
+<td>每次条件检查有分支预测成本</td>
+</tr>
+<tr>
+<td>安全性</td>
+<td>内部代码不在产物中</td>
+<td>代码存在，可被逆向</td>
+</tr>
+<tr>
+<td>调试</td>
+<td>需要不同构建产物</td>
+<td>同一产物，改环境变量即可</td>
+</tr>
+</tbody></table>
+<p><code>&quot;external&quot;</code> 是构建时被替换的宏，bundler 可进行同样的死代码消除。</p>
+<hr>
+<div class="thinking-note"><h3>思考笔记</h3>
+<p>feature() 编译时 DCE 是 Bun 生态最独特的能力——不是&quot;运行时不执行&quot;，而是&quot;编译时不存在&quot;。</p>
+<ul>
+<li>对比 process.env 运行时检查：条件分支在编译时就被求值并消除，未启用的代码分支物理上不在产物中。</li>
+<li>编译时 DCE 不只是性能优化——外部构建中内部功能的代码连被逆向的机会都没有。</li>
+<li>feature() + require() 延迟加载的组合实现了&quot;按需加载 + 编译时消除&quot;的双重效果。</li>
+<li>代价：不同 feature 组合需要不同的构建产物，测试需要覆盖多种构建配置。</li>
+</ul>
+</div><hr>
+<h2>2.4 延迟加载：require() 的策略性使用</h2>
+<h3>模式 1：打破循环依赖</h3>
+<pre><code class="language-typescript">const getTeamCreateTool = () =&gt;
+  require('./tools/TeamCreateTool/TeamCreateTool.js').TeamCreateTool
+    as typeof import('./tools/TeamCreateTool/TeamCreateTool.js').TeamCreateTool</code></pre><div class="mermaid">%%{init: {"theme": "base", "themeVariables":{"primaryColor":"#3b82f6","primaryTextColor":"#1e293b","primaryBorderColor":"#60a5fa","lineColor":"#94a3b8","secondaryColor":"#f1f5f9","tertiaryColor":"#ffffff","fontFamily":"-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif"}}}%%
+graph LR
+    A["tools.ts"] --&gt;|"静态 import"| B["TeamCreateTool"]
+    B --&gt;|"间接 import 链"| A
+    style A fill:#fee2e2,stroke:#ef4444
+    style B fill:#fee2e2,stroke:#ef4444</div><div class="mermaid">%%{init: {"theme": "base", "themeVariables":{"primaryColor":"#3b82f6","primaryTextColor":"#1e293b","primaryBorderColor":"#60a5fa","lineColor":"#94a3b8","secondaryColor":"#f1f5f9","tertiaryColor":"#ffffff","fontFamily":"-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif"}}}%%
+graph LR
+    A["tools.ts"] --&gt;|"延迟 require()"| B["TeamCreateTool"]
+    B --&gt;|"间接 import 链"| A
+    style A fill:#dcfce7,stroke:#22c55e
+    style B fill:#dcfce7,stroke:#22c55e
+    Note["require() 被调用时&lt;br/&gt;tools.ts 已完成初始化"]</div><h3>模式 2：条件加载 + 类型安全</h3>
+<pre><code class="language-typescript">const coordinatorModeModule = feature('COORDINATOR_MODE')
+  ? require('./coordinator/coordinatorMode.js')
+    as typeof import('./coordinator/coordinatorMode.js')
+  : null;</code></pre><p>同时实现三个目标：编译时死代码消除 + 延迟加载 + 类型安全。</p>
+<div class="thinking-note"><h3>思考笔记</h3>
+<p>feature() 同时解决安全、性能、代码组织三个问题，是编译时多态的经典应用。</p>
+<ul>
+<li>DCE 不只是性能优化——外部构建中内部代码物理不存在，比任何运行时守卫都安全。</li>
+<li>require() 延迟加载同时实现三个目标：打破循环依赖、按需加载、类型安全——一个模式三份收益。</li>
+<li>与 process.env 运行时检查相比，编译时消除的代码连被逆向的机会都没有——安全是设计出来的，不是加固出来的。</li>
+</ul>
+</div><hr>
+<h2>2.5 profileCheckpoint 启动性能系统</h2>
+<pre><code class="language-typescript">// src/utils/startupProfiler.ts
+const DETAILED_PROFILING = isEnvTruthy(process.env.CLAUDE_CODE_PROFILE_STARTUP)
+const STATSIG_SAMPLE_RATE = 0.005
+const STATSIG_LOGGING_SAMPLED =
+  process.env.USER_TYPE === 'ant' || Math.random() &lt; STATSIG_SAMPLE_RATE
+const SHOULD_PROFILE = DETAILED_PROFILING || STATSIG_LOGGING_SAMPLED</code></pre><p><strong>两种工作模式</strong>：</p>
+<ul>
+<li><strong>采样日志模式</strong>：100% 内部用户 + 0.5% 外部用户，上报到 Statsig</li>
+<li><strong>详细分析模式</strong>：<code>CLAUDE_CODE_PROFILE_STARTUP=1</code> 手动启用，输出完整时间线</li>
+</ul>
+<p>当 <code>SHOULD_PROFILE = false</code> 时，<code>profileCheckpoint()</code> 是<strong>空函数，零运行时开销</strong>。</p>
+<h3>性能打点时间线</h3>
+<pre><code>profileCheckpoint('main_tsx_entry')           // import 开始
+// ... 135ms import 链 ...
+profileCheckpoint('main_tsx_imports_loaded')   // import 结束
+profileCheckpoint('main_function_start')       // main() 入口
+profileCheckpoint('eagerLoadSettings_start')   // 配置加载开始
+profileCheckpoint('eagerLoadSettings_end')     // 配置加载结束</code></pre><h3>详细报告</h3>
+<pre><code>================================================================================
+STARTUP PROFILING REPORT
+================================================================================
+    0ms    +0ms  profiler_initialized          [RSS: 45MB, Heap: 12MB]
+    1ms    +1ms  cli_entry                      [RSS: 45MB, Heap: 12MB]
+  137ms  +135ms  main_tsx_imports_loaded         [RSS: 89MB, Heap: 42MB]
+  ...
+  312ms  +174ms  main_after_run                 [RSS: 112MB, Heap: 58MB]
+Total startup time: 312ms
+================================================================================</code></pre><hr>
+<div class="thinking-note"><h3>思考笔记</h3>
+<p>profileCheckpoint 是&quot;预先埋点、事后分析&quot;的性能观测模式——不是等出问题了才加日志。</p>
+<ul>
+<li>双模式设计：0.5% 外部用户自动上报 + 内部用户 100% 上报 + 手动详细模式。</li>
+<li>profileCheckpoint 在非采样用户下是空函数——零开销的可观测性是最好的可观测性。</li>
+<li>启动时间线精确到每毫秒——有了这个时间线，优化就不再是拍脑袋。</li>
+<li>&quot;检测→报告→修复→验证&quot;的闭环才是真正价值：不测量就无法优化。</li>
+</ul>
+</div><hr>
+<h2>2.6 init 流程：从配置到就绪</h2>
+<p><code>init()</code> 被 <code>memoize</code> 包装，确保全局只执行一次：</p>
+<div class="mermaid">%%{init: {"theme": "base", "themeVariables":{"primaryColor":"#3b82f6","primaryTextColor":"#1e293b","primaryBorderColor":"#60a5fa","lineColor":"#94a3b8","secondaryColor":"#f1f5f9","tertiaryColor":"#ffffff","fontFamily":"-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif"}}}%%
+graph TD
+    Init["init() 入口"] --&gt; Configs["enableConfigs()&lt;br/&gt;验证配置文件"]
+    Configs --&gt; SafeEnv["applySafeConfigEnvironmentVariables()&lt;br/&gt;应用安全环境变量"]
+    SafeEnv --&gt; CACerts["applyExtraCACertsFromConfig()&lt;br/&gt;配置 CA 证书"]
+    CACerts --&gt; Shutdown["setupGracefulShutdown()&lt;br/&gt;注册退出处理"]
+    Shutdown --&gt; Analytics["初始化 1P 事件日志&lt;br/&gt;(异步)"]
+    Analytics --&gt; OAuth["填充 OAuth 信息&lt;br/&gt;(异步)"]
+    OAuth --&gt; MTLS["configureGlobalMTLS()&lt;br/&gt;配置 mTLS"]
+    MTLS --&gt; Proxy["configureGlobalAgents()&lt;br/&gt;配置代理"]
+    Proxy --&gt; Preconnect["preconnectAnthropicApi()&lt;br/&gt;TCP+TLS 预连接"]
+    Preconnect --&gt; Remote["远程管理设置&lt;br/&gt;(条件性加载)"]
+    Remote --&gt; Done["init 完成"]
+    style Analytics fill:#e0f2fe,stroke:#38bdf8
+    style OAuth fill:#e0f2fe,stroke:#38bdf8
+    style Preconnect fill:#e0f2fe,stroke:#38bdf8</div><h3>分阶段环境变量应用</h3>
+<table>
+<thead>
+<tr>
+<th>阶段</th>
+<th>函数</th>
+<th>执行时机</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>安全</td>
+<td><code>applySafeConfigEnvironmentVariables()</code></td>
+<td>trust 对话框之前</td>
+</tr>
+<tr>
+<td>完整</td>
+<td><code>applyConfigEnvironmentVariables()</code></td>
+<td>trust 建立之后</td>
+</tr>
+</tbody></table>
+<h3>preconnectAnthropicApi 预连接优化</h3>
+<p>TCP+TLS 握手通常需要 100-200ms。在 CA 证书和代理配置完成后立即发起预连接，使其与后续 ~100ms 初始化工作并行。第一次 API 调用时连接已就绪。</p>
+<h3>迁移系统</h3>
+<pre><code class="language-typescript">const CURRENT_MIGRATION_VERSION = 11;
+function runMigrations(): void {
+  if (getGlobalConfig().migrationVersion !== CURRENT_MIGRATION_VERSION) {
+    migrateAutoUpdatesToSettings();
+    migrateBypassPermissionsAcceptedToSettings();
+    migrateSonnet1mToSonnet45();
+    migrateLegacyOpusToCurrent();
+    migrateSonnet45ToSonnet46();
+    migrateOpusToOpus1m();
+    // ...
+  }
+}</code></pre><p><strong>设计特点</strong>：</p>
+<ul>
+<li><strong>版本门控</strong>：<code>migrationVersion</code> 整数避免重复执行</li>
+<li><strong>幂等性</strong>：每个迁移函数必须幂等</li>
+<li><strong>全量执行</strong>：每次检查时运行所有迁移</li>
+<li><strong>异步分离</strong>：<code>migrateChangelogFromConfig()</code> fire-and-forget，不阻塞启动</li>
+</ul>
+<p><strong>模型演进历史</strong>：<code>Fennec → Opus → Legacy Opus → Sonnet 1M → Sonnet 4.5 → Sonnet 4.6 → Opus 1M</code></p>
+<h3>安全前置检查</h3>
+<pre><code class="language-typescript">// 安全：防止 Windows 从当前目录执行命令
+process.env.NoDefaultCurrentDirectoryInExePath = '1';
+
+// 外部构建中检测并阻止调试器附加
+if ("external" !== 'ant' &amp;&amp; isBeingDebugged()) {
+  process.exit(1);
+}</code></pre><div class="thinking-note"><h3>思考笔记</h3>
+<p>init() 的 13+ 步串行链展示了生产级 CLI 启动的完整复杂度。</p>
+<ul>
+<li>安全前置（NoDefaultCurrentDirectoryInExePath、调试器检测）放在最开始——安全不可协商。</li>
+<li>TCP+TLS 预连接把 100-200ms 握手延迟藏进初始化流程——不是&quot;优化&quot;而是&quot;时序设计&quot;。</li>
+<li>迁移系统的版本门控 + 幂等性设计保证跨版本升级不炸——CLI 工具不能热更新，必须在启动时完成所有迁移。</li>
+<li>从 Fennec 到 Opus 1M 的模型演进历史——一个二进制要兼容多少代模型接口？</li>
+</ul>
+</div><hr>
+<h2>本章小结</h2>
+<table>
+<thead>
+<tr>
+<th>优化手段</th>
+<th>实现方式</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>快速路径优先</td>
+<td><code>--version</code> 零 import，特殊入口延迟加载</td>
+</tr>
+<tr>
+<td>并行预取</td>
+<td>利用模块加载窗口并行执行 I/O</td>
+</tr>
+<tr>
+<td>编译时优化</td>
+<td><code>feature()</code> 实现物理级代码消除</td>
+</tr>
+<tr>
+<td>分阶段初始化</td>
+<td>安全敏感操作在 trust 后执行</td>
+</tr>
+<tr>
+<td>延迟到首次使用</td>
+<td>预取结果在第一次需要时才被消费</td>
+</tr>
+<tr>
+<td>可观测性内建</td>
+<td>profileCheckpoint 零成本（非采样用户）</td>
+</tr>
+</tbody></table>
+<p><strong>最终效果</strong>：典型 macOS 环境 300ms 左右启动时间，达到&quot;瞬间响应&quot;阈值。</p>
+<hr>
+<hr>
+<p><em>Last updated: 2026-05-14</em></p>
+
+      </article>
+    </main>
+  </div>
+  
+  <!-- Syntax highlighting -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script>hljs.highlightAll();</script>
+
+  <script>
+    // Collapsible sidebar sections
+    document.querySelectorAll('.sidebar-section-header').forEach(header => {
+      header.addEventListener('click', () => {
+        const items = header.nextElementSibling;
+        const isCollapsed = items.classList.contains('collapsed');
+        // If collapsed, uncollapse; if visible, collapse
+        items.classList.toggle('collapsed');
+        header.classList.toggle('open');
+      });
+    });
+
+    // Auto-open current page's section + highlight active link
+    const currentPath = window.location.pathname;
+    const currentFilename = currentPath.split('/').pop();
+    let foundMatch = false;
+    document.querySelectorAll('.sidebar-section-items a').forEach(link => {
+      const href = link.getAttribute('href');
+      const linkFilename = href.split('/').pop();
+      if (linkFilename === currentFilename) {
+        link.classList.add('active');
+        const section = link.closest('.sidebar-section-items');
+        const header = section ? section.previousElementSibling : null;
+        if (section) section.classList.remove('collapsed');
+        if (header) header.classList.add('open');
+        foundMatch = true;
+      }
+    });
+    
+    // Full-text search
+    (function() {
+      const searchInput = document.getElementById('searchInput');
+      const searchResults = document.getElementById('searchResults');
+      if (!searchInput || !searchResults) return;
+
+      let searchIndex = [];
+      let indexLoaded = false;
+
+      // Compute root path for loading search-index.json
+      const currentScript = document.currentScript;
+      const rootPath = '../';
+
+      function loadIndex() {
+        if (indexLoaded) return;
+        indexLoaded = true;
+        fetch(rootPath + 'search-index.json')
+          .then(r => r.json())
+          .then(data => { searchIndex = data; })
+          .catch(() => { searchIndex = []; });
+      }
+
+      function highlight(text, query) {
+        const re = new RegExp('(' + query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi');
+        return text.replace(re, '<mark style="background:#fde047;padding:0 2px;border-radius:2px;">$1</mark>');
+      }
+
+      function search(query) {
+        if (!query || !searchIndex.length) return [];
+        const terms = query.toLowerCase().split(/\s+/).filter(t => t.length > 0);
+        if (!terms.length) return [];
+
+        const results = searchIndex.map(doc => {
+          const titleLower = doc.title.toLowerCase();
+          const textLower = doc.text.toLowerCase();
+          let score = 0;
+
+          for (const term of terms) {
+            if (titleLower.includes(term)) score += 10;
+            if (textLower.includes(term)) score += 1;
+          }
+
+          if (score === 0) return null;
+
+          // Find best snippet
+          let snippet = doc.text.slice(0, 120);
+          for (const term of terms) {
+            const idx = doc.text.toLowerCase().indexOf(term);
+            if (idx !== -1) {
+              const start = Math.max(0, idx - 40);
+              snippet = doc.text.slice(start, start + 120);
+              break;
+            }
+          }
+
+          return { ...doc, score, snippet };
+        }).filter(Boolean);
+
+        return results.sort((a, b) => b.score - a.score).slice(0, 10);
+      }
+
+      function render(results, query) {
+        if (!query) {
+          searchResults.classList.remove('active');
+          searchResults.innerHTML = '';
+          return;
+        }
+        if (!results.length) {
+          searchResults.innerHTML = '<div class="search-no-results">未找到相关文档</div>';
+          searchResults.classList.add('active');
+          return;
+        }
+
+        let html = '';
+        for (const r of results) {
+          const title = highlight(r.title, query);
+          const preview = highlight(r.snippet.replace(/\s+/g, ' '), query);
+          html += `<a href="${rootPath + r.path}" class="search-result-item">
+            <div class="sr-title">${title}</div>
+            <div class="sr-preview">${preview}...</div>
+          </a>`;
+        }
+        searchResults.innerHTML = html;
+        searchResults.classList.add('active');
+      }
+
+      let debounce;
+      searchInput.addEventListener('input', (e) => {
+        loadIndex();
+        clearTimeout(debounce);
+        const query = e.target.value.trim();
+        if (!query) {
+          render([], '');
+          return;
+        }
+        searchResults.innerHTML = '<div class="search-loading">搜索中...</div>';
+        searchResults.classList.add('active');
+        debounce = setTimeout(() => {
+          render(search(query), query);
+        }, 150);
+      });
+
+      // Close results on click outside
+      document.addEventListener('click', (e) => {
+        if (!e.target.closest('.sidebar-search')) {
+          searchResults.classList.remove('active');
+        }
+      });
+
+      // Keyboard navigation
+      searchInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          searchResults.classList.remove('active');
+          searchInput.blur();
+        }
+      });
+    })();
+    
+    // Back to top
+    (function() {
+      const btn = document.getElementById('backToTop');
+      if (!btn) return;
+      const toggle = () => {
+        btn.classList.toggle('visible', window.scrollY > 400);
+      };
+      window.addEventListener('scroll', toggle, { passive: true });
+      btn.addEventListener('click', () => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+    })();
+
+    // Mobile menu toggle
+    (function() {
+      const menuToggle = document.getElementById('menuToggle');
+      const sidebar = document.querySelector('.sidebar');
+      const overlay = document.getElementById('sidebarOverlay');
+      if (!menuToggle || !sidebar || !overlay) return;
+
+      menuToggle.addEventListener('click', () => {
+        sidebar.classList.toggle('open');
+        overlay.classList.toggle('active');
+      });
+
+      overlay.addEventListener('click', () => {
+        sidebar.classList.remove('open');
+        overlay.classList.remove('active');
+      });
+
+      // Close sidebar when a nav link is clicked (mobile)
+      sidebar.querySelectorAll('a').forEach(link => {
+        link.addEventListener('click', () => {
+          if (window.innerWidth <= 1024) {
+            sidebar.classList.remove('open');
+            overlay.classList.remove('active');
+          }
+        });
+      });
+    })();
+
+    // Copy code buttons
+    (function() {
+      document.querySelectorAll('.markdown-section pre').forEach(pre => {
+        const btn = document.createElement('button');
+        btn.className = 'copy-code-btn';
+        btn.textContent = '复制';
+        btn.addEventListener('click', () => {
+          const code = pre.querySelector('code')?.textContent || pre.textContent;
+          navigator.clipboard.writeText(code).then(() => {
+            btn.textContent = '已复制';
+            btn.classList.add('copied');
+            setTimeout(() => {
+              btn.textContent = '复制';
+              btn.classList.remove('copied');
+            }, 1500);
+          }).catch(() => {
+            btn.textContent = '失败';
+            setTimeout(() => { btn.textContent = '复制'; }, 1500);
+          });
+        });
+        pre.style.position = 'relative';
+        pre.appendChild(btn);
+      });
+    })();
+
+    // 引导思考 collapsible card
+    (function() {
+      document.querySelectorAll('.guide-card-header').forEach(function(header) {
+        header.addEventListener('click', function() {
+          var table = header.closest('.guide-card');
+          table.classList.toggle('collapsed');
+        });
+      });
+    })();
+
+    // Mermaid: Load dynamically + zoomable containers
+    (function() {
+      var mermaidDivs = document.querySelectorAll('.mermaid');
+      if (mermaidDivs.length === 0) return;
+
+      var cdns = [
+        '../mermaid.min.js',
+        'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js',
+        'https://unpkg.com/mermaid@10/dist/mermaid.min.js'
+      ];
+      var cdnIndex = 0;
+
+      function showError(msg) {
+        mermaidDivs.forEach(function(div) {
+          div.innerHTML = '<div class="mermaid-error" style="padding:16px;color:#dc2626;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;margin:20px 0;">' + msg + '</div>';
+          div.classList.add('rendered');
+        });
+      }
+
+      function wrapZoomable(div) {
+        if (div.parentNode.classList.contains('mermaid-zoom-container')) return;
+        if (!div.querySelector('svg')) return;
+        div.classList.add('rendered');
+
+        var wrapper = document.createElement('div');
+        wrapper.className = 'mermaid-zoom-container';
+        div.parentNode.insertBefore(wrapper, div);
+        wrapper.appendChild(div);
+
+        // Click overlay hint
+        var overlay = document.createElement('div');
+        overlay.className = 'mermaid-expand-overlay';
+        overlay.innerHTML = '<span><span class="expand-icon">⛶</span> 点击查看全图</span>';
+        wrapper.appendChild(overlay);
+
+        // Click (or double-click) to open modal
+        wrapper.addEventListener('click', function() { openMermaidModal(div); });
+      }
+
+      // ---- Mermaid Modal (full-screen viewer) ----
+      var modalInstance = null;
+
+      function openMermaidModal(sourceDiv) {
+        closeMermaidModal();
+        var clone = sourceDiv.cloneNode(true);
+        var svg = clone.querySelector('svg');
+        if (!svg) return;
+
+        // Let SVG fill width, height follows viewBox aspect ratio
+        svg.removeAttribute('width');
+        svg.removeAttribute('height');
+        svg.style.width = '100%';
+        svg.style.height = 'auto';
+        svg.style.maxWidth = 'none';
+
+        // Build modal: simple header + scrollable body
+        var modal = document.createElement('div');
+        modal.className = 'mermaid-modal active';
+
+        var content = document.createElement('div');
+        content.className = 'mermaid-modal-content';
+
+        var header = document.createElement('div');
+        header.className = 'mermaid-modal-header';
+        var chapterHint = '';
+        var prev = sourceDiv.closest('.markdown-section');
+        if (prev) {
+          var heading = prev.querySelector('h2, h3');
+          if (heading) chapterHint = heading.textContent.replace(/[#\d.]/g,'').trim().slice(0, 30);
+        }
+        header.innerHTML =
+          '<div class="modal-title-wrap">' +
+            '<span class="modal-icon">⬡</span>' +
+            '<span class="modal-title">' + (chapterHint || '图表') + '</span>' +
+          '</div>' +
+          '<button class="modal-close" title="关闭 (ESC)">✕</button>';
+
+        var body = document.createElement('div');
+        body.className = 'mermaid-modal-body';
+        body.appendChild(clone);
+
+        content.appendChild(header);
+        content.appendChild(body);
+        modal.appendChild(content);
+        document.body.appendChild(modal);
+
+        // Close handlers
+        header.querySelector('.modal-close').addEventListener('click', closeMermaidModal);
+        modal.addEventListener('click', function(e) {
+          if (e.target === modal) closeMermaidModal();
+        });
+
+        modalInstance = modal;
+      }
+
+      function closeMermaidModal() {
+        if (modalInstance) {
+          modalInstance.remove();
+          modalInstance = null;
+        }
+      }
+
+      document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') closeMermaidModal();
+      });
+
+      function tryLoadMermaid() {
+        if (cdnIndex >= cdns.length) {
+          showError('❌ 无法加载图表库，请检查网络连接后刷新页面');
+          return;
+        }
+
+        var script = document.createElement('script');
+        script.src = cdns[cdnIndex];
+        script.onload = function() {
+          if (typeof mermaid === 'undefined') {
+            showError('❌ 图表库加载失败');
+            return;
+          }
+          try {
+            mermaid.initialize({
+              startOnLoad: false,
+              theme: 'base',
+              themeVariables: {
+                fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif',
+                primaryColor: '#ffffff',
+                primaryTextColor: '#1e293b',
+                primaryBorderColor: '#e2e8f0',
+                lineColor: '#64748b',
+                secondaryColor: '#f1f5f9',
+                tertiaryColor: '#f8fafc',
+              },
+              securityLevel: 'loose',
+              flowchart: {
+                curve: 'basis',
+                padding: 15,
+                nodeSpacing: 50,
+                rankSpacing: 80,
+              },
+              maxTextSize: 50000,
+            });
+            mermaid.run({ querySelector: '.mermaid' }).then(function() {
+              mermaidDivs.forEach(wrapZoomable);
+            });
+          } catch(e) {
+            showError('❌ 图表渲染失败: ' + e.message);
+          }
+        };
+        script.onerror = function() {
+          cdnIndex++;
+          tryLoadMermaid();
+        };
+        document.head.appendChild(script);
+      }
+
+      tryLoadMermaid();
+    })();
+
+  </script>
+</body>
+</html>

@@ -1,0 +1,2251 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>第 4 章：查询引擎</title>
+  <style>
+    /* ===== Reset & Base ===== */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { font-size: 62.5%; }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+      font-size: 15px;
+      color: #1e293b;
+      line-height: 1.7;
+      background: #ffffff;
+      -webkit-font-smoothing: antialiased;
+    }
+    
+    /* ===== Layout ===== */
+    .app {
+      display: flex;
+      min-height: 100vh;
+    }
+    
+    /* ===== Sidebar ===== */
+    .sidebar {
+      width: 280px;
+      min-width: 280px;
+      background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+      border-right: 1px solid #e2e8f0;
+      position: fixed;
+      top: 0;
+      left: 0;
+      bottom: 0;
+      display: flex;
+      flex-direction: column;
+    }
+    .sidebar::-webkit-scrollbar { width: 4px; }
+    .sidebar::-webkit-scrollbar-track { background: transparent; }
+    .sidebar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+    .sidebar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+    .sidebar-header {
+      padding: 20px 20px 14px;
+      border-bottom: 1px solid #e2e8f0;
+      flex-shrink: 0;
+    }
+
+    .sidebar-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 15px;
+      font-weight: 700;
+      color: #0f172a;
+      text-decoration: none;
+      letter-spacing: -0.02em;
+    }
+
+    .sidebar-brand .icon {
+      width: 30px;
+      height: 30px;
+      background: linear-gradient(135deg, #3b82f6 0%, #0ea5e9 100%);
+      border-radius: 7px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 15px;
+      flex-shrink: 0;
+    }
+
+    .sidebar-search {
+      padding: 12px 20px;
+      flex-shrink: 0;
+    }
+
+    .search-box {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 8px 12px;
+      transition: all 0.2s ease;
+    }
+
+    .search-box:focus-within {
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+
+    .search-box input {
+      flex: 1;
+      border: none;
+      outline: none;
+      font-size: 13px;
+      color: #1e293b;
+      background: transparent;
+    }
+
+    .search-box input::placeholder {
+      color: #94a3b8;
+    }
+
+    .search-box svg {
+      width: 15px;
+      height: 15px;
+      color: #94a3b8;
+      flex-shrink: 0;
+    }
+
+    .sidebar-nav {
+      flex: 1;
+      padding: 4px 8px;
+      overflow-y: auto;
+    }
+
+    .sidebar-nav ul, .sidebar-nav li {
+      list-style: none;
+    }
+
+    .quick-links {
+      display: flex;
+      gap: 6px;
+      padding: 0 8px 10px;
+      flex-shrink: 0;
+    }
+
+    .quick-links a {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      padding: 7px 10px;
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 7px;
+      font-size: 12px;
+      font-weight: 500;
+      color: #64748b;
+      text-decoration: none;
+      transition: all 0.15s ease;
+    }
+
+    .quick-links a:hover {
+      color: #3b82f6;
+      border-color: #3b82f6;
+      background: #eff6ff;
+    }
+
+    .quick-links a .ql-icon {
+      font-size: 13px;
+      line-height: 1;
+    }
+
+    .sidebar-section {
+      margin-bottom: 2px;
+    }
+
+    .sidebar-section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 9px 12px 9px 14px;
+      cursor: pointer;
+      user-select: none;
+      border-radius: 8px;
+      margin: 0 2px;
+      transition: background 0.15s ease;
+    }
+
+    .sidebar-section-header:hover {
+      background: rgba(59, 130, 246, 0.06);
+    }
+
+    .sidebar-section-header.open {
+      background: rgba(59, 130, 246, 0.08);
+    }
+
+    .section-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+    }
+
+    .section-num {
+      width: 22px;
+      height: 22px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #3b82f6 0%, #0ea5e9 100%);
+      border-radius: 5px;
+      font-size: 10px;
+      font-weight: 700;
+      color: #ffffff;
+      flex-shrink: 0;
+    }
+
+    .section-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: #1e293b;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .sidebar-section-header .arrow {
+      width: 16px;
+      height: 16px;
+      color: #94a3b8;
+      transition: transform 0.2s ease, color 0.15s ease;
+      flex-shrink: 0;
+    }
+
+    .sidebar-section-header:hover .arrow {
+      color: #64748b;
+    }
+
+    .sidebar-section-header.open .arrow {
+      transform: rotate(90deg);
+      color: #3b82f6;
+    }
+
+    .sidebar-section-items {
+      overflow: hidden;
+      transition: max-height 0.2s ease, opacity 0.15s ease;
+      max-height: 2000px;
+      opacity: 1;
+    }
+    .sidebar-section-items.collapsed {
+      max-height: 0;
+      opacity: 0;
+    }
+
+    .sidebar-section-items ul {
+      padding: 2px 6px 6px;
+    }
+
+    .sidebar-section-items li {
+      margin: 1px 0;
+    }
+
+    .sidebar-section-items a {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 10px;
+      font-size: 13px;
+      color: #64748b;
+      text-decoration: none;
+      border-radius: 6px;
+      transition: all 0.15s ease;
+      position: relative;
+    }
+
+    .sidebar-section-items a:hover {
+      color: #3b82f6;
+      background: rgba(59, 130, 246, 0.06);
+    }
+
+    .sidebar-section-items a.active {
+      color: #1e293b;
+      background: rgba(59, 130, 246, 0.1);
+      font-weight: 500;
+    }
+    .sidebar-section-items a.active::before {
+      content: '';
+      position: absolute;
+      left: -6px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 3px;
+      height: 18px;
+      border-radius: 2px;
+      background: #3b82f6;
+    }
+    .sidebar-section-items a.active .num {
+      color: #3b82f6;
+    }
+    .sidebar-section-items a[href*="APPENDIX"] {
+      font-size: 12px;
+      color: #94a3b8;
+      padding-left: 14px;
+    }
+    .sidebar-section-items a[href*="APPENDIX"]:hover {
+      color: #3b82f6;
+    }
+    .sidebar-section-items a[href*="APPENDIX"] .num {
+      display: none;
+    }
+
+    .sidebar-section-items a .num {
+      font-size: 11px;
+      font-weight: 500;
+      color: #94a3b8;
+      min-width: 26px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .sidebar-divider {
+      height: 1px;
+      background: linear-gradient(90deg, transparent, #e2e8f0, transparent);
+      margin: 6px 10px 10px;
+    }
+
+    .sidebar-external {
+      padding: 0 8px 12px;
+      flex-shrink: 0;
+    }
+
+    .sidebar-external a {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 9px 12px;
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 500;
+      color: #475569;
+      text-decoration: none;
+      transition: all 0.15s ease;
+    }
+
+    .sidebar-external a:hover {
+      border-color: #3b82f6;
+      color: #3b82f6;
+      background: #eff6ff;
+    }
+
+    .sidebar-external a svg {
+      width: 15px;
+      height: 15px;
+      opacity: 0.5;
+      flex-shrink: 0;
+    }
+    .sidebar-external a:hover svg {
+      opacity: 0.8;
+    }
+    
+    /* ===== Content ===== */
+    .content {
+      flex: 1;
+      margin-left: 280px;
+      padding: 48px 64px;
+      min-height: 100vh;
+      max-width: 1400px;
+    }
+
+    /* ===== Typography ===== */
+    .markdown-section h1 {
+      font-size: 28px;
+      font-weight: 700;
+      color: #0f172a;
+      letter-spacing: -0.02em;
+      margin: 0 0 24px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    
+    .markdown-section h2 {
+      font-size: 20px;
+      font-weight: 600;
+      color: #1e293b;
+      letter-spacing: -0.01em;
+      margin: 40px 0 16px;
+    }
+    
+    .markdown-section h3 {
+      font-size: 16px;
+      font-weight: 600;
+      color: #3b82f6;
+      margin: 28px 0 12px;
+    }
+    
+    .markdown-section h4 {
+      font-size: 15px;
+      font-weight: 600;
+      color: #1e293b;
+      margin: 20px 0 8px;
+    }
+    .markdown-section h1, .markdown-section h2, .markdown-section h3, .markdown-section h4 {
+      position: relative;
+    }
+    .markdown-section .heading-anchor {
+      position: absolute;
+      left: -20px;
+      top: 50%;
+      transform: translateY(-50%);
+      opacity: 0;
+      color: #94a3b8;
+      text-decoration: none;
+      font-size: 0.8em;
+      font-weight: 400;
+      transition: opacity 0.15s ease;
+      padding-right: 4px;
+    }
+    .markdown-section h1:hover .heading-anchor,
+    .markdown-section h2:hover .heading-anchor,
+    .markdown-section h3:hover .heading-anchor,
+    .markdown-section h4:hover .heading-anchor {
+      opacity: 1;
+    }
+    
+    .markdown-section p {
+      margin: 12px 0;
+      color: #475569;
+    }
+
+    /* ===== Thinking Note ===== */
+    .thinking-note {
+      background: #fffbeb;
+      border-left: 4px solid #f59e0b;
+      border-radius: 0 12px 12px 0;
+      padding: 20px 24px;
+      margin: 24px 0;
+    }
+    .thinking-note h3 {
+      margin: 0 0 12px;
+      padding: 0;
+      border: none;
+      font-size: 14px;
+      font-weight: 700;
+      color: #d97706;
+      letter-spacing: 0.03em;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .thinking-note p {
+      margin: 8px 0;
+      font-size: 14px;
+      line-height: 1.8;
+      color: #78350f;
+    }
+    .thinking-note strong {
+      display: inline-block;
+      margin-top: 6px;
+      color: #92400e;
+    }
+    .thinking-note strong:first-of-type {
+      margin-top: 0;
+    }
+    .thinking-note ul {
+      margin: 4px 0 4px 0;
+      padding-left: 18px;
+      list-style: none;
+    }
+    .thinking-note li {
+      margin: 4px 0;
+      padding-left: 14px;
+      position: relative;
+      color: #78350f;
+      font-size: 14px;
+      line-height: 1.7;
+    }
+    .thinking-note li::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 10px;
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: #d97706;
+      opacity: 0.5;
+    }
+    .thinking-note li strong {
+      color: #92400e;
+    }
+
+    .markdown-section a {
+      color: #3b82f6;
+      text-decoration: none;
+      font-weight: 500;
+    }
+    
+    .markdown-section a:hover {
+      text-decoration: underline;
+    }
+    
+    .markdown-section code {
+      background: #f1f5f9;
+      color: #0f172a;
+      padding: 2px 6px;
+      font-size: 13px;
+      border-radius: 4px;
+      font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Consolas', monospace;
+    }
+    
+    .markdown-section pre {
+      background: #1e293b;
+      border-radius: 12px;
+      padding: 20px 24px;
+      overflow-x: auto;
+      margin: 20px 0;
+    }
+    
+    .markdown-section pre code {
+      background: transparent;
+      color: #e2e8f0;
+      padding: 0;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+    
+    .markdown-section blockquote {
+      background: #f8fafc;
+      border-left: 4px solid #3b82f6;
+      border-radius: 0 8px 8px 0;
+      padding: 16px 20px;
+      margin: 20px 0;
+    }
+    
+    .markdown-section blockquote p {
+      margin: 0;
+      color: #475569;
+    }
+    
+    .markdown-section table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0;
+      font-size: 14px;
+      border-radius: 12px;
+      
+      border: 1px solid #e2e8f0;
+    }
+    
+    .markdown-section table th {
+      background: #f8fafc;
+      font-weight: 600;
+      text-align: left;
+      padding: 12px 16px;
+      color: #475569;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    
+    .markdown-section table td {
+      padding: 12px 16px;
+      border-top: 1px solid #e2e8f0;
+    }
+    
+    .markdown-section table tr:nth-child(2n) td {
+      background: #f8fafc;
+    }
+    
+    .markdown-section ul, .markdown-section ol {
+      padding-left: 24px;
+      margin: 12px 0;
+    }
+    
+    .markdown-section li {
+      margin: 6px 0;
+      color: #475569;
+    }
+    
+    .markdown-section hr {
+      height: 1px;
+      background: #e2e8f0;
+      border: none;
+      margin: 32px 0;
+    }
+    
+    .markdown-section img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 8px;
+    }
+    
+    /* ===== Mermaid Diagrams ===== */
+    .mermaid {
+      background: #f8fafc;
+      border-radius: 12px;
+      padding: 24px;
+      margin: 20px 0;
+      overflow-x: auto;
+      border: 1px solid #e2e8f0;
+      display: block;
+    }
+    .mermaid.rendered {
+      display: block;
+    }
+    .mermaid svg {
+      max-width: 100%;
+      height: auto;
+    }
+    .mermaid-error {
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      border-radius: 8px;
+      padding: 16px;
+      color: #dc2626;
+      margin: 20px 0;
+    }
+    .mermaid-loading {
+      background: #f8fafc;
+      border: 1px dashed #e2e8f0;
+      border-radius: 12px;
+      padding: 24px;
+      margin: 20px 0;
+      color: #64748b;
+      text-align: center;
+    }
+
+    
+    
+
+/* ===== Click-to-Expand Mermaid ===== */
+    .mermaid-zoom-container {
+      position: relative;
+      overflow: hidden;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      margin: 20px 0;
+      background: #f8fafc;
+      cursor: pointer;
+      min-height: 100px;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+    .mermaid-zoom-container:hover {
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 2px rgba(59,130,246,0.1);
+    }
+    .mermaid-zoom-container .mermaid {
+      margin: 0;
+      border: none;
+      border-radius: 0;
+      background: transparent;
+    }
+    .mermaid-zoom-container .mermaid svg {
+      display: block;
+    }
+    .mermaid-expand-overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+      background: rgba(15,23,42,0.03);
+    }
+    .mermaid-zoom-container:hover .mermaid-expand-overlay {
+      opacity: 1;
+    }
+    .mermaid-expand-overlay span {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 18px;
+      background: rgba(255,255,255,0.95);
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 500;
+      color: #3b82f6;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+      backdrop-filter: blur(4px);
+      pointer-events: none;
+      transition: transform 0.15s ease;
+    }
+    .mermaid-zoom-container:hover .mermaid-expand-overlay span {
+      transform: translateY(-2px);
+    }
+    .mermaid-expand-overlay .expand-icon {
+      font-size: 15px;
+    }
+
+    /* ===== Mermaid Modal ===== */
+    @keyframes modal-fade-in {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    @keyframes modal-content-in {
+      from { opacity: 0; transform: scale(0.95) translateY(8px); }
+      to { opacity: 1; transform: scale(1) translateY(0); }
+    }
+    .mermaid-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 1000;
+      background: rgba(15, 23, 42, 0.65);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      animation: modal-fade-in 0.2s ease;
+    }
+    .mermaid-modal.active {
+      display: flex;
+    }
+    .mermaid-modal-content {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      max-width: 90vw;
+      max-height: 90vh;
+      background: #fff;
+      border-radius: 14px;
+      box-shadow: 0 25px 80px rgba(0,0,0,0.3);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      animation: modal-content-in 0.2s ease;
+    }
+    .mermaid-modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 20px;
+      border-bottom: 1px solid #e2e8f0;
+      flex-shrink: 0;
+      background: #fafbfc;
+      gap: 12px;
+    }
+    .mermaid-modal-header .modal-title-wrap {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+    }
+    .mermaid-modal-header .modal-icon {
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      background: linear-gradient(135deg, #3b82f6, #0ea5e9);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      flex-shrink: 0;
+    }
+    .mermaid-modal-header .modal-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: #1e293b;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .mermaid-modal-header .modal-hint {
+      font-size: 12px;
+      color: #94a3b8;
+      font-weight: 400;
+      margin-left: 4px;
+    }
+    .mermaid-modal-header .modal-actions {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      flex-shrink: 0;
+    }
+    .mermaid-modal-header .modal-close {
+      width: 30px;
+      height: 30px;
+      border: none;
+      border-radius: 6px;
+      background: transparent;
+      color: #94a3b8;
+      font-size: 17px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s ease;
+      margin-left: 4px;
+    }
+    .mermaid-modal-header .modal-close:hover {
+      background: #fee2e2;
+      color: #dc2626;
+    }
+    .mermaid-modal-body {
+      flex: 1;
+      overflow: auto;
+      position: relative;
+      user-select: auto;
+      background: #f8fafc
+        repeating-linear-gradient(
+          0deg, transparent, transparent 23px, #f1f5f9 23px, #f1f5f9 24px
+        ),
+        repeating-linear-gradient(
+          90deg, transparent, transparent 23px, #f1f5f9 23px, #f1f5f9 24px
+        );
+    }
+    .mermaid-modal-body svg {
+      display: block;
+    }
+    @media (max-width: 768px) {
+      .mermaid-modal { padding: 12px; }
+      .mermaid-modal-content { max-width: 100vw; max-height: 100vh; border-radius: 10px; }
+      .mermaid-modal-header { padding: 10px 14px; }
+    }
+    @media (max-width: 480px) {
+      .mermaid-modal { padding: 0; }
+      .mermaid-modal-content { border-radius: 0; max-width: 100vw; max-height: 100vh; }
+    }
+
+
+/* ===== 引导思考 - Note-style Card ===== */
+    tr.guide-card-header td {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      width: 100%;
+      padding: 12px 24px !important;
+      font-size: 13px;
+      font-weight: 700;
+      color: #6366f1;
+      letter-spacing: 0.04em;
+      background: transparent !important;
+      border: none !important;
+    }
+    table.guide-card {
+      border-collapse: separate;
+      border-spacing: 0;
+      font-size: 14px;
+      margin: 0 0 24px;
+      overflow: hidden;
+      display: block;
+      width: 100%;
+      background: #f8faff;
+      border-left: 4px solid #6366f1;
+      border-radius: 0 12px 12px 0;
+      box-shadow: 0 1px 3px rgba(99, 102, 241, 0.08);
+    }
+    /* Hide original table header ("思考维度 | 内容") */
+    table.guide-card thead {
+      display: none;
+    }
+    /* Collapse/expand behavior */
+    table.guide-card.collapsed tbody tr:not(.guide-card-header) {
+      display: none;
+    }
+    table.guide-card tbody tr.guide-card-header {
+      cursor: pointer;
+      user-select: none;
+    }
+    table.guide-card tbody tr.guide-card-header:hover {
+      background: rgba(99, 102, 241, 0.04);
+    }
+    .collapse-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 18px;
+      height: 18px;
+      flex-shrink: 0;
+      transition: transform 0.2s ease;
+    }
+    .collapse-icon::before {
+      content: '';
+      display: block;
+      width: 6px;
+      height: 6px;
+      border-right: 2px solid #a5b4fc;
+      border-bottom: 2px solid #a5b4fc;
+      transform: rotate(-45deg);
+      margin-top: -3px;
+      transition: transform 0.2s ease, border-color 0.2s ease;
+    }
+    table.guide-card:not(.collapsed) .collapse-icon::before {
+      transform: rotate(45deg);
+      margin-top: 3px;
+      border-color: #6366f1;
+    }
+    tr.guide-card-header:hover .collapse-icon::before {
+      border-color: #6366f1;
+    }
+    .collapse-hint {
+      font-size: 11px;
+      color: #a5b4fc;
+      font-weight: 400;
+      transition: color 0.2s ease;
+    }
+    table.guide-card:not(.collapsed) .collapse-hint {
+      display: none;
+    }
+    tr.guide-card-header:hover .collapse-hint {
+      color: #6366f1;
+    }
+    table.guide-card tbody,
+    table.guide-card tbody tr {
+      display: block;
+      width: 100%;
+    }
+    table.guide-card tbody td {
+      display: block;
+      width: 100%;
+      padding: 0 24px 14px;
+      border: none;
+      vertical-align: top;
+      line-height: 1.7;
+      color: #475569;
+    }
+    table.guide-card tbody td:first-child {
+      padding: 12px 24px 2px;
+      font-weight: 600;
+      font-size: 12px;
+      color: #6366f1;
+      background: transparent;
+      width: 100%;
+      border: none;
+      letter-spacing: 0.03em;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    table.guide-card tbody td:first-child::before {
+      display: none;
+    }
+    /* Content lists inside cells */
+    table.guide-card tbody td ul {
+      margin: 0;
+      padding-left: 16px;
+      list-style: none;
+    }
+    table.guide-card tbody td > ul > li {
+      position: relative;
+      padding-left: 14px;
+      margin-bottom: 4px;
+      font-size: 13.5px;
+      color: #475569;
+      line-height: 1.7;
+    }
+    table.guide-card tbody td > ul > li::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 10px;
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: #c7d2fe;
+    }
+    table.guide-card tbody td > ul > li:last-child {
+      margin-bottom: 0;
+    }
+    table.guide-card tbody td ul ul {
+      padding-left: 14px;
+      margin-top: 2px;
+    }
+    table.guide-card tbody td ul ul li {
+      position: relative;
+      padding-left: 12px;
+      margin-bottom: 2px;
+      font-size: 13px;
+      color: #64748b;
+      line-height: 1.6;
+    }
+    table.guide-card tbody td ul ul li::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 9px;
+      width: 3px;
+      height: 3px;
+      border-radius: 50%;
+      background: #cbd5e1;
+    }
+    table.guide-card tbody td strong,
+    table.guide-card tbody td:first-child strong {
+      color: #4338ca;
+      font-weight: 600;
+    }
+    table.guide-card tbody td code {
+      background: #eef2ff;
+      color: #6366f1;
+      font-size: 12.5px;
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-weight: 500;
+    }
+
+/* ===== Navigation ===== */
+    .nav {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 48px;
+      padding-top: 24px;
+      border-top: 1px solid #e2e8f0;
+    }
+    
+    .nav a {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 10px 18px;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      color: #475569;
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 500;
+      transition: all 0.15s ease;
+    }
+    
+    .nav a:hover {
+      background: #3b82f6;
+      color: #fff;
+      border-color: #3b82f6;
+    }
+    
+    /* ===== Search Results ===== */
+    .search-results {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.12);
+      max-height: 400px;
+      overflow-y: auto;
+      z-index: 100;
+      display: none;
+      margin: 4px 0 0;
+    }
+    .search-results.active { display: block; }
+    .search-result-item {
+      display: block;
+      padding: 10px 14px;
+      text-decoration: none;
+      border-bottom: 1px solid #f1f5f9;
+      transition: background 0.15s ease;
+    }
+    .search-result-item:last-child { border-bottom: none; }
+    .search-result-item:hover { background: #f8fafc; }
+    .search-result-item .sr-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: #1e293b;
+      margin-bottom: 2px;
+    }
+    .search-result-item .sr-preview {
+      font-size: 12px;
+      color: #64748b;
+      line-height: 1.4;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .search-result-item .sr-path {
+      font-size: 11px;
+      color: #94a3b8;
+      margin-top: 2px;
+    }
+    .search-no-results {
+      padding: 16px;
+      text-align: center;
+      color: #94a3b8;
+      font-size: 13px;
+    }
+    .search-loading {
+      padding: 12px;
+      text-align: center;
+      color: #94a3b8;
+      font-size: 12px;
+    }
+    .sidebar-search { position: relative; }
+
+    /* ===== Copy Code Button ===== */
+    .code-block-wrapper {
+      position: relative;
+    }
+    .copy-code-btn {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      padding: 4px 10px;
+      background: rgba(255,255,255,0.1);
+      color: #94a3b8;
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 6px;
+      font-size: 12px;
+      cursor: pointer;
+      opacity: 0;
+      transition: opacity 0.15s ease, background 0.15s ease, color 0.15s ease;
+    }
+    .markdown-section pre:hover .copy-code-btn,
+    .copy-code-btn:focus {
+      opacity: 1;
+    }
+    .copy-code-btn:hover {
+      background: rgba(255,255,255,0.2);
+      color: #e2e8f0;
+    }
+    .copy-code-btn.copied {
+      background: #22c55e;
+      color: #fff;
+      border-color: #22c55e;
+      opacity: 1;
+    }
+
+    /* ===== Back to Top ===== */
+    .back-to-top {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      width: 40px;
+      height: 40px;
+      background: #3b82f6;
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 12px rgba(59,130,246,0.3);
+      transition: opacity 0.2s ease, transform 0.2s ease;
+      z-index: 80;
+    }
+    .back-to-top.visible { display: flex; }
+    .back-to-top:hover { transform: translateY(-2px); }
+    .back-to-top svg { width: 20px; height: 20px; }
+
+    /* ===== Mobile Menu Toggle ===== */
+    .menu-toggle {
+      display: none;
+      position: fixed;
+      top: 16px;
+      left: 16px;
+      z-index: 200;
+      width: 40px;
+      height: 40px;
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    .menu-toggle svg {
+      width: 20px;
+      height: 20px;
+      color: #475569;
+    }
+    .sidebar-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.3);
+      z-index: 90;
+    }
+    .sidebar-overlay.active { display: block; }
+
+    /* ===== Mobile ===== */
+    @media (max-width: 1024px) {
+      .menu-toggle { display: flex; }
+      .sidebar { transform: translateX(-100%); transition: transform 0.2s ease; z-index: 100; }
+      .sidebar.open { transform: translateX(0); }
+      .content { margin-left: 0; padding: 24px 20px; padding-top: 64px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <nav class="sidebar">
+      <div class="sidebar-header">
+        <a href="../index.html" class="sidebar-brand">
+          <span class="icon">📚</span>
+          LLM Agent 源码学习
+        </a>
+      </div>
+      
+      <div class="sidebar-search">
+        <div class="search-box">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"/>
+            <path d="M21 21l-4.35-4.35"/>
+          </svg>
+          <input type="text" placeholder="搜索文档..." id="searchInput" autocomplete="off">
+        </div>
+        <div class="search-results" id="searchResults"></div>
+      </div>
+      
+      <div class="quick-links">
+        <a href="../index.html">🏠 首页</a>
+        <a href="../SUMMARY.html">📑 目录</a>
+      </div>
+      
+      <div class="sidebar-nav">
+        <div class="sidebar-section">
+        <div class="sidebar-section-header">
+          <span class="section-title">
+            <span class="section-num">1</span>
+            <span class="section-name">Claude Code</span>
+          </span>
+          <svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+        </div>
+        <div class="sidebar-section-items"><ul><li><a href="./01-OVERVIEW.html"><span class="num">1.0</span>全景概览</a></li><li><a href="./02-BOOTSTRAP.html"><span class="num">2.0</span>启动流程</a></li><li><a href="./03-TYPE-SYSTEM.html"><span class="num">3.0</span>类型系统设计</a></li><li><a href="./04-QUERY-ENGINE.html"><span class="num">4.0</span>查询引擎</a></li><li><a href="./05-MESSAGE-SYSTEM.html"><span class="num">5.0</span>消息系统</a></li><li><a href="./06-STREAMING.html"><span class="num">6.0</span>流式处理</a></li><li><a href="./07-TOOL-ARCHITECTURE.html"><span class="num">7.0</span>工具架构</a></li><li><a href="./08-BUILTIN-TOOLS.html"><span class="num">8.0</span>内置工具</a></li><li><a href="./09-TOOL-EXECUTION.html"><span class="num">9.0</span>工具执行</a></li><li><a href="./10-AGENT-MODEL.html"><span class="num">10.0</span>Agent 模型</a></li><li><a href="./11-SUBAGENT.html"><span class="num">11.0</span>子代理</a></li><li><a href="./12-SKILL-SYSTEM.html"><span class="num">12.0</span>技能系统</a></li><li><a href="./13-PERMISSION-MODEL.html"><span class="num">13.0</span>权限模型</a></li><li><a href="./14-BASH-SECURITY.html"><span class="num">14.0</span>Bash 安全</a></li><li><a href="./15-MCP-PROTOCOL.html"><span class="num">15.0</span>MCP 协议</a></li><li><a href="./16-MCP-AUTH.html"><span class="num">16.0</span>MCP 认证</a></li><li><a href="./17-STATE-MANAGEMENT.html"><span class="num">17.0</span>状态管理</a></li><li><a href="./18-CONVERSATION.html"><span class="num">18.0</span>会话管理</a></li><li><a href="./19-INK-REACT.html"><span class="num">19.0</span>Ink React</a></li><li><a href="./20-REPL.html"><span class="num">20.0</span>REPL</a></li><li><a href="./21-PERFORMANCE.html"><span class="num">21.0</span>性能优化</a></li><li><a href="./22-TESTING.html"><span class="num">22.0</span>测试</a></li><li><a href="./23-BUILD-SYSTEM.html"><span class="num">23.0</span>构建系统</a></li><li><a href="./24-DESIGN-PATTERNS.html"><span class="num">24.0</span>设计模式</a></li><li><a href="./25-PHILOSOPHY.html"><span class="num">25.0</span>哲学思想</a></li><li><a href="./26-COGNITIVE-LOOP.html"><span class="num">26.0</span>认知循环</a></li><li><a href="./APPENDIX-A-GLOSSARY.html">附录A 术语表</a></li><li><a href="./APPENDIX-B-SOURCE-MAP.html">附录B 源码导航</a></li></ul></div></div>
+      </div>
+
+      <div class="sidebar-external">
+        <a href="https://github.com/Hyper66666/claude-code-sourcemap" target="_blank">
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+          </svg>
+          GitHub 源码
+        </a>
+      </div>
+    </nav>
+    <button class="back-to-top" id="backToTop" aria-label="回到顶部" title="回到顶部">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M18 15l-6-6-6 6"/>
+      </svg>
+    </button>
+    <button class="menu-toggle" id="menuToggle" aria-label="打开菜单">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M3 12h18M3 6h18M3 18h18"/>
+      </svg>
+    </button>
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+    <main class="content">
+      <article class="markdown-section">
+        <h1>第 4 章：查询引擎</h1>
+<blockquote>
+<p>&quot;一个优秀的引擎设计，不在于它能跑多快，而在于它在出错时仍能保持可控。&quot;</p>
+</blockquote>
+<table class="guide-card collapsed">
+<thead>
+<tr>
+<th>思考维度</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody>
+<tr class="guide-card-header"><td colspan="2"><span class="collapse-icon"></span>引导思考 <span class="collapse-hint">展开</span></td></tr><tr>
+<td><strong>它为什么存在</strong></td>
+<td><ul><li>查询引擎就是整个系统的心脏——每次敲回车到 AI 回复，都经过它</li><li>SDK 和 REPL 共用同一个抽象——不用维护两套代码</li></ul></td>
+</tr>
+<tr>
+<td><strong>它解决什么问题</strong></td>
+<td><ul><li>聊了好几轮了状态不能丢——mutableMessages 跨多次 submitMessage 保持</li><li>模型说&quot;我要调个工具&quot;——引擎自动执行并把结果喂回去，用户不用管</li><li>模型输出被截断了？上下文超长了？模型挂了？——引擎自己会恢复，不用重来</li></ul></td>
+</tr>
+<tr>
+<td><strong>它在系统中的位置</strong></td>
+<td><ul><li>L4 层——工作在 CLI/UI 和 Tool 系统之间，承上启下</li><li>一个实例绑一个完整对话——聊多久状态都还在</li></ul></td>
+</tr>
+<tr>
+<td><strong>它如何工作</strong></td>
+<td><ul><li>submitMessage 是个 AsyncGenerator——调用方可以一条一条消费流式产出</li><li>queryLoop 是个无限循环状态机，每轮都判断是结束（Terminal）还是继续（Continue）</li><li>BudgetTracker 盯着 token 用量——快超了就自动停或者塞一条&quot;差不多了&quot;的消息</li></ul></td>
+</tr>
+<tr>
+<td><strong>它如何实现</strong></td>
+<td><ul><li>Config 对象注入 20+ 依赖项——配置对象模式比构造函数参数列表好用</li><li>State.transition 记住上次为啥继续——智能决策，同样的失败不重蹈覆辙</li><li>withhold 模式扣住错误消息不发给 SDK——恢复成功了就假装没发生过</li></ul></td>
+</tr>
+<tr>
+<td><strong>不同平台如何做</strong></td>
+<td><ul><li><strong>Cursor Agent</strong>：没有独立的查询引擎——AI 请求直接走 VS Code 消息通道</li><li><strong>OpenClaw</strong>：查询循环简化版，不支持 max_output_tokens 恢复和 token 预算</li><li><strong>Harness Agent</strong>：查询引擎嵌在流水线框架里，任务级重试有但缺少 Generator 模式</li></ul></td>
+</tr>
+<tr>
+<td><strong>优势是什么？</strong></td>
+<td><ul><li><strong>优势</strong><ul><li>AsyncGenerator 天然背压 + 惰性计算</li><li>错误恢复链（413 → collapse → compact → fallback）覆盖极端场景</li><li>withhold 模式不让 SDK 消费者看到虚假错误</li></ul></li></ul></td>
+</tr>
+</tbody></table>
+<p>查询引擎（Query Engine）是 Claude Code 整个交互循环的心脏。无论用户是通过命令行 REPL 输入一条提示，还是通过 SDK 以编程方式发送消息，最终都会汇入同一条河流——<code>QueryEngine.submitMessage()</code> 方法。本章将深入剖析这一核心组件的设计哲学、状态管理与错误恢复机制。</p>
+<hr>
+<h2>4.1 QueryEngine 类</h2>
+<h3>设计目标与职责划分</h3>
+<p><code>QueryEngine</code> 的文件头注释道出了它的设计意图：</p>
+<pre><code class="language-typescript">/**
+ * QueryEngine owns the query lifecycle and session state for a conversation.
+ * It extracts the core logic from ask() into a standalone class that can be
+ * used by both the headless/SDK path and (in a future phase) the REPL.
+ *
+ * One QueryEngine per conversation. Each submitMessage() call starts a new
+ * turn within the same conversation. State (messages, file cache, usage, etc.)
+ * persists across turns.
+ */
+export class QueryEngine {</code></pre><p>这段注释揭示了三个关键设计决策：</p>
+<ol>
+<li><strong>一个对话一个实例</strong>：每个 <code>QueryEngine</code> 实例绑定一个完整的对话会话，状态在多轮交互之间持久化。</li>
+<li><strong>从 ask() 提取</strong>：它是从早期的 <code>ask()</code> 函数中重构而来，将会话状态从函数闭包提升为类字段。</li>
+<li><strong>统一抽象</strong>：SDK 和 REPL 共享同一个引擎，消除了两套代码路径的维护负担。</li>
+</ol>
+<h3>核心字段</h3>
+<pre><code class="language-typescript">export class QueryEngine {
+  private config: QueryEngineConfig
+  private mutableMessages: Message[]
+  private abortController: AbortController
+  private permissionDenials: SDKPermissionDenial[]
+  private totalUsage: NonNullableUsage
+  private hasHandledOrphanedPermission = false
+  private readFileState: FileStateCache
+  private discoveredSkillNames = new Set&lt;string&gt;()
+  private loadedNestedMemoryPaths = new Set&lt;string&gt;()</code></pre><p>让我们逐一分析这些字段的设计考量：</p>
+<p><strong><code>mutableMessages: Message[]</code></strong> 是整个对话的消息历史，它贯穿多次 <code>submitMessage()</code> 调用。注意这里使用了 <code>mutable</code> 前缀——这是有意为之的命名。在函数式风格占主导的代码库中，显式标记可变状态是一种防御性编程实践。每次用户输入处理完成后，新消息通过 <code>push()</code> 追加：</p>
+<pre><code class="language-typescript">this.mutableMessages.push(...messagesFromUserInput)</code></pre><p><strong><code>readFileState: FileStateCache</code></strong> 缓存了已读取文件的状态，用于避免重复读取和检测文件变更。在多轮工具调用中，同一文件可能被多次引用——缓存避免了不必要的磁盘 I/O。</p>
+<p><strong><code>totalUsage: NonNullableUsage</code></strong> 追踪整个会话的 API 使用量（input tokens、output tokens、缓存命中等）。初始化为 <code>EMPTY_USAGE</code>，在每次 API 调用后累加。</p>
+<p><strong><code>permissionDenials: SDKPermissionDenial[]</code></strong> 记录被拒绝的工具使用请求。这不仅用于 SDK 消费者的状态报告，也是安全审计的关键数据源。</p>
+<p><strong><code>discoveredSkillNames</code></strong> 跟踪当前 turn 中发现的技能名称，用于分析反馈。注意注释中强调它在每次 <code>submitMessage</code> 开头清空：</p>
+<pre><code class="language-typescript">// Turn-scoped skill discovery tracking. Must persist across the two
+// processUserInputContext rebuilds inside submitMessage, but is cleared
+// at the start of each submitMessage to avoid unbounded growth across
+// many turns in SDK mode.
+private discoveredSkillNames = new Set&lt;string&gt;()</code></pre><h3>配置对象</h3>
+<p><code>QueryEngineConfig</code> 类型是一个庞大的配置结构，将引擎初始化所需的一切依赖注入其中：</p>
+<pre><code class="language-typescript">export type QueryEngineConfig = {
+  cwd: string
+  tools: Tools
+  commands: Command[]
+  mcpClients: MCPServerConnection[]
+  agents: AgentDefinition[]
+  canUseTool: CanUseToolFn
+  getAppState: () =&gt; AppState
+  setAppState: (f: (prev: AppState) =&gt; AppState) =&gt; void
+  initialMessages?: Message[]
+  readFileCache: FileStateCache
+  customSystemPrompt?: string
+  appendSystemPrompt?: string
+  maxTurns?: number
+  maxBudgetUsd?: number
+  taskBudget?: { total: number }
+  jsonSchema?: Record&lt;string, unknown&gt;
+  // ...
+}</code></pre><p>这种&quot;配置对象&quot;模式（有别于构造函数参数列表）有两个好处：第一，可选参数不需要固定位置；第二，新增配置项不会破坏现有调用方。</p>
+<p>值得特别关注的是 <code>snipReplay</code> 回调：</p>
+<pre><code class="language-typescript">snipReplay?: (
+  yieldedSystemMsg: Message,
+  store: Message[],
+) =&gt; { messages: Message[]; executed: boolean } | undefined</code></pre><p>注释解释了为什么将这个功能注入而非硬编码——<code>feature(&#39;HISTORY_SNIP&#39;)</code> 是编译时条件，在 bun test 环境下返回 false，如果在 QueryEngine 内直接引用被 tree-shake 掉的模块字符串，测试会中断。这是一个典型的&quot;依赖倒置解决编译约束&quot;案例。</p>
+<div class="thinking-note"><h3>思考笔记</h3>
+<p>QueryEngine 是 Claude Code 的&quot;会话容器&quot;——它不关心你传什么消息进来，只管维护会话生命周期。</p>
+<ul>
+<li>AsyncGenerator 的惰性求值是最优雅的设计选择——调用方逐条消费，引擎逐条产出，天然背压。</li>
+<li>mutableMessages 贯穿整个生命周期，每次 submitMessage 都基于前一次的状态——这意味着 QueryEngine 实例天然支持多轮对话。</li>
+<li>依赖倒置（injectHistorySnipTools）解决编译约束的设计说明：feature() DCE 不只是性能优化，还会影响模块的可测试性。</li>
+<li>&quot;生命周期容器&quot;的抽象让 SDK 和 REPL 共享同一个 QueryEngine——不是两套代码，是一个接口两个消费者。</li>
+</ul>
+</div><hr>
+<h2>4.2 submitMessage 流程</h2>
+<p><code>submitMessage</code> 是 QueryEngine 的唯一公共方法——或者更准确地说，是唯一的公共 <strong>AsyncGenerator</strong>。这个选择意味着调用方不是获得一个 Promise，而是获得一个可以逐步消费的异步流。</p>
+<h3>完整生命周期</h3>
+<div class="mermaid">%%{init: {"theme": "base", "themeVariables":{"primaryColor":"#3b82f6","primaryTextColor":"#1e293b","primaryBorderColor":"#60a5fa","lineColor":"#94a3b8","secondaryColor":"#f1f5f9","tertiaryColor":"#ffffff","fontFamily":"-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif"}}}%%
+sequenceDiagram
+    participant Caller as SDK/REPL 调用方
+    participant QE as QueryEngine
+    participant PUI as processUserInput
+    participant TS as Transcript
+    participant Q as query()
+    participant API as Claude API
+
+    Caller-&gt;&gt;QE: submitMessage(prompt)
+    QE-&gt;&gt;QE: discoveredSkillNames.clear()
+    QE-&gt;&gt;QE: setCwd(cwd)
+    QE-&gt;&gt;QE: fetchSystemPromptParts()
+    QE-&gt;&gt;QE: 构造 systemPrompt
+
+    alt 有 orphanedPermission
+        QE-&gt;&gt;QE: handleOrphanedPermission()
+    end
+
+    QE-&gt;&gt;PUI: processUserInput(prompt)
+    PUI--&gt;&gt;QE: { messages, shouldQuery, allowedTools }
+    QE-&gt;&gt;QE: mutableMessages.push(...messages)
+
+    alt persistSession
+        QE-&gt;&gt;TS: recordTranscript(messages)
+    end
+
+    QE-&gt;&gt;Caller: yield buildSystemInitMessage(...)
+
+    alt !shouldQuery (本地命令)
+        QE-&gt;&gt;Caller: yield 命令输出
+        QE-&gt;&gt;Caller: yield { type: 'result', subtype: 'success' }
+        Note over QE: 提前返回
+    end
+
+    QE-&gt;&gt;Q: query({ messages, systemPrompt, ... })
+    loop 消息流
+        Q-&gt;&gt;API: callModel(streaming)
+        API--&gt;&gt;Q: yield assistant messages
+        Q-&gt;&gt;Q: 执行工具调用
+        Q--&gt;&gt;QE: yield message
+        QE-&gt;&gt;QE: mutableMessages.push(message)
+        QE-&gt;&gt;TS: recordTranscript(messages)
+        QE-&gt;&gt;Caller: yield normalizeMessage(message)
+    end
+
+    Q--&gt;&gt;QE: return Terminal
+    QE-&gt;&gt;Caller: yield { type: 'result' }</div><h3>阶段一：上下文构建</h3>
+<p><code>submitMessage</code> 的前半段是一个精心编排的上下文构建过程：</p>
+<pre><code class="language-typescript">const {
+  defaultSystemPrompt,
+  userContext: baseUserContext,
+  systemContext,
+} = await fetchSystemPromptParts({
+  tools,
+  mainLoopModel: initialMainLoopModel,
+  additionalWorkingDirectories: Array.from(
+    initialAppState.toolPermissionContext.additionalWorkingDirectories.keys(),
+  ),
+  mcpClients,
+  customSystemPrompt: customPrompt,
+})</code></pre><p>系统提示由多个层次组成：默认系统提示、可选的自定义提示、内存机制提示和追加提示。它们通过 <code>asSystemPrompt()</code> 组合为最终的系统提示数组。</p>
+<h3>阶段二：用户输入处理</h3>
+<pre><code class="language-typescript">const {
+  messages: messagesFromUserInput,
+  shouldQuery,
+  allowedTools,
+  model: modelFromUserInput,
+  resultText,
+} = await processUserInput({
+  input: prompt,
+  mode: 'prompt',
+  // ...
+})</code></pre><p><code>processUserInput</code> 负责将原始输入（可能是纯文本、斜杠命令或 ContentBlock 数组）转换为消息列表。如果是本地命令（如 <code>/compact</code>），<code>shouldQuery</code> 为 false，引擎不会调用 API。</p>
+<h3>阶段三：Transcript 预写</h3>
+<p>在进入查询循环之前，引擎将用户消息写入 transcript：</p>
+<pre><code class="language-typescript">if (persistSession &amp;&amp; messagesFromUserInput.length &gt; 0) {
+  const transcriptPromise = recordTranscript(messages)
+  if (isBareMode()) {
+    void transcriptPromise  // fire-and-forget
+  } else {
+    await transcriptPromise
+  }
+}</code></pre><p>这里有一个精妙的区分：在 <code>bare</code> 模式（脚本化调用）下不等待写入完成，因为这类场景不需要 <code>--resume</code> 能力。注释中甚至量化了性能影响：&quot;~4ms on SSD, ~30ms under disk contention&quot;。</p>
+<h3>阶段四：查询循环</h3>
+<p>最终，引擎进入查询主循环：</p>
+<pre><code class="language-typescript">for await (const message of query({
+  messages,
+  systemPrompt,
+  userContext,
+  systemContext,
+  canUseTool: wrappedCanUseTool,
+  toolUseContext: processUserInputContext,
+  fallbackModel,
+  querySource: 'sdk',
+  maxTurns,
+  taskBudget,
+})) {
+  // 处理每个 yielded message...
+}</code></pre><p><code>query()</code> 函数本身也是一个 AsyncGenerator——引擎在外层消费它的产出，同时向上层调用方再次 yield。这形成了一个 <strong>Generator 管道</strong>（我们将在第 6 章详细讨论）。</p>
+<div class="thinking-note"><h3>思考笔记</h3>
+<p>submitMessage 的异步 Generator 管道是整本书最核心的&quot;数据高速公路&quot;——所有消息、工具结果、流式文本都在这条管道里流动。</p>
+<ul>
+<li>外层 Engine 管理状态，内层 query() 管理循环——职责分离清晰，Engine 不用关心循环细节。</li>
+<li>管道是单向的：Engine → query() → API → 工具执行 → 回到 query() → Engine。每一步都是 yield，天然背压。</li>
+<li>状态机（4.3 节）追踪 queryStatus（Running/Terminal/Error），每次循环迭代检查 status——不是 try/catch 驱动，而是状态驱动。</li>
+<li>while(true) 循环 + break 条件（无 tool_use 或 Terminal 状态）——这是最直接但也最清晰的事件循环实现。</li>
+</ul>
+</div><hr>
+<h2>4.3 状态机模型</h2>
+<p><code>query.ts</code> 中的 <code>queryLoop</code> 函数是一个显式的无限循环状态机。它的设计理念是：每次循环迭代要么以 <code>return</code> 终止（Terminal），要么以 <code>continue</code> 转向下一轮（Continue）。</p>
+<h3>状态定义</h3>
+<pre><code class="language-typescript">type State = {
+  messages: Message[]
+  toolUseContext: ToolUseContext
+  autoCompactTracking: AutoCompactTrackingState | undefined
+  maxOutputTokensRecoveryCount: number
+  hasAttemptedReactiveCompact: boolean
+  maxOutputTokensOverride: number | undefined
+  pendingToolUseSummary: Promise&lt;ToolUseSummaryMessage | null&gt; | undefined
+  stopHookActive: boolean | undefined
+  turnCount: number
+  transition: Continue | undefined
+}</code></pre><p><code>State</code> 是 queryLoop 的全部可变状态。每次 <code>continue</code> 都通过构建一个新的 <code>State</code> 对象来执行状态转换：</p>
+<pre><code class="language-typescript">const next: State = {
+  messages: [...messagesForQuery, ...assistantMessages, ...toolResults],
+  toolUseContext: toolUseContextWithQueryTracking,
+  // ...
+  transition: { reason: 'next_turn' },
+}
+state = next</code></pre><h3>状态转换图</h3>
+<div class="mermaid">%%{init: {"theme": "base", "themeVariables":{"primaryColor":"#3b82f6","primaryTextColor":"#1e293b","primaryBorderColor":"#60a5fa","lineColor":"#94a3b8","secondaryColor":"#f1f5f9","tertiaryColor":"#ffffff","fontFamily":"-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif"}}}%%
+stateDiagram-v2
+    [*] --&gt; LoopEntry: 进入 while(true)
+
+    LoopEntry --&gt; Preprocess: snip / microcompact / collapse / autocompact
+    Preprocess --&gt; APICall: callModel (streaming)
+
+    APICall --&gt; StreamingFallback: FallbackTriggeredError
+    StreamingFallback --&gt; APICall: 切换模型重试
+
+    APICall --&gt; StreamComplete: 流式接收完成
+
+    StreamComplete --&gt; AbortedStreaming: signal.aborted
+    AbortedStreaming --&gt; [*]: return 'aborted_streaming'
+
+    StreamComplete --&gt; CheckFollowUp: needsFollowUp?
+
+    CheckFollowUp --&gt; NoFollowUp: 无工具调用
+    CheckFollowUp --&gt; ToolExecution: 有工具调用
+
+    NoFollowUp --&gt; CollapseDrainRetry: 413 + 有可清除的 collapse
+    CollapseDrainRetry --&gt; LoopEntry: continue
+
+    NoFollowUp --&gt; ReactiveCompactRetry: 413 + reactive compact 成功
+    ReactiveCompactRetry --&gt; LoopEntry: continue
+
+    NoFollowUp --&gt; MaxOutputEscalate: max_output + 可升级到 64k
+    MaxOutputEscalate --&gt; LoopEntry: continue
+
+    NoFollowUp --&gt; MaxOutputRecovery: max_output + 恢复次数 &lt; 3
+    MaxOutputRecovery --&gt; LoopEntry: continue
+
+    NoFollowUp --&gt; StopHookBlocking: stop hook 返回阻塞错误
+    StopHookBlocking --&gt; LoopEntry: continue
+
+    NoFollowUp --&gt; TokenBudgetContinuation: token 预算未满
+    TokenBudgetContinuation --&gt; LoopEntry: continue
+
+    NoFollowUp --&gt; Completed: 正常完成
+    Completed --&gt; [*]: return 'completed'
+
+    ToolExecution --&gt; AbortedTools: signal.aborted
+    AbortedTools --&gt; [*]: return 'aborted_tools'
+
+    ToolExecution --&gt; HookStopped: hook 阻止继续
+    HookStopped --&gt; [*]: return 'hook_stopped'
+
+    ToolExecution --&gt; MaxTurns: turnCount &gt; maxTurns
+    MaxTurns --&gt; [*]: return 'max_turns'
+
+    ToolExecution --&gt; NextTurn: 正常递归
+    NextTurn --&gt; LoopEntry: continue</div><h3>Terminal 与 Continue 的类型约束</h3>
+<p>从源码中提取的所有终止原因（Terminal reasons）：</p>
+<table>
+<thead>
+<tr>
+<th>reason</th>
+<th>触发条件</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>completed</code></td>
+<td>模型正常完成回复（无工具调用）</td>
+</tr>
+<tr>
+<td><code>blocking_limit</code></td>
+<td>token 数超过硬性限制</td>
+</tr>
+<tr>
+<td><code>aborted_streaming</code></td>
+<td>用户中断（流式阶段）</td>
+</tr>
+<tr>
+<td><code>aborted_tools</code></td>
+<td>用户中断（工具执行阶段）</td>
+</tr>
+<tr>
+<td><code>prompt_too_long</code></td>
+<td>413 错误且无法恢复</td>
+</tr>
+<tr>
+<td><code>image_error</code></td>
+<td>图片/PDF 过大且无法恢复</td>
+</tr>
+<tr>
+<td><code>model_error</code></td>
+<td>API 抛出非预期异常</td>
+</tr>
+<tr>
+<td><code>stop_hook_prevented</code></td>
+<td>stop hook 明确阻止</td>
+</tr>
+<tr>
+<td><code>hook_stopped</code></td>
+<td>工具执行期间 hook 阻止</td>
+</tr>
+<tr>
+<td><code>max_turns</code></td>
+<td>达到最大轮次限制</td>
+</tr>
+</tbody></table>
+<p>Continue 转换原因：</p>
+<table>
+<thead>
+<tr>
+<th>reason</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>next_turn</code></td>
+<td>正常的工具调用后递归</td>
+</tr>
+<tr>
+<td><code>collapse_drain_retry</code></td>
+<td>清除 context collapse 后重试</td>
+</tr>
+<tr>
+<td><code>reactive_compact_retry</code></td>
+<td>reactive compact 后重试</td>
+</tr>
+<tr>
+<td><code>max_output_tokens_escalate</code></td>
+<td>从 8k 升级到 64k 重试</td>
+</tr>
+<tr>
+<td><code>max_output_tokens_recovery</code></td>
+<td>注入恢复消息后继续</td>
+</tr>
+<tr>
+<td><code>stop_hook_blocking</code></td>
+<td>stop hook 错误后重试</td>
+</tr>
+<tr>
+<td><code>token_budget_continuation</code></td>
+<td>token 预算内继续</td>
+</tr>
+</tbody></table>
+<p><code>transition</code> 字段记录了上一次迭代的 Continue 原因，让下一次迭代能根据历史做出不同决策——例如，<code>collapse_drain_retry</code> 只尝试一次，如果重试后仍然 413，则退回到 reactive compact。</p>
+<div class="thinking-note"><h3>思考笔记</h3>
+<p>Token 预算是查询引擎的&quot;燃油表&quot;——它决定了一次查询还能跑多远，以及什么时候该减速或停车。</p>
+<ul>
+<li>27K/5K 的双阈值设计区分了&quot;需要行动&quot;和&quot;必须行动&quot;——不是等到油箱空了才找加油站。</li>
+<li>BudgetTracker 在每次 API 调用前检查 token——这是一种预检（pre-flight check）而非事后补救。</li>
+<li>collapse 策略不是简单的删消息，而是用摘要替换——这是一个&quot;信息密度 vs 长度&quot;的权衡决策。</li>
+<li>wait_for_budget_tokens 模式是&quot;暂停而非报错&quot;——引擎知道恢复后重试能成功，所以不需要用户参与。</li>
+</ul>
+</div><hr>
+<h2>4.4 Token 预算</h2>
+<h3>BudgetTracker 机制</h3>
+<p><code>src/query/tokenBudget.ts</code> 实现了一个轻量级的 token 预算追踪器：</p>
+<pre><code class="language-typescript">export type BudgetTracker = {
+  continuationCount: number
+  lastDeltaTokens: number
+  lastGlobalTurnTokens: number
+  startedAt: number
+}
+
+export function createBudgetTracker(): BudgetTracker {
+  return {
+    continuationCount: 0,
+    lastDeltaTokens: 0,
+    lastGlobalTurnTokens: 0,
+    startedAt: Date.now(),
+  }
+}</code></pre><p>预算检查在模型完成回复（无工具调用）时触发：</p>
+<pre><code class="language-typescript">export function checkTokenBudget(
+  tracker: BudgetTracker,
+  agentId: string | undefined,
+  budget: number | null,
+  globalTurnTokens: number,
+): TokenBudgetDecision {
+  if (agentId || budget === null || budget &lt;= 0) {
+    return { action: 'stop', completionEvent: null }
+  }
+
+  const turnTokens = globalTurnTokens
+  const pct = Math.round((turnTokens / budget) * 100)
+  const deltaSinceLastCheck = globalTurnTokens - tracker.lastGlobalTurnTokens
+
+  const isDiminishing =
+    tracker.continuationCount &gt;= 3 &amp;&amp;
+    deltaSinceLastCheck &lt; DIMINISHING_THRESHOLD &amp;&amp;
+    tracker.lastDeltaTokens &lt; DIMINISHING_THRESHOLD
+
+  if (!isDiminishing &amp;&amp; turnTokens &lt; budget * COMPLETION_THRESHOLD) {
+    // 继续
+    tracker.continuationCount++
+    return { action: 'continue', nudgeMessage: ... }
+  }
+  // 停止
+}</code></pre><p>这个算法有三个关键阈值：</p>
+<ul>
+<li><strong><code>COMPLETION_THRESHOLD = 0.9</code></strong>：当已使用 token 达到预算的 90% 时停止。</li>
+<li><strong><code>DIMINISHING_THRESHOLD = 500</code></strong>：如果连续两次迭代的增量都小于 500 token，判定为&quot;收益递减&quot;。</li>
+<li><strong>连续检查次数 &gt;= 3</strong>：收益递减判定需要至少 3 次 continuation 历史。</li>
+</ul>
+<h3>子代理排除</h3>
+<p>注意第一个条件：<code>if (agentId || ...)</code>——子代理（subagent）不参与 token 预算。这是因为子代理有自己独立的生命周期，由父级的 <code>maxTurns</code> 控制。</p>
+<h3>与 task_budget 的区别</h3>
+<p>源码中有两种不同的&quot;预算&quot;概念：</p>
+<ol>
+<li><strong>tokenBudget</strong>：客户端侧的输出 token 追踪，通过 <code>checkTokenBudget</code> 在 queryLoop 内决策是否继续。</li>
+<li><strong>taskBudget</strong>：API 服务端的 <code>output_config.task_budget</code>，通过请求参数传递给服务端。跨越 compaction 边界时需要计算 <code>remaining</code>。</li>
+</ol>
+<pre><code class="language-typescript">// task_budget.remaining tracking across compaction boundaries.
+// While context is uncompacted the server sees the full history
+// and handles the countdown from {total} itself. After a compact,
+// the server sees only the summary and would under-count spend.
+let taskBudgetRemaining: number | undefined = undefined</code></pre><div class="thinking-note"><h3>思考笔记</h3>
+<p>Token 预算是查询引擎的&quot;油箱表&quot;——决定一次查询还能跑多远。</p>
+<ul>
+<li>27K/5K 双阈值是&quot;预警 + 告警&quot;模式，不是等到油箱空了才找加油站。</li>
+<li>BudgetTracker 在每次 API 调用前检查——预检而非事后补救。</li>
+<li>collapse 策略用摘要替换历史——&quot;用计算成本换 token 空间&quot;的权衡。</li>
+<li>wait_for_budget_tokens 是&quot;暂停而非报错&quot;——引擎知道重试后能成功。</li>
+</ul>
+</div><hr>
+<h2>4.5 错误恢复</h2>
+<p>Claude Code 的查询引擎实现了多层错误恢复策略，每一层都有明确的职责边界。</p>
+<h3>max_output_tokens 恢复</h3>
+<p>当模型输出被截断（<code>apiError === &#39;max_output_tokens&#39;</code>），引擎执行两阶段恢复：</p>
+<p><strong>阶段一：升级输出限制</strong></p>
+<p>如果当前使用的是默认的 8k 限制，且功能开关允许，引擎将 <code>maxOutputTokensOverride</code> 设置为 <code>ESCALATED_MAX_TOKENS</code>（64k）并重试同一请求：</p>
+<pre><code class="language-typescript">if (capEnabled &amp;&amp; maxOutputTokensOverride === undefined) {
+  const next: State = {
+    // ...
+    maxOutputTokensOverride: ESCALATED_MAX_TOKENS,
+    transition: { reason: 'max_output_tokens_escalate' },
+  }
+  state = next
+  continue
+}</code></pre><p><strong>阶段二：多轮恢复</strong></p>
+<p>如果升级后仍然截断，引擎注入一条特殊的 meta 消息，引导模型继续输出：</p>
+<pre><code class="language-typescript">if (maxOutputTokensRecoveryCount &lt; MAX_OUTPUT_TOKENS_RECOVERY_LIMIT) {
+  const recoveryMessage = createUserMessage({
+    content:
+      `Output token limit hit. Resume directly — no apology, no recap. ` +
+      `Pick up mid-thought if that is where the cut happened. ` +
+      `Break remaining work into smaller pieces.`,
+    isMeta: true,
+  })
+  // ...
+}</code></pre><p><code>MAX_OUTPUT_TOKENS_RECOVERY_LIMIT = 3</code> 意味着最多重试 3 次。消息中的措辞是经过精心设计的——&quot;no apology, no recap&quot; 防止模型浪费 token 重复已说过的内容。</p>
+<h3>Prompt-too-long 恢复链</h3>
+<p>当上下文超出模型窗口限制（HTTP 413），恢复链按优先级执行：</p>
+<ol>
+<li><strong>Context Collapse 清除</strong>（最轻量）：清除暂存的 collapse 操作，释放上下文空间。</li>
+<li><strong>Reactive Compact</strong>（全量压缩）：如果 collapse 不够，执行完整的上下文压缩。</li>
+<li><strong>错误表面化</strong>：如果压缩后仍然超限，向用户展示错误。</li>
+</ol>
+<pre><code class="language-typescript">if (isWithheld413) {
+  // 第一步：drain collapses
+  if (state.transition?.reason !== 'collapse_drain_retry') {
+    const drained = contextCollapse.recoverFromOverflow(...)
+    if (drained.committed &gt; 0) {
+      state = { ..., transition: { reason: 'collapse_drain_retry' } }
+      continue
+    }
+  }
+}
+// 第二步：reactive compact
+if ((isWithheld413 || isWithheldMedia) &amp;&amp; reactiveCompact) {
+  const compacted = await reactiveCompact.tryReactiveCompact({
+    hasAttempted: hasAttemptedReactiveCompact,
+    // ...
+  })
+}</code></pre><h3>模型降级回退</h3>
+<p>当主模型不可用时，引擎自动切换到备用模型：</p>
+<pre><code class="language-typescript">try {
+  for await (const message of deps.callModel({...})) {
+    // ...
+  }
+} catch (innerError) {
+  if (innerError instanceof FallbackTriggeredError &amp;&amp; fallbackModel) {
+    currentModel = fallbackModel
+    attemptWithFallback = true
+    // 清理并重试
+  }
+}</code></pre><p>降级过程中有一个关键细节——thinking 签名是模型绑定的：</p>
+<pre><code class="language-typescript">// Thinking signatures are model-bound: replaying a protected-thinking
+// block (e.g. capybara) to an unprotected fallback (e.g. opus) 400s.
+if (process.env.USER_TYPE === 'ant') {
+  messagesForQuery = stripSignatureBlocks(messagesForQuery)
+}</code></pre><h3>错误消息的&quot;扣留&quot;机制</h3>
+<p>查询引擎使用一种&quot;扣留&quot;（withhold）模式处理可恢复的错误：</p>
+<pre><code class="language-typescript">let withheld = false
+if (reactiveCompact?.isWithheldPromptTooLong(message)) {
+  withheld = true
+}
+if (isWithheldMaxOutputTokens(message)) {
+  withheld = true
+}
+if (!withheld) {
+  yield yieldMessage
+}</code></pre><p>被扣留的消息不会立即 yield 给调用方。只有当所有恢复手段用尽后，才将错误消息表面化。这防止了 SDK 消费者在恢复成功时收到虚假的错误信号。</p>
+<div class="thinking-note"><h3>思考笔记</h3>
+<p>错误恢复链是查询引擎的&quot;逃生路线&quot;——每一步失败都自动触发下一步。</p>
+<ul>
+<li>恢复链（413 → collapse → compact → fallback）有明确的优先级——先做最简单的（413 重试），不行再走重量级方案（compact）。</li>
+<li>withhold 模式让可恢复的错误对消费者透明——SDK 方不需要知道 engine 内部出了什么问题，只需要等到最终结果。</li>
+<li>fallback 模型触发时自动清理 thinking 签名——这是&quot;主模型不行就用备胎&quot;的保险策略。</li>
+<li>所有恢复手段用尽后，被扣留的错误消息才被释放——消费者要么看到成功要么看到最终失败，没有中间状态。</li>
+</ul>
+</div><hr>
+<h2>4.6 SDK vs REPL</h2>
+<p>QueryEngine 通过构造函数参数的差异化实现了 SDK 和 REPL 两种模式的统一：</p>
+<h3>SDK 模式</h3>
+<p>在 SDK 模式下，<code>QueryEngine</code> 是完全无头的（headless）：</p>
+<pre><code class="language-typescript">processUserInputContext = {
+  // ...
+  options: {
+    debug: false,          // 不输出调试信息到 stdout
+    isNonInteractiveSession: true,  // 标记为非交互
+  },
+  setInProgressToolUseIDs: () =&gt; {},   // 不需要 UI 更新
+  setResponseLength: () =&gt; {},          // 不需要实时长度显示
+}</code></pre><p>SDK 调用方通过 <code>for await...of</code> 消费 <code>submitMessage</code> 的产出，每个 <code>SDKMessage</code> 都是自包含的——包括类型标签、session ID 和所有必要的元数据。</p>
+<h3>REPL 模式</h3>
+<p>REPL 模式下，消息同时流向两个目标：</p>
+<ol>
+<li><strong>UI 渲染</strong>：通过 React/Ink 组件实时渲染到终端。</li>
+<li><strong>状态持久化</strong>：通过 <code>recordTranscript</code> 写入 JSONL 文件。</li>
+</ol>
+<p>关键区别在于 snip 处理：</p>
+<pre><code class="language-typescript">/**
+ * SDK-only: the REPL keeps full history for UI scrollback and
+ * projects on demand via projectSnippedView; QueryEngine truncates
+ * here to bound memory in long headless sessions (no UI to preserve).
+ */
+snipReplay?: (
+  yieldedSystemMsg: Message,
+  store: Message[],
+) =&gt; { messages: Message[]; executed: boolean } | undefined</code></pre><p>REPL 保留完整历史用于滚动回看，snip 只是一个&quot;视图投影&quot;；而 SDK 模式下，snip 会实际截断 <code>mutableMessages</code> 数组以控制内存。</p>
+<h3>权限追踪包装</h3>
+<p>两种模式共享同一个权限包装器：</p>
+<pre><code class="language-typescript">const wrappedCanUseTool: CanUseToolFn = async (
+  tool, input, toolUseContext, assistantMessage, toolUseID, forceDecision,
+) =&gt; {
+  const result = await canUseTool(...)
+  if (result.behavior !== 'allow') {
+    this.permissionDenials.push({
+      tool_name: sdkCompatToolName(tool.name),
+      tool_use_id: toolUseID,
+      tool_input: input,
+    })
+  }
+  return result
+}</code></pre><p>被拒绝的权限请求被收集到 <code>permissionDenials</code> 数组中，最终包含在 <code>result</code> 消息的 <code>permission_denials</code> 字段中返回给 SDK 调用方。REPL 模式下，这些信息同样可用于权限审计和调试。</p>
+<h3>统一的生命周期信号</h3>
+<p>无论哪种模式，查询结束时都会 yield 一个统一的结果消息：</p>
+<pre><code class="language-typescript">yield {
+  type: 'result',
+  subtype: 'success',
+  is_error: false,
+  duration_ms: Date.now() - startTime,
+  duration_api_ms: getTotalAPIDuration(),
+  num_turns: messages.length - 1,
+  result: resultText ?? '',
+  total_cost_usd: getTotalCost(),
+  usage: this.totalUsage,
+  modelUsage: getModelUsage(),
+  permission_denials: this.permissionDenials,
+  fast_mode_state: getFastModeState(mainLoopModel, initialAppState.fastMode),
+  // ...
+}</code></pre><p>这个 <code>result</code> 消息是查询引擎的&quot;最终裁决&quot;——它汇总了整个查询轮次的耗时、成本、token 使用量和权限事件，为上层（无论是 SDK 的 JSON 输出还是 REPL 的状态栏更新）提供了完整的查询报告。</p>
+<div class="thinking-note"><h3>思考笔记</h3>
+<p>错误恢复链和 SDK/REPL 双模设计展示了 QueryEngine 作为&quot;会话容器&quot;的完整能力——不只要跑通正常流程，更要优雅处理各种异常。</p>
+<ul>
+<li>错误恢复链（413 → collapse → compact → fallback）是一条有优先级的&quot;逃生路线&quot;——每一步失败都自动触发下一步，不需要用户介入。</li>
+<li>withhold 模式是最体贴的设计：可恢复的错误不告诉消费者，等恢复成功了静默跳过——SDK 开发者不需要为引擎的内部问题写处理逻辑。</li>
+<li>SDK vs REPL 的差异本质上是对&quot;消息流向&quot;的不同需求——REPL 要渲染到终端还要保留回看，SDK 只关心最终结果和最小内存占用。</li>
+<li>result 消息作为统一生命周期信号，包含 duration、cost、usage、permission_denials——这是引擎对一次查询的&quot;完整审计报告&quot;。</li>
+</ul>
+</div>
+      </article>
+    </main>
+  </div>
+  
+  <!-- Syntax highlighting -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script>hljs.highlightAll();</script>
+
+  <script>
+    // Collapsible sidebar sections
+    document.querySelectorAll('.sidebar-section-header').forEach(header => {
+      header.addEventListener('click', () => {
+        const items = header.nextElementSibling;
+        const isCollapsed = items.classList.contains('collapsed');
+        // If collapsed, uncollapse; if visible, collapse
+        items.classList.toggle('collapsed');
+        header.classList.toggle('open');
+      });
+    });
+
+    // Auto-open current page's section + highlight active link
+    const currentPath = window.location.pathname;
+    const currentFilename = currentPath.split('/').pop();
+    let foundMatch = false;
+    document.querySelectorAll('.sidebar-section-items a').forEach(link => {
+      const href = link.getAttribute('href');
+      const linkFilename = href.split('/').pop();
+      if (linkFilename === currentFilename) {
+        link.classList.add('active');
+        const section = link.closest('.sidebar-section-items');
+        const header = section ? section.previousElementSibling : null;
+        if (section) section.classList.remove('collapsed');
+        if (header) header.classList.add('open');
+        foundMatch = true;
+      }
+    });
+    
+    // Full-text search
+    (function() {
+      const searchInput = document.getElementById('searchInput');
+      const searchResults = document.getElementById('searchResults');
+      if (!searchInput || !searchResults) return;
+
+      let searchIndex = [];
+      let indexLoaded = false;
+
+      // Compute root path for loading search-index.json
+      const currentScript = document.currentScript;
+      const rootPath = '../';
+
+      function loadIndex() {
+        if (indexLoaded) return;
+        indexLoaded = true;
+        fetch(rootPath + 'search-index.json')
+          .then(r => r.json())
+          .then(data => { searchIndex = data; })
+          .catch(() => { searchIndex = []; });
+      }
+
+      function highlight(text, query) {
+        const re = new RegExp('(' + query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi');
+        return text.replace(re, '<mark style="background:#fde047;padding:0 2px;border-radius:2px;">$1</mark>');
+      }
+
+      function search(query) {
+        if (!query || !searchIndex.length) return [];
+        const terms = query.toLowerCase().split(/\s+/).filter(t => t.length > 0);
+        if (!terms.length) return [];
+
+        const results = searchIndex.map(doc => {
+          const titleLower = doc.title.toLowerCase();
+          const textLower = doc.text.toLowerCase();
+          let score = 0;
+
+          for (const term of terms) {
+            if (titleLower.includes(term)) score += 10;
+            if (textLower.includes(term)) score += 1;
+          }
+
+          if (score === 0) return null;
+
+          // Find best snippet
+          let snippet = doc.text.slice(0, 120);
+          for (const term of terms) {
+            const idx = doc.text.toLowerCase().indexOf(term);
+            if (idx !== -1) {
+              const start = Math.max(0, idx - 40);
+              snippet = doc.text.slice(start, start + 120);
+              break;
+            }
+          }
+
+          return { ...doc, score, snippet };
+        }).filter(Boolean);
+
+        return results.sort((a, b) => b.score - a.score).slice(0, 10);
+      }
+
+      function render(results, query) {
+        if (!query) {
+          searchResults.classList.remove('active');
+          searchResults.innerHTML = '';
+          return;
+        }
+        if (!results.length) {
+          searchResults.innerHTML = '<div class="search-no-results">未找到相关文档</div>';
+          searchResults.classList.add('active');
+          return;
+        }
+
+        let html = '';
+        for (const r of results) {
+          const title = highlight(r.title, query);
+          const preview = highlight(r.snippet.replace(/\s+/g, ' '), query);
+          html += `<a href="${rootPath + r.path}" class="search-result-item">
+            <div class="sr-title">${title}</div>
+            <div class="sr-preview">${preview}...</div>
+          </a>`;
+        }
+        searchResults.innerHTML = html;
+        searchResults.classList.add('active');
+      }
+
+      let debounce;
+      searchInput.addEventListener('input', (e) => {
+        loadIndex();
+        clearTimeout(debounce);
+        const query = e.target.value.trim();
+        if (!query) {
+          render([], '');
+          return;
+        }
+        searchResults.innerHTML = '<div class="search-loading">搜索中...</div>';
+        searchResults.classList.add('active');
+        debounce = setTimeout(() => {
+          render(search(query), query);
+        }, 150);
+      });
+
+      // Close results on click outside
+      document.addEventListener('click', (e) => {
+        if (!e.target.closest('.sidebar-search')) {
+          searchResults.classList.remove('active');
+        }
+      });
+
+      // Keyboard navigation
+      searchInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          searchResults.classList.remove('active');
+          searchInput.blur();
+        }
+      });
+    })();
+    
+    // Back to top
+    (function() {
+      const btn = document.getElementById('backToTop');
+      if (!btn) return;
+      const toggle = () => {
+        btn.classList.toggle('visible', window.scrollY > 400);
+      };
+      window.addEventListener('scroll', toggle, { passive: true });
+      btn.addEventListener('click', () => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+    })();
+
+    // Mobile menu toggle
+    (function() {
+      const menuToggle = document.getElementById('menuToggle');
+      const sidebar = document.querySelector('.sidebar');
+      const overlay = document.getElementById('sidebarOverlay');
+      if (!menuToggle || !sidebar || !overlay) return;
+
+      menuToggle.addEventListener('click', () => {
+        sidebar.classList.toggle('open');
+        overlay.classList.toggle('active');
+      });
+
+      overlay.addEventListener('click', () => {
+        sidebar.classList.remove('open');
+        overlay.classList.remove('active');
+      });
+
+      // Close sidebar when a nav link is clicked (mobile)
+      sidebar.querySelectorAll('a').forEach(link => {
+        link.addEventListener('click', () => {
+          if (window.innerWidth <= 1024) {
+            sidebar.classList.remove('open');
+            overlay.classList.remove('active');
+          }
+        });
+      });
+    })();
+
+    // Copy code buttons
+    (function() {
+      document.querySelectorAll('.markdown-section pre').forEach(pre => {
+        const btn = document.createElement('button');
+        btn.className = 'copy-code-btn';
+        btn.textContent = '复制';
+        btn.addEventListener('click', () => {
+          const code = pre.querySelector('code')?.textContent || pre.textContent;
+          navigator.clipboard.writeText(code).then(() => {
+            btn.textContent = '已复制';
+            btn.classList.add('copied');
+            setTimeout(() => {
+              btn.textContent = '复制';
+              btn.classList.remove('copied');
+            }, 1500);
+          }).catch(() => {
+            btn.textContent = '失败';
+            setTimeout(() => { btn.textContent = '复制'; }, 1500);
+          });
+        });
+        pre.style.position = 'relative';
+        pre.appendChild(btn);
+      });
+    })();
+
+    // 引导思考 collapsible card
+    (function() {
+      document.querySelectorAll('.guide-card-header').forEach(function(header) {
+        header.addEventListener('click', function() {
+          var table = header.closest('.guide-card');
+          table.classList.toggle('collapsed');
+        });
+      });
+    })();
+
+    // Mermaid: Load dynamically + zoomable containers
+    (function() {
+      var mermaidDivs = document.querySelectorAll('.mermaid');
+      if (mermaidDivs.length === 0) return;
+
+      var cdns = [
+        '../mermaid.min.js',
+        'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js',
+        'https://unpkg.com/mermaid@10/dist/mermaid.min.js'
+      ];
+      var cdnIndex = 0;
+
+      function showError(msg) {
+        mermaidDivs.forEach(function(div) {
+          div.innerHTML = '<div class="mermaid-error" style="padding:16px;color:#dc2626;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;margin:20px 0;">' + msg + '</div>';
+          div.classList.add('rendered');
+        });
+      }
+
+      function wrapZoomable(div) {
+        if (div.parentNode.classList.contains('mermaid-zoom-container')) return;
+        if (!div.querySelector('svg')) return;
+        div.classList.add('rendered');
+
+        var wrapper = document.createElement('div');
+        wrapper.className = 'mermaid-zoom-container';
+        div.parentNode.insertBefore(wrapper, div);
+        wrapper.appendChild(div);
+
+        // Click overlay hint
+        var overlay = document.createElement('div');
+        overlay.className = 'mermaid-expand-overlay';
+        overlay.innerHTML = '<span><span class="expand-icon">⛶</span> 点击查看全图</span>';
+        wrapper.appendChild(overlay);
+
+        // Click (or double-click) to open modal
+        wrapper.addEventListener('click', function() { openMermaidModal(div); });
+      }
+
+      // ---- Mermaid Modal (full-screen viewer) ----
+      var modalInstance = null;
+
+      function openMermaidModal(sourceDiv) {
+        closeMermaidModal();
+        var clone = sourceDiv.cloneNode(true);
+        var svg = clone.querySelector('svg');
+        if (!svg) return;
+
+        // Let SVG fill width, height follows viewBox aspect ratio
+        svg.removeAttribute('width');
+        svg.removeAttribute('height');
+        svg.style.width = '100%';
+        svg.style.height = 'auto';
+        svg.style.maxWidth = 'none';
+
+        // Build modal: simple header + scrollable body
+        var modal = document.createElement('div');
+        modal.className = 'mermaid-modal active';
+
+        var content = document.createElement('div');
+        content.className = 'mermaid-modal-content';
+
+        var header = document.createElement('div');
+        header.className = 'mermaid-modal-header';
+        var chapterHint = '';
+        var prev = sourceDiv.closest('.markdown-section');
+        if (prev) {
+          var heading = prev.querySelector('h2, h3');
+          if (heading) chapterHint = heading.textContent.replace(/[#\d.]/g,'').trim().slice(0, 30);
+        }
+        header.innerHTML =
+          '<div class="modal-title-wrap">' +
+            '<span class="modal-icon">⬡</span>' +
+            '<span class="modal-title">' + (chapterHint || '图表') + '</span>' +
+          '</div>' +
+          '<button class="modal-close" title="关闭 (ESC)">✕</button>';
+
+        var body = document.createElement('div');
+        body.className = 'mermaid-modal-body';
+        body.appendChild(clone);
+
+        content.appendChild(header);
+        content.appendChild(body);
+        modal.appendChild(content);
+        document.body.appendChild(modal);
+
+        // Close handlers
+        header.querySelector('.modal-close').addEventListener('click', closeMermaidModal);
+        modal.addEventListener('click', function(e) {
+          if (e.target === modal) closeMermaidModal();
+        });
+
+        modalInstance = modal;
+      }
+
+      function closeMermaidModal() {
+        if (modalInstance) {
+          modalInstance.remove();
+          modalInstance = null;
+        }
+      }
+
+      document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') closeMermaidModal();
+      });
+
+      function tryLoadMermaid() {
+        if (cdnIndex >= cdns.length) {
+          showError('❌ 无法加载图表库，请检查网络连接后刷新页面');
+          return;
+        }
+
+        var script = document.createElement('script');
+        script.src = cdns[cdnIndex];
+        script.onload = function() {
+          if (typeof mermaid === 'undefined') {
+            showError('❌ 图表库加载失败');
+            return;
+          }
+          try {
+            mermaid.initialize({
+              startOnLoad: false,
+              theme: 'base',
+              themeVariables: {
+                fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif',
+                primaryColor: '#ffffff',
+                primaryTextColor: '#1e293b',
+                primaryBorderColor: '#e2e8f0',
+                lineColor: '#64748b',
+                secondaryColor: '#f1f5f9',
+                tertiaryColor: '#f8fafc',
+              },
+              securityLevel: 'loose',
+              flowchart: {
+                curve: 'basis',
+                padding: 15,
+                nodeSpacing: 50,
+                rankSpacing: 80,
+              },
+              maxTextSize: 50000,
+            });
+            mermaid.run({ querySelector: '.mermaid' }).then(function() {
+              mermaidDivs.forEach(wrapZoomable);
+            });
+          } catch(e) {
+            showError('❌ 图表渲染失败: ' + e.message);
+          }
+        };
+        script.onerror = function() {
+          cdnIndex++;
+          tryLoadMermaid();
+        };
+        document.head.appendChild(script);
+      }
+
+      tryLoadMermaid();
+    })();
+
+  </script>
+</body>
+</html>

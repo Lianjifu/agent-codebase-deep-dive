@@ -1,0 +1,2178 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>第 16 章：MCP 认证体系</title>
+  <style>
+    /* ===== Reset & Base ===== */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { font-size: 62.5%; }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+      font-size: 15px;
+      color: #1e293b;
+      line-height: 1.7;
+      background: #ffffff;
+      -webkit-font-smoothing: antialiased;
+    }
+    
+    /* ===== Layout ===== */
+    .app {
+      display: flex;
+      min-height: 100vh;
+    }
+    
+    /* ===== Sidebar ===== */
+    .sidebar {
+      width: 280px;
+      min-width: 280px;
+      background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+      border-right: 1px solid #e2e8f0;
+      position: fixed;
+      top: 0;
+      left: 0;
+      bottom: 0;
+      display: flex;
+      flex-direction: column;
+    }
+    .sidebar::-webkit-scrollbar { width: 4px; }
+    .sidebar::-webkit-scrollbar-track { background: transparent; }
+    .sidebar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+    .sidebar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+    .sidebar-header {
+      padding: 20px 20px 14px;
+      border-bottom: 1px solid #e2e8f0;
+      flex-shrink: 0;
+    }
+
+    .sidebar-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 15px;
+      font-weight: 700;
+      color: #0f172a;
+      text-decoration: none;
+      letter-spacing: -0.02em;
+    }
+
+    .sidebar-brand .icon {
+      width: 30px;
+      height: 30px;
+      background: linear-gradient(135deg, #3b82f6 0%, #0ea5e9 100%);
+      border-radius: 7px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 15px;
+      flex-shrink: 0;
+    }
+
+    .sidebar-search {
+      padding: 12px 20px;
+      flex-shrink: 0;
+    }
+
+    .search-box {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 8px 12px;
+      transition: all 0.2s ease;
+    }
+
+    .search-box:focus-within {
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+
+    .search-box input {
+      flex: 1;
+      border: none;
+      outline: none;
+      font-size: 13px;
+      color: #1e293b;
+      background: transparent;
+    }
+
+    .search-box input::placeholder {
+      color: #94a3b8;
+    }
+
+    .search-box svg {
+      width: 15px;
+      height: 15px;
+      color: #94a3b8;
+      flex-shrink: 0;
+    }
+
+    .sidebar-nav {
+      flex: 1;
+      padding: 4px 8px;
+      overflow-y: auto;
+    }
+
+    .sidebar-nav ul, .sidebar-nav li {
+      list-style: none;
+    }
+
+    .quick-links {
+      display: flex;
+      gap: 6px;
+      padding: 0 8px 10px;
+      flex-shrink: 0;
+    }
+
+    .quick-links a {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      padding: 7px 10px;
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 7px;
+      font-size: 12px;
+      font-weight: 500;
+      color: #64748b;
+      text-decoration: none;
+      transition: all 0.15s ease;
+    }
+
+    .quick-links a:hover {
+      color: #3b82f6;
+      border-color: #3b82f6;
+      background: #eff6ff;
+    }
+
+    .quick-links a .ql-icon {
+      font-size: 13px;
+      line-height: 1;
+    }
+
+    .sidebar-section {
+      margin-bottom: 2px;
+    }
+
+    .sidebar-section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 9px 12px 9px 14px;
+      cursor: pointer;
+      user-select: none;
+      border-radius: 8px;
+      margin: 0 2px;
+      transition: background 0.15s ease;
+    }
+
+    .sidebar-section-header:hover {
+      background: rgba(59, 130, 246, 0.06);
+    }
+
+    .sidebar-section-header.open {
+      background: rgba(59, 130, 246, 0.08);
+    }
+
+    .section-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+    }
+
+    .section-num {
+      width: 22px;
+      height: 22px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #3b82f6 0%, #0ea5e9 100%);
+      border-radius: 5px;
+      font-size: 10px;
+      font-weight: 700;
+      color: #ffffff;
+      flex-shrink: 0;
+    }
+
+    .section-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: #1e293b;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .sidebar-section-header .arrow {
+      width: 16px;
+      height: 16px;
+      color: #94a3b8;
+      transition: transform 0.2s ease, color 0.15s ease;
+      flex-shrink: 0;
+    }
+
+    .sidebar-section-header:hover .arrow {
+      color: #64748b;
+    }
+
+    .sidebar-section-header.open .arrow {
+      transform: rotate(90deg);
+      color: #3b82f6;
+    }
+
+    .sidebar-section-items {
+      overflow: hidden;
+      transition: max-height 0.2s ease, opacity 0.15s ease;
+      max-height: 2000px;
+      opacity: 1;
+    }
+    .sidebar-section-items.collapsed {
+      max-height: 0;
+      opacity: 0;
+    }
+
+    .sidebar-section-items ul {
+      padding: 2px 6px 6px;
+    }
+
+    .sidebar-section-items li {
+      margin: 1px 0;
+    }
+
+    .sidebar-section-items a {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 10px;
+      font-size: 13px;
+      color: #64748b;
+      text-decoration: none;
+      border-radius: 6px;
+      transition: all 0.15s ease;
+      position: relative;
+    }
+
+    .sidebar-section-items a:hover {
+      color: #3b82f6;
+      background: rgba(59, 130, 246, 0.06);
+    }
+
+    .sidebar-section-items a.active {
+      color: #1e293b;
+      background: rgba(59, 130, 246, 0.1);
+      font-weight: 500;
+    }
+    .sidebar-section-items a.active::before {
+      content: '';
+      position: absolute;
+      left: -6px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 3px;
+      height: 18px;
+      border-radius: 2px;
+      background: #3b82f6;
+    }
+    .sidebar-section-items a.active .num {
+      color: #3b82f6;
+    }
+    .sidebar-section-items a[href*="APPENDIX"] {
+      font-size: 12px;
+      color: #94a3b8;
+      padding-left: 14px;
+    }
+    .sidebar-section-items a[href*="APPENDIX"]:hover {
+      color: #3b82f6;
+    }
+    .sidebar-section-items a[href*="APPENDIX"] .num {
+      display: none;
+    }
+
+    .sidebar-section-items a .num {
+      font-size: 11px;
+      font-weight: 500;
+      color: #94a3b8;
+      min-width: 26px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .sidebar-divider {
+      height: 1px;
+      background: linear-gradient(90deg, transparent, #e2e8f0, transparent);
+      margin: 6px 10px 10px;
+    }
+
+    .sidebar-external {
+      padding: 0 8px 12px;
+      flex-shrink: 0;
+    }
+
+    .sidebar-external a {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 9px 12px;
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 500;
+      color: #475569;
+      text-decoration: none;
+      transition: all 0.15s ease;
+    }
+
+    .sidebar-external a:hover {
+      border-color: #3b82f6;
+      color: #3b82f6;
+      background: #eff6ff;
+    }
+
+    .sidebar-external a svg {
+      width: 15px;
+      height: 15px;
+      opacity: 0.5;
+      flex-shrink: 0;
+    }
+    .sidebar-external a:hover svg {
+      opacity: 0.8;
+    }
+    
+    /* ===== Content ===== */
+    .content {
+      flex: 1;
+      margin-left: 280px;
+      padding: 48px 64px;
+      min-height: 100vh;
+      max-width: 1400px;
+    }
+
+    /* ===== Typography ===== */
+    .markdown-section h1 {
+      font-size: 28px;
+      font-weight: 700;
+      color: #0f172a;
+      letter-spacing: -0.02em;
+      margin: 0 0 24px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    
+    .markdown-section h2 {
+      font-size: 20px;
+      font-weight: 600;
+      color: #1e293b;
+      letter-spacing: -0.01em;
+      margin: 40px 0 16px;
+    }
+    
+    .markdown-section h3 {
+      font-size: 16px;
+      font-weight: 600;
+      color: #3b82f6;
+      margin: 28px 0 12px;
+    }
+    
+    .markdown-section h4 {
+      font-size: 15px;
+      font-weight: 600;
+      color: #1e293b;
+      margin: 20px 0 8px;
+    }
+    .markdown-section h1, .markdown-section h2, .markdown-section h3, .markdown-section h4 {
+      position: relative;
+    }
+    .markdown-section .heading-anchor {
+      position: absolute;
+      left: -20px;
+      top: 50%;
+      transform: translateY(-50%);
+      opacity: 0;
+      color: #94a3b8;
+      text-decoration: none;
+      font-size: 0.8em;
+      font-weight: 400;
+      transition: opacity 0.15s ease;
+      padding-right: 4px;
+    }
+    .markdown-section h1:hover .heading-anchor,
+    .markdown-section h2:hover .heading-anchor,
+    .markdown-section h3:hover .heading-anchor,
+    .markdown-section h4:hover .heading-anchor {
+      opacity: 1;
+    }
+    
+    .markdown-section p {
+      margin: 12px 0;
+      color: #475569;
+    }
+
+    /* ===== Thinking Note ===== */
+    .thinking-note {
+      background: #fffbeb;
+      border-left: 4px solid #f59e0b;
+      border-radius: 0 12px 12px 0;
+      padding: 20px 24px;
+      margin: 24px 0;
+    }
+    .thinking-note h3 {
+      margin: 0 0 12px;
+      padding: 0;
+      border: none;
+      font-size: 14px;
+      font-weight: 700;
+      color: #d97706;
+      letter-spacing: 0.03em;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .thinking-note p {
+      margin: 8px 0;
+      font-size: 14px;
+      line-height: 1.8;
+      color: #78350f;
+    }
+    .thinking-note strong {
+      display: inline-block;
+      margin-top: 6px;
+      color: #92400e;
+    }
+    .thinking-note strong:first-of-type {
+      margin-top: 0;
+    }
+    .thinking-note ul {
+      margin: 4px 0 4px 0;
+      padding-left: 18px;
+      list-style: none;
+    }
+    .thinking-note li {
+      margin: 4px 0;
+      padding-left: 14px;
+      position: relative;
+      color: #78350f;
+      font-size: 14px;
+      line-height: 1.7;
+    }
+    .thinking-note li::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 10px;
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: #d97706;
+      opacity: 0.5;
+    }
+    .thinking-note li strong {
+      color: #92400e;
+    }
+
+    .markdown-section a {
+      color: #3b82f6;
+      text-decoration: none;
+      font-weight: 500;
+    }
+    
+    .markdown-section a:hover {
+      text-decoration: underline;
+    }
+    
+    .markdown-section code {
+      background: #f1f5f9;
+      color: #0f172a;
+      padding: 2px 6px;
+      font-size: 13px;
+      border-radius: 4px;
+      font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Consolas', monospace;
+    }
+    
+    .markdown-section pre {
+      background: #1e293b;
+      border-radius: 12px;
+      padding: 20px 24px;
+      overflow-x: auto;
+      margin: 20px 0;
+    }
+    
+    .markdown-section pre code {
+      background: transparent;
+      color: #e2e8f0;
+      padding: 0;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+    
+    .markdown-section blockquote {
+      background: #f8fafc;
+      border-left: 4px solid #3b82f6;
+      border-radius: 0 8px 8px 0;
+      padding: 16px 20px;
+      margin: 20px 0;
+    }
+    
+    .markdown-section blockquote p {
+      margin: 0;
+      color: #475569;
+    }
+    
+    .markdown-section table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0;
+      font-size: 14px;
+      border-radius: 12px;
+      
+      border: 1px solid #e2e8f0;
+    }
+    
+    .markdown-section table th {
+      background: #f8fafc;
+      font-weight: 600;
+      text-align: left;
+      padding: 12px 16px;
+      color: #475569;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    
+    .markdown-section table td {
+      padding: 12px 16px;
+      border-top: 1px solid #e2e8f0;
+    }
+    
+    .markdown-section table tr:nth-child(2n) td {
+      background: #f8fafc;
+    }
+    
+    .markdown-section ul, .markdown-section ol {
+      padding-left: 24px;
+      margin: 12px 0;
+    }
+    
+    .markdown-section li {
+      margin: 6px 0;
+      color: #475569;
+    }
+    
+    .markdown-section hr {
+      height: 1px;
+      background: #e2e8f0;
+      border: none;
+      margin: 32px 0;
+    }
+    
+    .markdown-section img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 8px;
+    }
+    
+    /* ===== Mermaid Diagrams ===== */
+    .mermaid {
+      background: #f8fafc;
+      border-radius: 12px;
+      padding: 24px;
+      margin: 20px 0;
+      overflow-x: auto;
+      border: 1px solid #e2e8f0;
+      display: block;
+    }
+    .mermaid.rendered {
+      display: block;
+    }
+    .mermaid svg {
+      max-width: 100%;
+      height: auto;
+    }
+    .mermaid-error {
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      border-radius: 8px;
+      padding: 16px;
+      color: #dc2626;
+      margin: 20px 0;
+    }
+    .mermaid-loading {
+      background: #f8fafc;
+      border: 1px dashed #e2e8f0;
+      border-radius: 12px;
+      padding: 24px;
+      margin: 20px 0;
+      color: #64748b;
+      text-align: center;
+    }
+
+    
+    
+
+/* ===== Click-to-Expand Mermaid ===== */
+    .mermaid-zoom-container {
+      position: relative;
+      overflow: hidden;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      margin: 20px 0;
+      background: #f8fafc;
+      cursor: pointer;
+      min-height: 100px;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+    .mermaid-zoom-container:hover {
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 2px rgba(59,130,246,0.1);
+    }
+    .mermaid-zoom-container .mermaid {
+      margin: 0;
+      border: none;
+      border-radius: 0;
+      background: transparent;
+    }
+    .mermaid-zoom-container .mermaid svg {
+      display: block;
+    }
+    .mermaid-expand-overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+      background: rgba(15,23,42,0.03);
+    }
+    .mermaid-zoom-container:hover .mermaid-expand-overlay {
+      opacity: 1;
+    }
+    .mermaid-expand-overlay span {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 18px;
+      background: rgba(255,255,255,0.95);
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 500;
+      color: #3b82f6;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+      backdrop-filter: blur(4px);
+      pointer-events: none;
+      transition: transform 0.15s ease;
+    }
+    .mermaid-zoom-container:hover .mermaid-expand-overlay span {
+      transform: translateY(-2px);
+    }
+    .mermaid-expand-overlay .expand-icon {
+      font-size: 15px;
+    }
+
+    /* ===== Mermaid Modal ===== */
+    @keyframes modal-fade-in {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    @keyframes modal-content-in {
+      from { opacity: 0; transform: scale(0.95) translateY(8px); }
+      to { opacity: 1; transform: scale(1) translateY(0); }
+    }
+    .mermaid-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 1000;
+      background: rgba(15, 23, 42, 0.65);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      animation: modal-fade-in 0.2s ease;
+    }
+    .mermaid-modal.active {
+      display: flex;
+    }
+    .mermaid-modal-content {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      max-width: 90vw;
+      max-height: 90vh;
+      background: #fff;
+      border-radius: 14px;
+      box-shadow: 0 25px 80px rgba(0,0,0,0.3);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      animation: modal-content-in 0.2s ease;
+    }
+    .mermaid-modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 20px;
+      border-bottom: 1px solid #e2e8f0;
+      flex-shrink: 0;
+      background: #fafbfc;
+      gap: 12px;
+    }
+    .mermaid-modal-header .modal-title-wrap {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+    }
+    .mermaid-modal-header .modal-icon {
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      background: linear-gradient(135deg, #3b82f6, #0ea5e9);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      flex-shrink: 0;
+    }
+    .mermaid-modal-header .modal-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: #1e293b;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .mermaid-modal-header .modal-hint {
+      font-size: 12px;
+      color: #94a3b8;
+      font-weight: 400;
+      margin-left: 4px;
+    }
+    .mermaid-modal-header .modal-actions {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      flex-shrink: 0;
+    }
+    .mermaid-modal-header .modal-close {
+      width: 30px;
+      height: 30px;
+      border: none;
+      border-radius: 6px;
+      background: transparent;
+      color: #94a3b8;
+      font-size: 17px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s ease;
+      margin-left: 4px;
+    }
+    .mermaid-modal-header .modal-close:hover {
+      background: #fee2e2;
+      color: #dc2626;
+    }
+    .mermaid-modal-body {
+      flex: 1;
+      overflow: auto;
+      position: relative;
+      user-select: auto;
+      background: #f8fafc
+        repeating-linear-gradient(
+          0deg, transparent, transparent 23px, #f1f5f9 23px, #f1f5f9 24px
+        ),
+        repeating-linear-gradient(
+          90deg, transparent, transparent 23px, #f1f5f9 23px, #f1f5f9 24px
+        );
+    }
+    .mermaid-modal-body svg {
+      display: block;
+    }
+    @media (max-width: 768px) {
+      .mermaid-modal { padding: 12px; }
+      .mermaid-modal-content { max-width: 100vw; max-height: 100vh; border-radius: 10px; }
+      .mermaid-modal-header { padding: 10px 14px; }
+    }
+    @media (max-width: 480px) {
+      .mermaid-modal { padding: 0; }
+      .mermaid-modal-content { border-radius: 0; max-width: 100vw; max-height: 100vh; }
+    }
+
+
+/* ===== 引导思考 - Note-style Card ===== */
+    tr.guide-card-header td {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      width: 100%;
+      padding: 12px 24px !important;
+      font-size: 13px;
+      font-weight: 700;
+      color: #6366f1;
+      letter-spacing: 0.04em;
+      background: transparent !important;
+      border: none !important;
+    }
+    table.guide-card {
+      border-collapse: separate;
+      border-spacing: 0;
+      font-size: 14px;
+      margin: 0 0 24px;
+      overflow: hidden;
+      display: block;
+      width: 100%;
+      background: #f8faff;
+      border-left: 4px solid #6366f1;
+      border-radius: 0 12px 12px 0;
+      box-shadow: 0 1px 3px rgba(99, 102, 241, 0.08);
+    }
+    /* Hide original table header ("思考维度 | 内容") */
+    table.guide-card thead {
+      display: none;
+    }
+    /* Collapse/expand behavior */
+    table.guide-card.collapsed tbody tr:not(.guide-card-header) {
+      display: none;
+    }
+    table.guide-card tbody tr.guide-card-header {
+      cursor: pointer;
+      user-select: none;
+    }
+    table.guide-card tbody tr.guide-card-header:hover {
+      background: rgba(99, 102, 241, 0.04);
+    }
+    .collapse-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 18px;
+      height: 18px;
+      flex-shrink: 0;
+      transition: transform 0.2s ease;
+    }
+    .collapse-icon::before {
+      content: '';
+      display: block;
+      width: 6px;
+      height: 6px;
+      border-right: 2px solid #a5b4fc;
+      border-bottom: 2px solid #a5b4fc;
+      transform: rotate(-45deg);
+      margin-top: -3px;
+      transition: transform 0.2s ease, border-color 0.2s ease;
+    }
+    table.guide-card:not(.collapsed) .collapse-icon::before {
+      transform: rotate(45deg);
+      margin-top: 3px;
+      border-color: #6366f1;
+    }
+    tr.guide-card-header:hover .collapse-icon::before {
+      border-color: #6366f1;
+    }
+    .collapse-hint {
+      font-size: 11px;
+      color: #a5b4fc;
+      font-weight: 400;
+      transition: color 0.2s ease;
+    }
+    table.guide-card:not(.collapsed) .collapse-hint {
+      display: none;
+    }
+    tr.guide-card-header:hover .collapse-hint {
+      color: #6366f1;
+    }
+    table.guide-card tbody,
+    table.guide-card tbody tr {
+      display: block;
+      width: 100%;
+    }
+    table.guide-card tbody td {
+      display: block;
+      width: 100%;
+      padding: 0 24px 14px;
+      border: none;
+      vertical-align: top;
+      line-height: 1.7;
+      color: #475569;
+    }
+    table.guide-card tbody td:first-child {
+      padding: 12px 24px 2px;
+      font-weight: 600;
+      font-size: 12px;
+      color: #6366f1;
+      background: transparent;
+      width: 100%;
+      border: none;
+      letter-spacing: 0.03em;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    table.guide-card tbody td:first-child::before {
+      display: none;
+    }
+    /* Content lists inside cells */
+    table.guide-card tbody td ul {
+      margin: 0;
+      padding-left: 16px;
+      list-style: none;
+    }
+    table.guide-card tbody td > ul > li {
+      position: relative;
+      padding-left: 14px;
+      margin-bottom: 4px;
+      font-size: 13.5px;
+      color: #475569;
+      line-height: 1.7;
+    }
+    table.guide-card tbody td > ul > li::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 10px;
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: #c7d2fe;
+    }
+    table.guide-card tbody td > ul > li:last-child {
+      margin-bottom: 0;
+    }
+    table.guide-card tbody td ul ul {
+      padding-left: 14px;
+      margin-top: 2px;
+    }
+    table.guide-card tbody td ul ul li {
+      position: relative;
+      padding-left: 12px;
+      margin-bottom: 2px;
+      font-size: 13px;
+      color: #64748b;
+      line-height: 1.6;
+    }
+    table.guide-card tbody td ul ul li::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 9px;
+      width: 3px;
+      height: 3px;
+      border-radius: 50%;
+      background: #cbd5e1;
+    }
+    table.guide-card tbody td strong,
+    table.guide-card tbody td:first-child strong {
+      color: #4338ca;
+      font-weight: 600;
+    }
+    table.guide-card tbody td code {
+      background: #eef2ff;
+      color: #6366f1;
+      font-size: 12.5px;
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-weight: 500;
+    }
+
+/* ===== Navigation ===== */
+    .nav {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 48px;
+      padding-top: 24px;
+      border-top: 1px solid #e2e8f0;
+    }
+    
+    .nav a {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 10px 18px;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      color: #475569;
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 500;
+      transition: all 0.15s ease;
+    }
+    
+    .nav a:hover {
+      background: #3b82f6;
+      color: #fff;
+      border-color: #3b82f6;
+    }
+    
+    /* ===== Search Results ===== */
+    .search-results {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.12);
+      max-height: 400px;
+      overflow-y: auto;
+      z-index: 100;
+      display: none;
+      margin: 4px 0 0;
+    }
+    .search-results.active { display: block; }
+    .search-result-item {
+      display: block;
+      padding: 10px 14px;
+      text-decoration: none;
+      border-bottom: 1px solid #f1f5f9;
+      transition: background 0.15s ease;
+    }
+    .search-result-item:last-child { border-bottom: none; }
+    .search-result-item:hover { background: #f8fafc; }
+    .search-result-item .sr-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: #1e293b;
+      margin-bottom: 2px;
+    }
+    .search-result-item .sr-preview {
+      font-size: 12px;
+      color: #64748b;
+      line-height: 1.4;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .search-result-item .sr-path {
+      font-size: 11px;
+      color: #94a3b8;
+      margin-top: 2px;
+    }
+    .search-no-results {
+      padding: 16px;
+      text-align: center;
+      color: #94a3b8;
+      font-size: 13px;
+    }
+    .search-loading {
+      padding: 12px;
+      text-align: center;
+      color: #94a3b8;
+      font-size: 12px;
+    }
+    .sidebar-search { position: relative; }
+
+    /* ===== Copy Code Button ===== */
+    .code-block-wrapper {
+      position: relative;
+    }
+    .copy-code-btn {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      padding: 4px 10px;
+      background: rgba(255,255,255,0.1);
+      color: #94a3b8;
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 6px;
+      font-size: 12px;
+      cursor: pointer;
+      opacity: 0;
+      transition: opacity 0.15s ease, background 0.15s ease, color 0.15s ease;
+    }
+    .markdown-section pre:hover .copy-code-btn,
+    .copy-code-btn:focus {
+      opacity: 1;
+    }
+    .copy-code-btn:hover {
+      background: rgba(255,255,255,0.2);
+      color: #e2e8f0;
+    }
+    .copy-code-btn.copied {
+      background: #22c55e;
+      color: #fff;
+      border-color: #22c55e;
+      opacity: 1;
+    }
+
+    /* ===== Back to Top ===== */
+    .back-to-top {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      width: 40px;
+      height: 40px;
+      background: #3b82f6;
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 12px rgba(59,130,246,0.3);
+      transition: opacity 0.2s ease, transform 0.2s ease;
+      z-index: 80;
+    }
+    .back-to-top.visible { display: flex; }
+    .back-to-top:hover { transform: translateY(-2px); }
+    .back-to-top svg { width: 20px; height: 20px; }
+
+    /* ===== Mobile Menu Toggle ===== */
+    .menu-toggle {
+      display: none;
+      position: fixed;
+      top: 16px;
+      left: 16px;
+      z-index: 200;
+      width: 40px;
+      height: 40px;
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    .menu-toggle svg {
+      width: 20px;
+      height: 20px;
+      color: #475569;
+    }
+    .sidebar-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.3);
+      z-index: 90;
+    }
+    .sidebar-overlay.active { display: block; }
+
+    /* ===== Mobile ===== */
+    @media (max-width: 1024px) {
+      .menu-toggle { display: flex; }
+      .sidebar { transform: translateX(-100%); transition: transform 0.2s ease; z-index: 100; }
+      .sidebar.open { transform: translateX(0); }
+      .content { margin-left: 0; padding: 24px 20px; padding-top: 64px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <nav class="sidebar">
+      <div class="sidebar-header">
+        <a href="../index.html" class="sidebar-brand">
+          <span class="icon">📚</span>
+          LLM Agent 源码学习
+        </a>
+      </div>
+      
+      <div class="sidebar-search">
+        <div class="search-box">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"/>
+            <path d="M21 21l-4.35-4.35"/>
+          </svg>
+          <input type="text" placeholder="搜索文档..." id="searchInput" autocomplete="off">
+        </div>
+        <div class="search-results" id="searchResults"></div>
+      </div>
+      
+      <div class="quick-links">
+        <a href="../index.html">🏠 首页</a>
+        <a href="../SUMMARY.html">📑 目录</a>
+      </div>
+      
+      <div class="sidebar-nav">
+        <div class="sidebar-section">
+        <div class="sidebar-section-header">
+          <span class="section-title">
+            <span class="section-num">1</span>
+            <span class="section-name">Claude Code</span>
+          </span>
+          <svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+        </div>
+        <div class="sidebar-section-items"><ul><li><a href="./01-OVERVIEW.html"><span class="num">1.0</span>全景概览</a></li><li><a href="./02-BOOTSTRAP.html"><span class="num">2.0</span>启动流程</a></li><li><a href="./03-TYPE-SYSTEM.html"><span class="num">3.0</span>类型系统设计</a></li><li><a href="./04-QUERY-ENGINE.html"><span class="num">4.0</span>查询引擎</a></li><li><a href="./05-MESSAGE-SYSTEM.html"><span class="num">5.0</span>消息系统</a></li><li><a href="./06-STREAMING.html"><span class="num">6.0</span>流式处理</a></li><li><a href="./07-TOOL-ARCHITECTURE.html"><span class="num">7.0</span>工具架构</a></li><li><a href="./08-BUILTIN-TOOLS.html"><span class="num">8.0</span>内置工具</a></li><li><a href="./09-TOOL-EXECUTION.html"><span class="num">9.0</span>工具执行</a></li><li><a href="./10-AGENT-MODEL.html"><span class="num">10.0</span>Agent 模型</a></li><li><a href="./11-SUBAGENT.html"><span class="num">11.0</span>子代理</a></li><li><a href="./12-SKILL-SYSTEM.html"><span class="num">12.0</span>技能系统</a></li><li><a href="./13-PERMISSION-MODEL.html"><span class="num">13.0</span>权限模型</a></li><li><a href="./14-BASH-SECURITY.html"><span class="num">14.0</span>Bash 安全</a></li><li><a href="./15-MCP-PROTOCOL.html"><span class="num">15.0</span>MCP 协议</a></li><li><a href="./16-MCP-AUTH.html"><span class="num">16.0</span>MCP 认证</a></li><li><a href="./17-STATE-MANAGEMENT.html"><span class="num">17.0</span>状态管理</a></li><li><a href="./18-CONVERSATION.html"><span class="num">18.0</span>会话管理</a></li><li><a href="./19-INK-REACT.html"><span class="num">19.0</span>Ink React</a></li><li><a href="./20-REPL.html"><span class="num">20.0</span>REPL</a></li><li><a href="./21-PERFORMANCE.html"><span class="num">21.0</span>性能优化</a></li><li><a href="./22-TESTING.html"><span class="num">22.0</span>测试</a></li><li><a href="./23-BUILD-SYSTEM.html"><span class="num">23.0</span>构建系统</a></li><li><a href="./24-DESIGN-PATTERNS.html"><span class="num">24.0</span>设计模式</a></li><li><a href="./25-PHILOSOPHY.html"><span class="num">25.0</span>哲学思想</a></li><li><a href="./26-COGNITIVE-LOOP.html"><span class="num">26.0</span>认知循环</a></li><li><a href="./APPENDIX-A-GLOSSARY.html">附录A 术语表</a></li><li><a href="./APPENDIX-B-SOURCE-MAP.html">附录B 源码导航</a></li></ul></div></div>
+      </div>
+
+      <div class="sidebar-external">
+        <a href="https://github.com/Hyper66666/claude-code-sourcemap" target="_blank">
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+          </svg>
+          GitHub 源码
+        </a>
+      </div>
+    </nav>
+    <button class="back-to-top" id="backToTop" aria-label="回到顶部" title="回到顶部">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M18 15l-6-6-6 6"/>
+      </svg>
+    </button>
+    <button class="menu-toggle" id="menuToggle" aria-label="打开菜单">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M3 12h18M3 6h18M3 18h18"/>
+      </svg>
+    </button>
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+    <main class="content">
+      <article class="markdown-section">
+        <h1>第 16 章：MCP 认证体系</h1>
+<blockquote>
+<p>&quot;认证不是一道门，而是一把锁——它不阻止人靠近，但阻止未授权者进入。&quot;</p>
+</blockquote>
+<table class="guide-card collapsed">
+<thead>
+<tr>
+<th>思考维度</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody>
+<tr class="guide-card-header"><td colspan="2"><span class="collapse-icon"></span>引导思考 <span class="collapse-hint">展开</span></td></tr><tr>
+<td><strong>它为什么存在</strong></td>
+<td><ul><li>远程服务不能裸奔——MCP 服务器暴露的工具和资源需要认证保护</li><li>CLI 环境不好藏 client_secret，所以得用公共客户端 OAuth 方案</li></ul></td>
+</tr>
+<tr>
+<td><strong>它解决什么问题</strong></td>
+<td><ul><li>远程 MCP 服务器的身份验证和授权——不是你家的服务器别乱连</li><li>OAuth token 关机会丢，需要存到系统 Keychain 里，下次启动还能用</li><li>企业环境还有跨账户访问的需求——XAA 就是干这个的</li></ul></td>
+</tr>
+<tr>
+<td><strong>它在系统中的位置</strong></td>
+<td><ul><li>MCP 传输层之上，连接建好之后先走授权协商</li><li>跟连接管理和通道权限系统深度集成——影响整个 MCP 通信链路</li></ul></td>
+</tr>
+<tr>
+<td><strong>它如何工作</strong></td>
+<td><ul><li>OAuth 2.0 授权码流 + PKCE，本地起个临时服务器等浏览器回跳拿授权码</li><li>拿到的 token 存系统 Keychain，用文件锁防止多个进程同时写导致冲突</li><li>XAA 三段交换链做到一次浏览器登录就能访问所有配置好的服务器</li></ul></td>
+</tr>
+<tr>
+<td><strong>它如何实现</strong></td>
+<td><ul><li>ClaudeAuthProvider 实现 OAuthClientProvider 接口——管登录、刷新、存储全生命周期</li><li>token 刷新用 Promise 锁防止并发刷新，文件锁防止跨进程冲突</li><li>通道权限模块管理本地 UI 和远程 Bridge 之间的权限请求竞争——先响应的说了算</li></ul></td>
+</tr>
+<tr>
+<td><strong>不同平台如何做</strong></td>
+<td><ul><li><strong>Cursor Agent</strong>：IDE 内置 token 管理，OAuth 流跑在 WebView 里，用 VS Code SecretStorage 存</li><li><strong>OpenClaw</strong>：支持 API Key 和环境变量认证，没有标准 OAuth 实现</li><li><strong>Harness Agent</strong>：企业 IAM 集成，支持 SAML/OIDC SSO，通过 Harness 密钥管理服务管凭证</li></ul></td>
+</tr>
+<tr>
+<td><strong>优势是什么？</strong></td>
+<td><ul><li><strong>优势</strong><ul><li>XAA 一次浏览器登录就能访问所有配置服务器，体验好</li><li>token 刷新有多重保护（锁文件 + 重试 + 跨进程感知）</li><li>通道权限支持远程设备审批——人不在电脑前也能确认</li></ul></li></ul></td>
+</tr>
+</tbody></table>
+<p>远程 MCP 服务器需要认证机制来保护其暴露的工具和资源。Claude Code 实现了一个完整的 OAuth 2.0 认证体系，支持从基本的授权码流到企业级的跨账户访问（XAA）。本章将深入 <code>src/services/mcp/auth.ts</code> 和 <code>xaa.ts</code>，剖析这一认证体系的每个层面。</p>
+<hr>
+<h2>16.1 OAuth 授权流</h2>
+<h3>16.1.1 ClaudeAuthProvider 架构</h3>
+<p><code>ClaudeAuthProvider</code> 是 MCP SDK 的 <code>OAuthClientProvider</code> 接口的完整实现，它管理了一个 MCP 服务器连接的完整 OAuth 生命周期：</p>
+<pre><code class="language-typescript">// src/services/mcp/auth.ts
+export class ClaudeAuthProvider implements OAuthClientProvider {
+  private serverName: string
+  private serverConfig: McpSSEServerConfig | McpHTTPServerConfig
+  private redirectUri: string
+  private _codeVerifier?: string
+  private _authorizationUrl?: string
+  private _state?: string
+  private _scopes?: string
+  private _metadata?: Awaited&lt;ReturnType&lt;typeof discoverAuthorizationServerMetadata&gt;&gt;
+  private _refreshInProgress?: Promise&lt;OAuthTokens | undefined&gt;
+  private _pendingStepUpScope?: string
+
+  constructor(
+    serverName: string,
+    serverConfig: McpSSEServerConfig | McpHTTPServerConfig,
+    redirectUri: string = buildRedirectUri(),
+    handleRedirection = false,
+    onAuthorizationUrl?: (url: string) =&gt; void,
+    skipBrowserOpen?: boolean,
+  ) {
+    this.serverName = serverName
+    this.serverConfig = serverConfig
+    this.redirectUri = redirectUri
+    this.handleRedirection = handleRedirection
+    this.onAuthorizationUrlCallback = onAuthorizationUrl
+    this.skipBrowserOpen = skipBrowserOpen ?? false
+  }</code></pre><p>设计要点：</p>
+<ol>
+<li><code>_refreshInProgress</code> 使用 Promise 作为锁——当一个 token 刷新正在进行时，并发请求等待同一个 Promise 而不是各自发起刷新</li>
+<li><code>_pendingStepUpScope</code> 支持 OAuth Step-Up 认证——当服务器要求更高权限（scope elevation）时，标记待提升的 scope</li>
+</ol>
+<h3>16.1.2 客户端元数据与 CIMD</h3>
+<pre><code class="language-typescript">get clientMetadata(): OAuthClientMetadata {
+  const metadata: OAuthClientMetadata = {
+    client_name: `Claude Code (${this.serverName})`,
+    redirect_uris: [this.redirectUri],
+    grant_types: ['authorization_code', 'refresh_token'],
+    response_types: ['code'],
+    token_endpoint_auth_method: 'none', // 公共客户端
+  }
+  const metadataScope = getScopeFromMetadata(this._metadata)
+  if (metadataScope) {
+    metadata.scope = metadataScope
+  }
+  return metadata
+}
+
+// CIMD (SEP-991): URL 形式的 client_id
+get clientMetadataUrl(): string | undefined {
+  const override = process.env.MCP_OAUTH_CLIENT_METADATA_URL
+  if (override) return override
+  return MCP_CLIENT_METADATA_URL
+}</code></pre><p>Claude Code 使用 <code>token_endpoint_auth_method: &#39;none&#39;</code> 声明自己为公共客户端（Public Client）——因为 CLI 工具无法安全地存储 client_secret。CIMD（Client ID Metadata Document，SEP-991）允许使用 URL 作为 client_id，这是 MCP 生态的一个重要创新。</p>
+<h3>16.1.3 授权服务器发现</h3>
+<pre><code class="language-typescript">async function fetchAuthServerMetadata(
+  serverName: string,
+  serverUrl: string,
+  configuredMetadataUrl: string | undefined,
+  fetchFn?: FetchLike,
+  resourceMetadataUrl?: URL,
+): Promise&lt;...&gt; {
+  if (configuredMetadataUrl) {
+    // 用户配置的元数据 URL
+    if (!configuredMetadataUrl.startsWith('https://')) {
+      throw new Error(`authServerMetadataUrl must use https://`)
+    }
+    const authFetch = fetchFn ?? createAuthFetch()
+    const response = await authFetch(configuredMetadataUrl, { ... })
+    return OAuthMetadataSchema.parse(await response.json())
+  }
+
+  try {
+    // RFC 9728: Protected Resource Metadata → 发现授权服务器
+    const { authorizationServerMetadata } = await discoverOAuthServerInfo(serverUrl, {
+      ...(fetchFn &amp;&amp; { fetchFn }),
+      ...(resourceMetadataUrl &amp;&amp; { resourceMetadataUrl }),
+    })
+    if (authorizationServerMetadata) return authorizationServerMetadata
+  } catch (err) {
+    logMCPDebug(serverName, `RFC 9728 discovery failed, falling back: ${errorMessage(err)}`)
+  }
+
+  // 回退: RFC 8414 路径感知发现
+  const url = new URL(serverUrl)
+  if (url.pathname === '/') return undefined
+  return discoverAuthorizationServerMetadata(url, { ...(fetchFn &amp;&amp; { fetchFn }) })
+}</code></pre><p>发现流程遵循三步回退策略：</p>
+<div class="mermaid">%%{init: {"theme": "base", "themeVariables":{"primaryColor":"#3b82f6","primaryTextColor":"#1e293b","primaryBorderColor":"#60a5fa","lineColor":"#94a3b8","secondaryColor":"#f1f5f9","tertiaryColor":"#ffffff","fontFamily":"-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif"}}}%%
+flowchart TD
+    A[开始发现] --&gt; B{配置了 metadataUrl?}
+    B --&gt;|是| C[直接获取配置 URL]
+    C --&gt;|成功| D[返回元数据]
+    C --&gt;|失败| E[抛出错误]
+    B --&gt;|否| F[RFC 9728 PRM 发现]
+    F --&gt;|成功| G[通过 PRM 找到 AS]
+    G --&gt; D
+    F --&gt;|失败| H{URL 有路径?}
+    H --&gt;|是| I[RFC 8414 路径感知回退]
+    I --&gt;|成功| D
+    I --&gt;|失败| J[返回 undefined]
+    H --&gt;|否| J</div><h3>16.1.4 本地回调服务器</h3>
+<p>OAuth 授权码流需要一个本地 HTTP 服务器来接收回调：</p>
+<pre><code class="language-typescript">// src/services/mcp/oauthPort.ts
+export function buildRedirectUri(port?: number): string {
+  return `http://127.0.0.1:${port || findAvailablePort()}/callback`
+}</code></pre><p>回调服务器在 <code>127.0.0.1</code> 上监听，接收授权码并用它交换 access token。端口号动态分配以避免冲突。</p>
+<h3>16.1.5 OAuth 错误规范化</h3>
+<p>某些 OAuth 服务器（特别是 Slack）不遵守标准的错误响应格式：</p>
+<pre><code class="language-typescript">// src/services/mcp/auth.ts
+const NONSTANDARD_INVALID_GRANT_ALIASES = new Set([
+  'invalid_refresh_token',
+  'expired_refresh_token',
+  'token_expired',
+])
+
+export async function normalizeOAuthErrorBody(response: Response): Promise&lt;Response&gt; {
+  if (!response.ok) return response
+  const text = await response.text()
+  let parsed: unknown
+  try { parsed = jsonParse(text) } catch { return new Response(text, response) }
+
+  // 如果是有效的 token 响应，直接返回
+  if (OAuthTokensSchema.safeParse(parsed).success) {
+    return new Response(text, response)
+  }
+
+  // 检查是否是错误响应包装在 200 中
+  const result = OAuthErrorResponseSchema.safeParse(parsed)
+  if (!result.success) return new Response(text, response)
+
+  // 规范化非标准错误码
+  const normalized = NONSTANDARD_INVALID_GRANT_ALIASES.has(result.data.error)
+    ? { error: 'invalid_grant', error_description: `...` }
+    : result.data
+
+  return new Response(jsonStringify(normalized), {
+    status: 400, statusText: 'Bad Request',
+    headers: response.headers,
+  })
+}</code></pre><p>Slack 等服务器返回 HTTP 200 + <code>{&quot;error&quot;:&quot;invalid_refresh_token&quot;}</code>，而 RFC 6749 规定应该返回 HTTP 400 + <code>{&quot;error&quot;:&quot;invalid_grant&quot;}</code>。这个规范化层将非标准响应转换为标准格式，确保 SDK 的错误处理逻辑正确工作。</p>
+<div class="thinking-note"><h3>思考笔记</h3>
+<ul>
+<li>远程 MCP 服务器需要认证——这个需求看起来简单，但 CLI 环境的 OAuth 实现比 Web 环境复杂得多：没有浏览器、没有 cookie、没有 session。</li>
+<li>公共客户端 OAuth（PKCE）是 CLI 环境的标准方案：没有 client_secret，用 code_verifier 证明请求的合法性。</li>
+<li>本地起临时 HTTP 服务器接收回调的机制——这是 CLI 工具处理 OAuth 回调的最优雅方式：监听 localhost，等待浏览器跳回。</li>
+<li>一个有趣的问题：没有浏览器怎么办？答案是后备方案——让用户手动复制授权码到终端。虽然体验不好，但至少不会卡死工作流。</li>
+</ul>
+</div><hr>
+<h2>16.2 Token 管理</h2>
+<h3>16.2.1 安全存储</h3>
+<p>Token 通过 <code>SecureStorage</code> 接口存储，在 macOS 上使用系统 Keychain：</p>
+<pre><code class="language-typescript">async tokens(): Promise&lt;OAuthTokens | undefined&gt; {
+  const storage = getSecureStorage()
+  const data = await storage.readAsync()
+  const serverKey = getServerKey(this.serverName, this.serverConfig)
+  const tokenData = data?.mcpOAuth?.[serverKey]
+  // ...
+}</code></pre><p>存储 key 是服务器名称和配置哈希的组合，防止同名不同配置的服务器共享凭据：</p>
+<pre><code class="language-typescript">export function getServerKey(
+  serverName: string,
+  serverConfig: McpSSEServerConfig | McpHTTPServerConfig,
+): string {
+  const configJson = jsonStringify({
+    type: serverConfig.type,
+    url: serverConfig.url,
+    headers: serverConfig.headers || {},
+  })
+  const hash = createHash('sha256').update(configJson).digest('hex').substring(0, 16)
+  return `${serverName}|${hash}`
+}</code></pre><h3>16.2.2 Token 刷新</h3>
+<p>Token 刷新有多层保护机制：</p>
+<ol>
+<li><strong>锁文件</strong>：使用文件锁防止多个 Claude Code 实例同时刷新</li>
+<li><strong>重试策略</strong>：区分瞬时错误（重试）和永久错误（失效）</li>
+<li><strong>跨进程感知</strong>：Keychain 缓存的 TTL 允许一个实例看到另一个实例的刷新结果</li>
+</ol>
+<pre><code class="language-typescript">// tokens() 方法中的性能注释
+// 我们不在这里 clearKeychainCache()——tokens() 被 MCP SDK 的
+// _commonHeaders 在每次请求中调用，强制 cache miss 会触发
+// 30-40 次/秒的阻塞 spawnSync(`security find-generic-password`)</code></pre><p>这条注释揭示了一个重要的性能考量：<code>tokens()</code> 在每次 MCP 请求中都被调用，如果每次都读取 Keychain 会导致严重的 CPU 消耗（在 CPU profile 中占到 7.2%）。</p>
+<h3>16.2.3 Token 撤销</h3>
+<pre><code class="language-typescript">export async function revokeServerTokens(
+  serverName: string,
+  serverConfig: McpSSEServerConfig | McpHTTPServerConfig,
+  { preserveStepUpState = false } = {},
+): Promise&lt;void&gt; {
+  // 1. 发现撤销端点
+  const metadata = await fetchAuthServerMetadata(serverName, asUrl, ...)
+
+  // 2. 先撤销 refresh_token（更重要——防止生成新的 access_token）
+  if (tokenData.refreshToken) {
+    await revokeToken({ ..., tokenTypeHint: 'refresh_token' })
+  }
+
+  // 3. 再撤销 access_token
+  if (tokenData.accessToken) {
+    await revokeToken({ ..., tokenTypeHint: 'access_token' })
+  }
+
+  // 4. 清除本地存储
+  clearServerTokensFromLocalStorage(serverName, serverConfig)
+
+  // 5. 可选保留 Step-Up 状态
+  if (preserveStepUpState &amp;&amp; tokenData.stepUpScope) {
+    // 保留 scope 和 discovery 状态，方便下次认证
+  }
+}</code></pre><p>撤销顺序很重要：先撤销 refresh_token，因为它是长期凭证。即使 access_token 撤销失败，只要 refresh_token 被撤销就无法生成新的 access_token。</p>
+<p>RFC 7009 的两种认证方式都被支持：</p>
+<pre><code class="language-typescript">async function revokeToken({ endpoint, token, tokenTypeHint, clientId, clientSecret, ... }) {
+  // 优先使用 client_secret_basic（RFC 7009 标准）
+  if (clientId &amp;&amp; clientSecret) {
+    if (authMethod === 'client_secret_post') {
+      params.set('client_id', clientId)
+      params.set('client_secret', clientSecret)
+    } else {
+      const basic = Buffer.from(`${encodeURIComponent(clientId)}:${encodeURIComponent(clientSecret)}`).toString('base64')
+      headers.Authorization = `Basic ${basic}`
+    }
+  }
+
+  try {
+    await axios.post(endpoint, params, { headers })
+  } catch (error) {
+    // 回退：某些非 RFC 7009 兼容的服务器需要 Bearer auth
+    if (error.response?.status === 401 &amp;&amp; accessToken) {
+      params.delete('client_id')
+      params.delete('client_secret')
+      await axios.post(endpoint, params, {
+        headers: { ...headers, Authorization: `Bearer ${accessToken}` },
+      })
+    }
+  }
+}</code></pre><div class="thinking-note"><h3>思考笔记</h3>
+<p>Token 管理是 OAuth 流程中最容易被低估的部分——获取 token 只占 5% 的工作，剩下 95% 是存储、刷新、恢复。</p>
+<ul>
+<li>系统 Keychain 是 macOS 上 token 持久化的首选——比文件安全，比环境变量持久。</li>
+<li>文件锁防止多进程并发写入——多个实例同时启动时不会冲突。</li>
+<li>锁文件 + 重试 + 跨进程感知让极端情况下的 token 刷新仍然可靠。</li>
+<li>无浏览器环境的回退方案：手动复制授权码——体验不好但不会卡死。</li>
+</ul>
+</div><hr>
+<h2>16.3 XAA 跨账户访问</h2>
+<p>Cross-App Access（XAA）是 MCP 认证体系中最精密的部分，它允许在不弹出浏览器的情况下获取 MCP 访问令牌。</p>
+<h3>16.3.1 XAA 协议链</h3>
+<p>XAA 基于三个 RFC 标准构建了一条 token 交换链：</p>
+<div class="mermaid">%%{init: {"theme": "base", "themeVariables":{"primaryColor":"#3b82f6","primaryTextColor":"#1e293b","primaryBorderColor":"#60a5fa","lineColor":"#94a3b8","secondaryColor":"#f1f5f9","tertiaryColor":"#ffffff","fontFamily":"-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif"}}}%%
+sequenceDiagram
+    participant CC as Claude Code
+    participant IdP as 身份提供商 (IdP)
+    participant AS as 授权服务器 (AS)
+    participant MCP as MCP Server
+
+    Note over CC: 步骤 0: 缓存检查
+    CC-&gt;&gt;CC: 检查缓存的 id_token
+
+    Note over CC,IdP: 步骤 1: 获取 id_token (仅首次)
+    CC-&gt;&gt;IdP: OIDC 授权码流 (PKCE)
+    IdP--&gt;&gt;CC: id_token (缓存到 Keychain)
+
+    Note over CC,MCP: 步骤 2: PRM 发现
+    CC-&gt;&gt;MCP: RFC 9728 PRM 发现
+    MCP--&gt;&gt;CC: resource, authorization_servers[]
+
+    Note over CC,AS: 步骤 3: AS 元数据发现
+    CC-&gt;&gt;AS: RFC 8414 AS 元数据
+    AS--&gt;&gt;CC: issuer, token_endpoint, grant_types
+
+    Note over CC,IdP: 步骤 4: Token Exchange (RFC 8693)
+    CC-&gt;&gt;IdP: id_token → ID-JAG
+    IdP--&gt;&gt;CC: ID-JAG (Identity Assertion Authorization Grant)
+
+    Note over CC,AS: 步骤 5: JWT Bearer Grant (RFC 7523)
+    CC-&gt;&gt;AS: ID-JAG → access_token
+    AS--&gt;&gt;CC: access_token + refresh_token</div><h3>16.3.2 XAA 核心实现</h3>
+<pre><code class="language-typescript">// src/services/mcp/xaa.ts
+export async function performCrossAppAccess(
+  serverUrl: string,
+  config: XaaConfig,
+  serverName = 'xaa',
+  abortSignal?: AbortSignal,
+): Promise&lt;XaaResult&gt; {
+  const fetchFn = makeXaaFetch(abortSignal)
+
+  // Layer 2: PRM 发现
+  const prm = await discoverProtectedResource(serverUrl, { fetchFn })
+
+  // Layer 2: AS 发现（遍历所有广告的 AS，找到支持 jwt-bearer 的）
+  let asMeta: AuthorizationServerMetadata | undefined
+  for (const asUrl of prm.authorization_servers) {
+    let candidate = await discoverAuthorizationServer(asUrl, { fetchFn })
+    if (candidate.grant_types_supported &amp;&amp;
+        !candidate.grant_types_supported.includes(JWT_BEARER_GRANT)) {
+      continue
+    }
+    asMeta = candidate
+    break
+  }
+  if (!asMeta) throw new Error('XAA: no authorization server supports jwt-bearer')
+
+  // 选择认证方法
+  const authMethods = asMeta.token_endpoint_auth_methods_supported
+  const authMethod = authMethods &amp;&amp;
+    !authMethods.includes('client_secret_basic') &amp;&amp;
+    authMethods.includes('client_secret_post')
+      ? 'client_secret_post' : 'client_secret_basic'
+
+  // Layer 2: Token Exchange (id_token → ID-JAG)
+  const jag = await requestJwtAuthorizationGrant({
+    tokenEndpoint: config.idpTokenEndpoint,
+    audience: asMeta.issuer,
+    resource: prm.resource,
+    idToken: config.idpIdToken,
+    clientId: config.idpClientId,
+    clientSecret: config.idpClientSecret,
+    fetchFn,
+  })
+
+  // Layer 2: JWT Bearer Grant (ID-JAG → access_token)
+  const tokens = await exchangeJwtAuthGrant({
+    tokenEndpoint: asMeta.token_endpoint,
+    assertion: jag.jwtAuthGrant,
+    clientId: config.clientId,
+    clientSecret: config.clientSecret,
+    authMethod,
+    fetchFn,
+  })
+
+  return { ...tokens, authorizationServerUrl: asMeta.issuer }
+}</code></pre><h3>16.3.3 安全验证</h3>
+<p>XAA 实现了多层安全验证：</p>
+<p><strong>RFC 9728 资源不匹配保护</strong>：</p>
+<pre><code class="language-typescript">export async function discoverProtectedResource(serverUrl: string, opts?): Promise&lt;...&gt; {
+  const prm = await discoverOAuthProtectedResourceMetadata(serverUrl, ...)
+  if (normalizeUrl(prm.resource) !== normalizeUrl(serverUrl)) {
+    throw new Error(`XAA: PRM resource mismatch: expected ${serverUrl}, got ${prm.resource}`)
+  }
+  return { resource: prm.resource, authorization_servers: prm.authorization_servers }
+}</code></pre><p><strong>RFC 8414 发行者不匹配保护</strong>：</p>
+<pre><code class="language-typescript">export async function discoverAuthorizationServer(asUrl: string, opts?): Promise&lt;...&gt; {
+  if (normalizeUrl(meta.issuer) !== normalizeUrl(asUrl)) {
+    throw new Error(`XAA: issuer mismatch: expected ${asUrl}, got ${meta.issuer}`)
+  }
+  // HTTPS 强制
+  if (new URL(meta.token_endpoint).protocol !== 'https:') {
+    throw new Error(`XAA: refusing non-HTTPS token endpoint: ${meta.token_endpoint}`)
+  }
+}</code></pre><p><strong>Token 泄露防护</strong>：</p>
+<pre><code class="language-typescript">const SENSITIVE_TOKEN_RE =
+  /"(access_token|refresh_token|id_token|assertion|subject_token|client_secret)"\s*:\s*"[^"]*"/g
+
+function redactTokens(raw: unknown): string {
+  const s = typeof raw === 'string' ? raw : jsonStringify(raw)
+  return s.replace(SENSITIVE_TOKEN_RE, (_, k) =&gt; `"${k}":"[REDACTED]"`)
+}</code></pre><p>所有包含 token 的日志输出都经过 <code>redactTokens</code> 处理，确保调试日志不会泄露敏感凭据。正则表达式匹配六种 token 相关字段，无论 JSON 嵌套深度如何。</p>
+<h3>16.3.4 错误分类与 id_token 缓存策略</h3>
+<p><code>XaaTokenExchangeError</code> 携带了是否应该清除缓存 id_token 的信息：</p>
+<pre><code class="language-typescript">export class XaaTokenExchangeError extends Error {
+  readonly shouldClearIdToken: boolean
+  constructor(message: string, shouldClearIdToken: boolean) {
+    super(message)
+    this.name = 'XaaTokenExchangeError'
+    this.shouldClearIdToken = shouldClearIdToken
+  }
+}</code></pre><ul>
+<li><strong>4xx 错误</strong>（invalid_grant 等）：id_token 被拒绝，清除缓存</li>
+<li><strong>5xx 错误</strong>：IdP 暂时不可用，id_token 可能仍有效，保留缓存</li>
+<li><strong>200 但格式错误</strong>：协议违规，清除缓存</li>
+</ul>
+<div class="thinking-note"><h3>思考笔记</h3>
+<ul>
+<li>XAA（Cross-Account Access）是 MCP 认证体系中最具企业级特色的设计：一次浏览器登录，就能访问所有配置好的服务器。</li>
+<li>三段交换链的设计思路类似 Kerberos：用初始 token 换取多个下游 token，每一段只做一件事，组合起来实现了跨账户访问。</li>
+<li>token 刷新机制的健壮性设计（锁文件 + 重试 + 跨进程感知）说明了一个道理：在 CLI 环境中，token 管理比 Web 环境更需要容错。</li>
+<li>跨账户场景下的&quot;远程设备审批&quot;功能：人不在电脑前，也能通过手机上已认证的设备授权访问——这是真正的生产级安全。</li>
+</ul>
+</div><hr>
+<h2>16.4 IdP 集成</h2>
+<p><code>xaaIdpLogin.ts</code> 管理与身份提供商（Identity Provider）的集成。</p>
+<h3>16.4.1 OIDC 发现</h3>
+<pre><code class="language-typescript">// src/services/mcp/xaaIdpLogin.ts
+export async function discoverOidc(issuer: string): Promise&lt;OidcDiscovery&gt; {
+  // 标准 OIDC 发现：/.well-known/openid-configuration
+  // 返回 authorization_endpoint, token_endpoint 等
+}</code></pre><h3>16.4.2 id_token 生命周期</h3>
+<p>id_token 的获取和缓存遵循以下流程：</p>
+<ol>
+<li>首次使用时通过 OIDC 授权码流（带 PKCE）获取 id_token</li>
+<li>id_token 缓存到系统 Keychain，按 IdP issuer 键控</li>
+<li>后续的 XAA 请求直接使用缓存的 id_token</li>
+<li>如果 id_token 过期或被拒绝，重新发起 OIDC 流程</li>
+</ol>
+<p>这个设计的关键优势是<strong>一次浏览器登录即可访问所有 XAA 配置的 MCP 服务器</strong>——id_token 是按 IdP 缓存的，而非按 MCP 服务器。</p>
+<h3>16.4.3 XAA 配置</h3>
+<pre><code class="language-typescript">export type XaaConfig = {
+  clientId: string       // MCP 服务器 AS 的 client_id
+  clientSecret: string   // MCP 服务器 AS 的 client_secret
+  idpClientId: string    // IdP 的 client_id
+  idpClientSecret?: string // IdP 的 client_secret（可选）
+  idpIdToken: string     // 用户的 id_token
+  idpTokenEndpoint: string // IdP 的 token endpoint
+}</code></pre><p>注意 IdP client_secret 是可选的——某些 IdP 将 Claude Code 注册为 Public Client，只需要 PKCE 而不需要 secret。</p>
+<div class="thinking-note"><h3>思考笔记</h3>
+<p>IdP（身份提供商）集成是 MCP 认证体系的企业级能力——不自己管用户，交给现有的身份系统。</p>
+<ul>
+<li>支持标准 OIDC/SAML 协议——企业现有的 Okta、Azure AD、Keycloak 都能对接。</li>
+<li>IdP 集成让企业的统一身份策略延伸到 MCP 工具——离职员工的访问权限自动撤销。</li>
+<li>不需要为每个 MCP 服务器单独配置用户——一次 IdP 集成，所有 MCP 服务器共享用户目录。</li>
+<li>企业 SSO（单点登录）的体验——用户登录一次企业门户就能访问所有配置的 MCP 服务器。</li>
+</ul>
+</div><hr>
+<h2>16.5 通道权限</h2>
+<p><code>channelPermissions.ts</code> 实现了通过外部通道（如 Telegram）进行权限审批的机制。</p>
+<h3>16.5.1 通道权限架构</h3>
+<pre><code class="language-typescript">// src/services/mcp/channelPermissions.ts
+export type ChannelPermissionCallbacks = {
+  onResponse(requestId: string, handler: (response: ChannelPermissionResponse) =&gt; void): () =&gt; void
+  resolve(requestId: string, behavior: 'allow' | 'deny', fromServer: string): boolean
+}</code></pre><p>当 Claude Code 遇到权限请求时，它不仅显示本地 UI 对话框，还同时通过活跃的通道 MCP 服务器发送审批请求。第一个响应者（本地 UI 或远程通道）获胜。</p>
+<h3>16.5.2 短 ID 生成</h3>
+<pre><code class="language-typescript">const ID_ALPHABET = 'abcdefghijkmnopqrstuvwxyz'  // 25 字母，无 'l'
+
+export function shortRequestId(toolUseID: string): string {
+  let candidate = hashToId(toolUseID)
+  for (let salt = 0; salt &lt; 10; salt++) {
+    if (!ID_AVOID_SUBSTRINGS.some(bad =&gt; candidate.includes(bad))) {
+      return candidate
+    }
+    candidate = hashToId(`${toolUseID}:${salt}`)
+  }
+  return candidate
+}</code></pre><p>短 ID 的设计考虑周到：</p>
+<ul>
+<li>使用 25 个字母（排除了 <code>l</code>，因为它在很多字体中与 <code>1</code>/<code>I</code> 混淆）</li>
+<li>5 字母给出 25^5 = 9.8M 的空间，对单会话内的并发请求绰绰有余</li>
+<li>纯字母避免手机用户切换键盘模式</li>
+<li>脏词过滤确保 ID 可以安全地出现在手机短信中</li>
+</ul>
+<h3>16.5.3 通道能力检查</h3>
+<pre><code class="language-typescript">export function filterPermissionRelayClients&lt;T extends {
+  type: string; name: string;
+  capabilities?: { experimental?: Record&lt;string, unknown&gt; }
+}&gt;(
+  clients: readonly T[],
+  isInAllowlist: (name: string) =&gt; boolean,
+): (T &amp; { type: 'connected' })[] {
+  return clients.filter(
+    (c): c is T &amp; { type: 'connected' } =&gt;
+      c.type === 'connected' &amp;&amp;
+      isInAllowlist(c.name) &amp;&amp;
+      c.capabilities?.experimental?.['claude/channel'] !== undefined &amp;&amp;
+      c.capabilities?.experimental?.['claude/channel/permission'] !== undefined,
+  )
+}</code></pre><p>一个 MCP 服务器必须同时满足四个条件才能成为权限审批通道：</p>
+<ol>
+<li>已连接状态</li>
+<li>在会话的 <code>--channels</code> 允许列表中</li>
+<li>声明了 <code>claude/channel</code> 能力</li>
+<li>声明了 <code>claude/channel/permission</code> 能力</li>
+</ol>
+<p>第四个条件是服务器的<strong>显式 opt-in</strong>——一个聊天中继通道不会因为它能转发消息就自动成为权限审批表面。源码注释中引用了一位安全审查者的顾虑：&quot;users may be unpleasantly surprised&quot;，这个四重检查就是对此的回应。</p>
+<h3>16.5.4 安全边界分析</h3>
+<p>源码注释中的安全分析值得完整引用：</p>
+<pre><code class="language-typescript">/**
+ * Kenneth's "would this let Claude self-approve?": the approving party is
+ * the human via the channel, not Claude. But the trust boundary isn't the
+ * terminal — it's the allowlist (tengu_harbor_ledger). A compromised
+ * channel server CAN fabricate "yes &lt;id&gt;" without the human seeing the
+ * prompt. Accepted risk: a compromised channel already has unlimited
+ * conversation-injection turns (social-engineer over time, wait for
+ * acceptEdits, etc.); inject-then-self-approve is faster, not more
+ * capable. The dialog slows a compromised channel; it doesn't stop one.
+ */</code></pre><p>这段分析承认了一个已接受的风险：被入侵的通道服务器可以伪造审批。但它论证了这不会<strong>增加</strong>攻击者的能力——一个已入侵的通道已经可以注入任意对话内容，等待 acceptEdits 模式后执行任意操作。权限对话框增加了攻击的延迟，但不能阻止已经控制了通道的攻击者。</p>
+<p>通道权限的回复格式使用结构化事件而非文本匹配：</p>
+<pre><code class="language-typescript">// CC 生成 ID 并发送提示
+// 服务器解析用户回复 "yes tbxkq"
+// 服务器发送结构化事件：notifications/claude/channel/permission
+//   { request_id: "tbxkq", behavior: "allow" }
+// CC 匹配 pending map，不做文本正则匹配</code></pre><p>CC 永远不对通道中的文本做正则匹配——只接受服务器发送的结构化事件。这确保了通道中的普通对话文本不会意外触发权限审批。</p>
+<div class="mermaid">%%{init: {"theme": "base", "themeVariables":{"primaryColor":"#3b82f6","primaryTextColor":"#1e293b","primaryBorderColor":"#60a5fa","lineColor":"#94a3b8","secondaryColor":"#f1f5f9","tertiaryColor":"#ffffff","fontFamily":"-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif"}}}%%
+flowchart TD
+    A[权限请求] --&gt; B{通道权限已启用?}
+    B --&gt;|否| C[仅本地 UI]
+    B --&gt;|是| D[过滤合格通道]
+    D --&gt; E{有合格通道?}
+    E --&gt;|否| C
+    E --&gt;|是| F[生成短 ID]
+    F --&gt; G[并行发送]
+    G --&gt; H[本地 UI 对话框]
+    G --&gt; I[通道审批请求]
+    H --&gt; J{竞赛: 谁先响应?}
+    I --&gt; J
+    J --&gt;|本地 UI| K[应用本地决策]
+    J --&gt;|通道| L[应用通道决策]
+    K --&gt; M[取消另一方]
+    L --&gt; M</div><p>整个 MCP 认证体系展现了对真实世界复杂性的深刻理解：OAuth 服务器的非标准行为、跨进程的 token 管理、企业级的 IdP 集成、移动通道的安全模型。每一层都在标准协议的基础上增加了防御性工程，确保在各种边界条件下仍能正确运作。</p>
+<div class="thinking-note"><h3>思考笔记</h3>
+<p>通道权限（Channel Permissions）是 MCP 认证中最精细的访问控制——谁可以通过什么通道访问什么资源。</p>
+<ul>
+<li>通道管理的核心场景：远程设备审批——用户不在电脑前也能通过已认证的手机授权访问。</li>
+<li>通道权限包括：设备类型（桌面/移动）、网络来源（内网/外网）、时间窗口。</li>
+<li>通道权限不能阻止已入侵通道的伪造审批——如果攻击者控制了用户的手机，通道权限形同虚设。</li>
+<li>这是&quot;纵深防御&quot;在认证层的体现：通道权限 + OAuth + IdP + token 管理，多层叠加。</li>
+</ul>
+</div><hr>
+
+      </article>
+    </main>
+  </div>
+  
+  <!-- Syntax highlighting -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script>hljs.highlightAll();</script>
+
+  <script>
+    // Collapsible sidebar sections
+    document.querySelectorAll('.sidebar-section-header').forEach(header => {
+      header.addEventListener('click', () => {
+        const items = header.nextElementSibling;
+        const isCollapsed = items.classList.contains('collapsed');
+        // If collapsed, uncollapse; if visible, collapse
+        items.classList.toggle('collapsed');
+        header.classList.toggle('open');
+      });
+    });
+
+    // Auto-open current page's section + highlight active link
+    const currentPath = window.location.pathname;
+    const currentFilename = currentPath.split('/').pop();
+    let foundMatch = false;
+    document.querySelectorAll('.sidebar-section-items a').forEach(link => {
+      const href = link.getAttribute('href');
+      const linkFilename = href.split('/').pop();
+      if (linkFilename === currentFilename) {
+        link.classList.add('active');
+        const section = link.closest('.sidebar-section-items');
+        const header = section ? section.previousElementSibling : null;
+        if (section) section.classList.remove('collapsed');
+        if (header) header.classList.add('open');
+        foundMatch = true;
+      }
+    });
+    
+    // Full-text search
+    (function() {
+      const searchInput = document.getElementById('searchInput');
+      const searchResults = document.getElementById('searchResults');
+      if (!searchInput || !searchResults) return;
+
+      let searchIndex = [];
+      let indexLoaded = false;
+
+      // Compute root path for loading search-index.json
+      const currentScript = document.currentScript;
+      const rootPath = '../';
+
+      function loadIndex() {
+        if (indexLoaded) return;
+        indexLoaded = true;
+        fetch(rootPath + 'search-index.json')
+          .then(r => r.json())
+          .then(data => { searchIndex = data; })
+          .catch(() => { searchIndex = []; });
+      }
+
+      function highlight(text, query) {
+        const re = new RegExp('(' + query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi');
+        return text.replace(re, '<mark style="background:#fde047;padding:0 2px;border-radius:2px;">$1</mark>');
+      }
+
+      function search(query) {
+        if (!query || !searchIndex.length) return [];
+        const terms = query.toLowerCase().split(/\s+/).filter(t => t.length > 0);
+        if (!terms.length) return [];
+
+        const results = searchIndex.map(doc => {
+          const titleLower = doc.title.toLowerCase();
+          const textLower = doc.text.toLowerCase();
+          let score = 0;
+
+          for (const term of terms) {
+            if (titleLower.includes(term)) score += 10;
+            if (textLower.includes(term)) score += 1;
+          }
+
+          if (score === 0) return null;
+
+          // Find best snippet
+          let snippet = doc.text.slice(0, 120);
+          for (const term of terms) {
+            const idx = doc.text.toLowerCase().indexOf(term);
+            if (idx !== -1) {
+              const start = Math.max(0, idx - 40);
+              snippet = doc.text.slice(start, start + 120);
+              break;
+            }
+          }
+
+          return { ...doc, score, snippet };
+        }).filter(Boolean);
+
+        return results.sort((a, b) => b.score - a.score).slice(0, 10);
+      }
+
+      function render(results, query) {
+        if (!query) {
+          searchResults.classList.remove('active');
+          searchResults.innerHTML = '';
+          return;
+        }
+        if (!results.length) {
+          searchResults.innerHTML = '<div class="search-no-results">未找到相关文档</div>';
+          searchResults.classList.add('active');
+          return;
+        }
+
+        let html = '';
+        for (const r of results) {
+          const title = highlight(r.title, query);
+          const preview = highlight(r.snippet.replace(/\s+/g, ' '), query);
+          html += `<a href="${rootPath + r.path}" class="search-result-item">
+            <div class="sr-title">${title}</div>
+            <div class="sr-preview">${preview}...</div>
+          </a>`;
+        }
+        searchResults.innerHTML = html;
+        searchResults.classList.add('active');
+      }
+
+      let debounce;
+      searchInput.addEventListener('input', (e) => {
+        loadIndex();
+        clearTimeout(debounce);
+        const query = e.target.value.trim();
+        if (!query) {
+          render([], '');
+          return;
+        }
+        searchResults.innerHTML = '<div class="search-loading">搜索中...</div>';
+        searchResults.classList.add('active');
+        debounce = setTimeout(() => {
+          render(search(query), query);
+        }, 150);
+      });
+
+      // Close results on click outside
+      document.addEventListener('click', (e) => {
+        if (!e.target.closest('.sidebar-search')) {
+          searchResults.classList.remove('active');
+        }
+      });
+
+      // Keyboard navigation
+      searchInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          searchResults.classList.remove('active');
+          searchInput.blur();
+        }
+      });
+    })();
+    
+    // Back to top
+    (function() {
+      const btn = document.getElementById('backToTop');
+      if (!btn) return;
+      const toggle = () => {
+        btn.classList.toggle('visible', window.scrollY > 400);
+      };
+      window.addEventListener('scroll', toggle, { passive: true });
+      btn.addEventListener('click', () => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+    })();
+
+    // Mobile menu toggle
+    (function() {
+      const menuToggle = document.getElementById('menuToggle');
+      const sidebar = document.querySelector('.sidebar');
+      const overlay = document.getElementById('sidebarOverlay');
+      if (!menuToggle || !sidebar || !overlay) return;
+
+      menuToggle.addEventListener('click', () => {
+        sidebar.classList.toggle('open');
+        overlay.classList.toggle('active');
+      });
+
+      overlay.addEventListener('click', () => {
+        sidebar.classList.remove('open');
+        overlay.classList.remove('active');
+      });
+
+      // Close sidebar when a nav link is clicked (mobile)
+      sidebar.querySelectorAll('a').forEach(link => {
+        link.addEventListener('click', () => {
+          if (window.innerWidth <= 1024) {
+            sidebar.classList.remove('open');
+            overlay.classList.remove('active');
+          }
+        });
+      });
+    })();
+
+    // Copy code buttons
+    (function() {
+      document.querySelectorAll('.markdown-section pre').forEach(pre => {
+        const btn = document.createElement('button');
+        btn.className = 'copy-code-btn';
+        btn.textContent = '复制';
+        btn.addEventListener('click', () => {
+          const code = pre.querySelector('code')?.textContent || pre.textContent;
+          navigator.clipboard.writeText(code).then(() => {
+            btn.textContent = '已复制';
+            btn.classList.add('copied');
+            setTimeout(() => {
+              btn.textContent = '复制';
+              btn.classList.remove('copied');
+            }, 1500);
+          }).catch(() => {
+            btn.textContent = '失败';
+            setTimeout(() => { btn.textContent = '复制'; }, 1500);
+          });
+        });
+        pre.style.position = 'relative';
+        pre.appendChild(btn);
+      });
+    })();
+
+    // 引导思考 collapsible card
+    (function() {
+      document.querySelectorAll('.guide-card-header').forEach(function(header) {
+        header.addEventListener('click', function() {
+          var table = header.closest('.guide-card');
+          table.classList.toggle('collapsed');
+        });
+      });
+    })();
+
+    // Mermaid: Load dynamically + zoomable containers
+    (function() {
+      var mermaidDivs = document.querySelectorAll('.mermaid');
+      if (mermaidDivs.length === 0) return;
+
+      var cdns = [
+        '../mermaid.min.js',
+        'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js',
+        'https://unpkg.com/mermaid@10/dist/mermaid.min.js'
+      ];
+      var cdnIndex = 0;
+
+      function showError(msg) {
+        mermaidDivs.forEach(function(div) {
+          div.innerHTML = '<div class="mermaid-error" style="padding:16px;color:#dc2626;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;margin:20px 0;">' + msg + '</div>';
+          div.classList.add('rendered');
+        });
+      }
+
+      function wrapZoomable(div) {
+        if (div.parentNode.classList.contains('mermaid-zoom-container')) return;
+        if (!div.querySelector('svg')) return;
+        div.classList.add('rendered');
+
+        var wrapper = document.createElement('div');
+        wrapper.className = 'mermaid-zoom-container';
+        div.parentNode.insertBefore(wrapper, div);
+        wrapper.appendChild(div);
+
+        // Click overlay hint
+        var overlay = document.createElement('div');
+        overlay.className = 'mermaid-expand-overlay';
+        overlay.innerHTML = '<span><span class="expand-icon">⛶</span> 点击查看全图</span>';
+        wrapper.appendChild(overlay);
+
+        // Click (or double-click) to open modal
+        wrapper.addEventListener('click', function() { openMermaidModal(div); });
+      }
+
+      // ---- Mermaid Modal (full-screen viewer) ----
+      var modalInstance = null;
+
+      function openMermaidModal(sourceDiv) {
+        closeMermaidModal();
+        var clone = sourceDiv.cloneNode(true);
+        var svg = clone.querySelector('svg');
+        if (!svg) return;
+
+        // Let SVG fill width, height follows viewBox aspect ratio
+        svg.removeAttribute('width');
+        svg.removeAttribute('height');
+        svg.style.width = '100%';
+        svg.style.height = 'auto';
+        svg.style.maxWidth = 'none';
+
+        // Build modal: simple header + scrollable body
+        var modal = document.createElement('div');
+        modal.className = 'mermaid-modal active';
+
+        var content = document.createElement('div');
+        content.className = 'mermaid-modal-content';
+
+        var header = document.createElement('div');
+        header.className = 'mermaid-modal-header';
+        var chapterHint = '';
+        var prev = sourceDiv.closest('.markdown-section');
+        if (prev) {
+          var heading = prev.querySelector('h2, h3');
+          if (heading) chapterHint = heading.textContent.replace(/[#\d.]/g,'').trim().slice(0, 30);
+        }
+        header.innerHTML =
+          '<div class="modal-title-wrap">' +
+            '<span class="modal-icon">⬡</span>' +
+            '<span class="modal-title">' + (chapterHint || '图表') + '</span>' +
+          '</div>' +
+          '<button class="modal-close" title="关闭 (ESC)">✕</button>';
+
+        var body = document.createElement('div');
+        body.className = 'mermaid-modal-body';
+        body.appendChild(clone);
+
+        content.appendChild(header);
+        content.appendChild(body);
+        modal.appendChild(content);
+        document.body.appendChild(modal);
+
+        // Close handlers
+        header.querySelector('.modal-close').addEventListener('click', closeMermaidModal);
+        modal.addEventListener('click', function(e) {
+          if (e.target === modal) closeMermaidModal();
+        });
+
+        modalInstance = modal;
+      }
+
+      function closeMermaidModal() {
+        if (modalInstance) {
+          modalInstance.remove();
+          modalInstance = null;
+        }
+      }
+
+      document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') closeMermaidModal();
+      });
+
+      function tryLoadMermaid() {
+        if (cdnIndex >= cdns.length) {
+          showError('❌ 无法加载图表库，请检查网络连接后刷新页面');
+          return;
+        }
+
+        var script = document.createElement('script');
+        script.src = cdns[cdnIndex];
+        script.onload = function() {
+          if (typeof mermaid === 'undefined') {
+            showError('❌ 图表库加载失败');
+            return;
+          }
+          try {
+            mermaid.initialize({
+              startOnLoad: false,
+              theme: 'base',
+              themeVariables: {
+                fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif',
+                primaryColor: '#ffffff',
+                primaryTextColor: '#1e293b',
+                primaryBorderColor: '#e2e8f0',
+                lineColor: '#64748b',
+                secondaryColor: '#f1f5f9',
+                tertiaryColor: '#f8fafc',
+              },
+              securityLevel: 'loose',
+              flowchart: {
+                curve: 'basis',
+                padding: 15,
+                nodeSpacing: 50,
+                rankSpacing: 80,
+              },
+              maxTextSize: 50000,
+            });
+            mermaid.run({ querySelector: '.mermaid' }).then(function() {
+              mermaidDivs.forEach(wrapZoomable);
+            });
+          } catch(e) {
+            showError('❌ 图表渲染失败: ' + e.message);
+          }
+        };
+        script.onerror = function() {
+          cdnIndex++;
+          tryLoadMermaid();
+        };
+        document.head.appendChild(script);
+      }
+
+      tryLoadMermaid();
+    })();
+
+  </script>
+</body>
+</html>

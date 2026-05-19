@@ -1,0 +1,2288 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>第 5 章：消息系统</title>
+  <style>
+    /* ===== Reset & Base ===== */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { font-size: 62.5%; }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+      font-size: 15px;
+      color: #1e293b;
+      line-height: 1.7;
+      background: #ffffff;
+      -webkit-font-smoothing: antialiased;
+    }
+    
+    /* ===== Layout ===== */
+    .app {
+      display: flex;
+      min-height: 100vh;
+    }
+    
+    /* ===== Sidebar ===== */
+    .sidebar {
+      width: 280px;
+      min-width: 280px;
+      background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+      border-right: 1px solid #e2e8f0;
+      position: fixed;
+      top: 0;
+      left: 0;
+      bottom: 0;
+      display: flex;
+      flex-direction: column;
+    }
+    .sidebar::-webkit-scrollbar { width: 4px; }
+    .sidebar::-webkit-scrollbar-track { background: transparent; }
+    .sidebar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+    .sidebar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+    .sidebar-header {
+      padding: 20px 20px 14px;
+      border-bottom: 1px solid #e2e8f0;
+      flex-shrink: 0;
+    }
+
+    .sidebar-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 15px;
+      font-weight: 700;
+      color: #0f172a;
+      text-decoration: none;
+      letter-spacing: -0.02em;
+    }
+
+    .sidebar-brand .icon {
+      width: 30px;
+      height: 30px;
+      background: linear-gradient(135deg, #3b82f6 0%, #0ea5e9 100%);
+      border-radius: 7px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 15px;
+      flex-shrink: 0;
+    }
+
+    .sidebar-search {
+      padding: 12px 20px;
+      flex-shrink: 0;
+    }
+
+    .search-box {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 8px 12px;
+      transition: all 0.2s ease;
+    }
+
+    .search-box:focus-within {
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+
+    .search-box input {
+      flex: 1;
+      border: none;
+      outline: none;
+      font-size: 13px;
+      color: #1e293b;
+      background: transparent;
+    }
+
+    .search-box input::placeholder {
+      color: #94a3b8;
+    }
+
+    .search-box svg {
+      width: 15px;
+      height: 15px;
+      color: #94a3b8;
+      flex-shrink: 0;
+    }
+
+    .sidebar-nav {
+      flex: 1;
+      padding: 4px 8px;
+      overflow-y: auto;
+    }
+
+    .sidebar-nav ul, .sidebar-nav li {
+      list-style: none;
+    }
+
+    .quick-links {
+      display: flex;
+      gap: 6px;
+      padding: 0 8px 10px;
+      flex-shrink: 0;
+    }
+
+    .quick-links a {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      padding: 7px 10px;
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 7px;
+      font-size: 12px;
+      font-weight: 500;
+      color: #64748b;
+      text-decoration: none;
+      transition: all 0.15s ease;
+    }
+
+    .quick-links a:hover {
+      color: #3b82f6;
+      border-color: #3b82f6;
+      background: #eff6ff;
+    }
+
+    .quick-links a .ql-icon {
+      font-size: 13px;
+      line-height: 1;
+    }
+
+    .sidebar-section {
+      margin-bottom: 2px;
+    }
+
+    .sidebar-section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 9px 12px 9px 14px;
+      cursor: pointer;
+      user-select: none;
+      border-radius: 8px;
+      margin: 0 2px;
+      transition: background 0.15s ease;
+    }
+
+    .sidebar-section-header:hover {
+      background: rgba(59, 130, 246, 0.06);
+    }
+
+    .sidebar-section-header.open {
+      background: rgba(59, 130, 246, 0.08);
+    }
+
+    .section-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+    }
+
+    .section-num {
+      width: 22px;
+      height: 22px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #3b82f6 0%, #0ea5e9 100%);
+      border-radius: 5px;
+      font-size: 10px;
+      font-weight: 700;
+      color: #ffffff;
+      flex-shrink: 0;
+    }
+
+    .section-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: #1e293b;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .sidebar-section-header .arrow {
+      width: 16px;
+      height: 16px;
+      color: #94a3b8;
+      transition: transform 0.2s ease, color 0.15s ease;
+      flex-shrink: 0;
+    }
+
+    .sidebar-section-header:hover .arrow {
+      color: #64748b;
+    }
+
+    .sidebar-section-header.open .arrow {
+      transform: rotate(90deg);
+      color: #3b82f6;
+    }
+
+    .sidebar-section-items {
+      overflow: hidden;
+      transition: max-height 0.2s ease, opacity 0.15s ease;
+      max-height: 2000px;
+      opacity: 1;
+    }
+    .sidebar-section-items.collapsed {
+      max-height: 0;
+      opacity: 0;
+    }
+
+    .sidebar-section-items ul {
+      padding: 2px 6px 6px;
+    }
+
+    .sidebar-section-items li {
+      margin: 1px 0;
+    }
+
+    .sidebar-section-items a {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 10px;
+      font-size: 13px;
+      color: #64748b;
+      text-decoration: none;
+      border-radius: 6px;
+      transition: all 0.15s ease;
+      position: relative;
+    }
+
+    .sidebar-section-items a:hover {
+      color: #3b82f6;
+      background: rgba(59, 130, 246, 0.06);
+    }
+
+    .sidebar-section-items a.active {
+      color: #1e293b;
+      background: rgba(59, 130, 246, 0.1);
+      font-weight: 500;
+    }
+    .sidebar-section-items a.active::before {
+      content: '';
+      position: absolute;
+      left: -6px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 3px;
+      height: 18px;
+      border-radius: 2px;
+      background: #3b82f6;
+    }
+    .sidebar-section-items a.active .num {
+      color: #3b82f6;
+    }
+    .sidebar-section-items a[href*="APPENDIX"] {
+      font-size: 12px;
+      color: #94a3b8;
+      padding-left: 14px;
+    }
+    .sidebar-section-items a[href*="APPENDIX"]:hover {
+      color: #3b82f6;
+    }
+    .sidebar-section-items a[href*="APPENDIX"] .num {
+      display: none;
+    }
+
+    .sidebar-section-items a .num {
+      font-size: 11px;
+      font-weight: 500;
+      color: #94a3b8;
+      min-width: 26px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .sidebar-divider {
+      height: 1px;
+      background: linear-gradient(90deg, transparent, #e2e8f0, transparent);
+      margin: 6px 10px 10px;
+    }
+
+    .sidebar-external {
+      padding: 0 8px 12px;
+      flex-shrink: 0;
+    }
+
+    .sidebar-external a {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 9px 12px;
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 500;
+      color: #475569;
+      text-decoration: none;
+      transition: all 0.15s ease;
+    }
+
+    .sidebar-external a:hover {
+      border-color: #3b82f6;
+      color: #3b82f6;
+      background: #eff6ff;
+    }
+
+    .sidebar-external a svg {
+      width: 15px;
+      height: 15px;
+      opacity: 0.5;
+      flex-shrink: 0;
+    }
+    .sidebar-external a:hover svg {
+      opacity: 0.8;
+    }
+    
+    /* ===== Content ===== */
+    .content {
+      flex: 1;
+      margin-left: 280px;
+      padding: 48px 64px;
+      min-height: 100vh;
+      max-width: 1400px;
+    }
+
+    /* ===== Typography ===== */
+    .markdown-section h1 {
+      font-size: 28px;
+      font-weight: 700;
+      color: #0f172a;
+      letter-spacing: -0.02em;
+      margin: 0 0 24px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    
+    .markdown-section h2 {
+      font-size: 20px;
+      font-weight: 600;
+      color: #1e293b;
+      letter-spacing: -0.01em;
+      margin: 40px 0 16px;
+    }
+    
+    .markdown-section h3 {
+      font-size: 16px;
+      font-weight: 600;
+      color: #3b82f6;
+      margin: 28px 0 12px;
+    }
+    
+    .markdown-section h4 {
+      font-size: 15px;
+      font-weight: 600;
+      color: #1e293b;
+      margin: 20px 0 8px;
+    }
+    .markdown-section h1, .markdown-section h2, .markdown-section h3, .markdown-section h4 {
+      position: relative;
+    }
+    .markdown-section .heading-anchor {
+      position: absolute;
+      left: -20px;
+      top: 50%;
+      transform: translateY(-50%);
+      opacity: 0;
+      color: #94a3b8;
+      text-decoration: none;
+      font-size: 0.8em;
+      font-weight: 400;
+      transition: opacity 0.15s ease;
+      padding-right: 4px;
+    }
+    .markdown-section h1:hover .heading-anchor,
+    .markdown-section h2:hover .heading-anchor,
+    .markdown-section h3:hover .heading-anchor,
+    .markdown-section h4:hover .heading-anchor {
+      opacity: 1;
+    }
+    
+    .markdown-section p {
+      margin: 12px 0;
+      color: #475569;
+    }
+
+    /* ===== Thinking Note ===== */
+    .thinking-note {
+      background: #fffbeb;
+      border-left: 4px solid #f59e0b;
+      border-radius: 0 12px 12px 0;
+      padding: 20px 24px;
+      margin: 24px 0;
+    }
+    .thinking-note h3 {
+      margin: 0 0 12px;
+      padding: 0;
+      border: none;
+      font-size: 14px;
+      font-weight: 700;
+      color: #d97706;
+      letter-spacing: 0.03em;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .thinking-note p {
+      margin: 8px 0;
+      font-size: 14px;
+      line-height: 1.8;
+      color: #78350f;
+    }
+    .thinking-note strong {
+      display: inline-block;
+      margin-top: 6px;
+      color: #92400e;
+    }
+    .thinking-note strong:first-of-type {
+      margin-top: 0;
+    }
+    .thinking-note ul {
+      margin: 4px 0 4px 0;
+      padding-left: 18px;
+      list-style: none;
+    }
+    .thinking-note li {
+      margin: 4px 0;
+      padding-left: 14px;
+      position: relative;
+      color: #78350f;
+      font-size: 14px;
+      line-height: 1.7;
+    }
+    .thinking-note li::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 10px;
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: #d97706;
+      opacity: 0.5;
+    }
+    .thinking-note li strong {
+      color: #92400e;
+    }
+
+    .markdown-section a {
+      color: #3b82f6;
+      text-decoration: none;
+      font-weight: 500;
+    }
+    
+    .markdown-section a:hover {
+      text-decoration: underline;
+    }
+    
+    .markdown-section code {
+      background: #f1f5f9;
+      color: #0f172a;
+      padding: 2px 6px;
+      font-size: 13px;
+      border-radius: 4px;
+      font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Consolas', monospace;
+    }
+    
+    .markdown-section pre {
+      background: #1e293b;
+      border-radius: 12px;
+      padding: 20px 24px;
+      overflow-x: auto;
+      margin: 20px 0;
+    }
+    
+    .markdown-section pre code {
+      background: transparent;
+      color: #e2e8f0;
+      padding: 0;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+    
+    .markdown-section blockquote {
+      background: #f8fafc;
+      border-left: 4px solid #3b82f6;
+      border-radius: 0 8px 8px 0;
+      padding: 16px 20px;
+      margin: 20px 0;
+    }
+    
+    .markdown-section blockquote p {
+      margin: 0;
+      color: #475569;
+    }
+    
+    .markdown-section table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0;
+      font-size: 14px;
+      border-radius: 12px;
+      
+      border: 1px solid #e2e8f0;
+    }
+    
+    .markdown-section table th {
+      background: #f8fafc;
+      font-weight: 600;
+      text-align: left;
+      padding: 12px 16px;
+      color: #475569;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    
+    .markdown-section table td {
+      padding: 12px 16px;
+      border-top: 1px solid #e2e8f0;
+    }
+    
+    .markdown-section table tr:nth-child(2n) td {
+      background: #f8fafc;
+    }
+    
+    .markdown-section ul, .markdown-section ol {
+      padding-left: 24px;
+      margin: 12px 0;
+    }
+    
+    .markdown-section li {
+      margin: 6px 0;
+      color: #475569;
+    }
+    
+    .markdown-section hr {
+      height: 1px;
+      background: #e2e8f0;
+      border: none;
+      margin: 32px 0;
+    }
+    
+    .markdown-section img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 8px;
+    }
+    
+    /* ===== Mermaid Diagrams ===== */
+    .mermaid {
+      background: #f8fafc;
+      border-radius: 12px;
+      padding: 24px;
+      margin: 20px 0;
+      overflow-x: auto;
+      border: 1px solid #e2e8f0;
+      display: block;
+    }
+    .mermaid.rendered {
+      display: block;
+    }
+    .mermaid svg {
+      max-width: 100%;
+      height: auto;
+    }
+    .mermaid-error {
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      border-radius: 8px;
+      padding: 16px;
+      color: #dc2626;
+      margin: 20px 0;
+    }
+    .mermaid-loading {
+      background: #f8fafc;
+      border: 1px dashed #e2e8f0;
+      border-radius: 12px;
+      padding: 24px;
+      margin: 20px 0;
+      color: #64748b;
+      text-align: center;
+    }
+
+    
+    
+
+/* ===== Click-to-Expand Mermaid ===== */
+    .mermaid-zoom-container {
+      position: relative;
+      overflow: hidden;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      margin: 20px 0;
+      background: #f8fafc;
+      cursor: pointer;
+      min-height: 100px;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+    .mermaid-zoom-container:hover {
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 2px rgba(59,130,246,0.1);
+    }
+    .mermaid-zoom-container .mermaid {
+      margin: 0;
+      border: none;
+      border-radius: 0;
+      background: transparent;
+    }
+    .mermaid-zoom-container .mermaid svg {
+      display: block;
+    }
+    .mermaid-expand-overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+      background: rgba(15,23,42,0.03);
+    }
+    .mermaid-zoom-container:hover .mermaid-expand-overlay {
+      opacity: 1;
+    }
+    .mermaid-expand-overlay span {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 18px;
+      background: rgba(255,255,255,0.95);
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 500;
+      color: #3b82f6;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+      backdrop-filter: blur(4px);
+      pointer-events: none;
+      transition: transform 0.15s ease;
+    }
+    .mermaid-zoom-container:hover .mermaid-expand-overlay span {
+      transform: translateY(-2px);
+    }
+    .mermaid-expand-overlay .expand-icon {
+      font-size: 15px;
+    }
+
+    /* ===== Mermaid Modal ===== */
+    @keyframes modal-fade-in {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    @keyframes modal-content-in {
+      from { opacity: 0; transform: scale(0.95) translateY(8px); }
+      to { opacity: 1; transform: scale(1) translateY(0); }
+    }
+    .mermaid-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 1000;
+      background: rgba(15, 23, 42, 0.65);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      animation: modal-fade-in 0.2s ease;
+    }
+    .mermaid-modal.active {
+      display: flex;
+    }
+    .mermaid-modal-content {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      max-width: 90vw;
+      max-height: 90vh;
+      background: #fff;
+      border-radius: 14px;
+      box-shadow: 0 25px 80px rgba(0,0,0,0.3);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      animation: modal-content-in 0.2s ease;
+    }
+    .mermaid-modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 20px;
+      border-bottom: 1px solid #e2e8f0;
+      flex-shrink: 0;
+      background: #fafbfc;
+      gap: 12px;
+    }
+    .mermaid-modal-header .modal-title-wrap {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+    }
+    .mermaid-modal-header .modal-icon {
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      background: linear-gradient(135deg, #3b82f6, #0ea5e9);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      flex-shrink: 0;
+    }
+    .mermaid-modal-header .modal-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: #1e293b;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .mermaid-modal-header .modal-hint {
+      font-size: 12px;
+      color: #94a3b8;
+      font-weight: 400;
+      margin-left: 4px;
+    }
+    .mermaid-modal-header .modal-actions {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      flex-shrink: 0;
+    }
+    .mermaid-modal-header .modal-close {
+      width: 30px;
+      height: 30px;
+      border: none;
+      border-radius: 6px;
+      background: transparent;
+      color: #94a3b8;
+      font-size: 17px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s ease;
+      margin-left: 4px;
+    }
+    .mermaid-modal-header .modal-close:hover {
+      background: #fee2e2;
+      color: #dc2626;
+    }
+    .mermaid-modal-body {
+      flex: 1;
+      overflow: auto;
+      position: relative;
+      user-select: auto;
+      background: #f8fafc
+        repeating-linear-gradient(
+          0deg, transparent, transparent 23px, #f1f5f9 23px, #f1f5f9 24px
+        ),
+        repeating-linear-gradient(
+          90deg, transparent, transparent 23px, #f1f5f9 23px, #f1f5f9 24px
+        );
+    }
+    .mermaid-modal-body svg {
+      display: block;
+    }
+    @media (max-width: 768px) {
+      .mermaid-modal { padding: 12px; }
+      .mermaid-modal-content { max-width: 100vw; max-height: 100vh; border-radius: 10px; }
+      .mermaid-modal-header { padding: 10px 14px; }
+    }
+    @media (max-width: 480px) {
+      .mermaid-modal { padding: 0; }
+      .mermaid-modal-content { border-radius: 0; max-width: 100vw; max-height: 100vh; }
+    }
+
+
+/* ===== 引导思考 - Note-style Card ===== */
+    tr.guide-card-header td {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      width: 100%;
+      padding: 12px 24px !important;
+      font-size: 13px;
+      font-weight: 700;
+      color: #6366f1;
+      letter-spacing: 0.04em;
+      background: transparent !important;
+      border: none !important;
+    }
+    table.guide-card {
+      border-collapse: separate;
+      border-spacing: 0;
+      font-size: 14px;
+      margin: 0 0 24px;
+      overflow: hidden;
+      display: block;
+      width: 100%;
+      background: #f8faff;
+      border-left: 4px solid #6366f1;
+      border-radius: 0 12px 12px 0;
+      box-shadow: 0 1px 3px rgba(99, 102, 241, 0.08);
+    }
+    /* Hide original table header ("思考维度 | 内容") */
+    table.guide-card thead {
+      display: none;
+    }
+    /* Collapse/expand behavior */
+    table.guide-card.collapsed tbody tr:not(.guide-card-header) {
+      display: none;
+    }
+    table.guide-card tbody tr.guide-card-header {
+      cursor: pointer;
+      user-select: none;
+    }
+    table.guide-card tbody tr.guide-card-header:hover {
+      background: rgba(99, 102, 241, 0.04);
+    }
+    .collapse-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 18px;
+      height: 18px;
+      flex-shrink: 0;
+      transition: transform 0.2s ease;
+    }
+    .collapse-icon::before {
+      content: '';
+      display: block;
+      width: 6px;
+      height: 6px;
+      border-right: 2px solid #a5b4fc;
+      border-bottom: 2px solid #a5b4fc;
+      transform: rotate(-45deg);
+      margin-top: -3px;
+      transition: transform 0.2s ease, border-color 0.2s ease;
+    }
+    table.guide-card:not(.collapsed) .collapse-icon::before {
+      transform: rotate(45deg);
+      margin-top: 3px;
+      border-color: #6366f1;
+    }
+    tr.guide-card-header:hover .collapse-icon::before {
+      border-color: #6366f1;
+    }
+    .collapse-hint {
+      font-size: 11px;
+      color: #a5b4fc;
+      font-weight: 400;
+      transition: color 0.2s ease;
+    }
+    table.guide-card:not(.collapsed) .collapse-hint {
+      display: none;
+    }
+    tr.guide-card-header:hover .collapse-hint {
+      color: #6366f1;
+    }
+    table.guide-card tbody,
+    table.guide-card tbody tr {
+      display: block;
+      width: 100%;
+    }
+    table.guide-card tbody td {
+      display: block;
+      width: 100%;
+      padding: 0 24px 14px;
+      border: none;
+      vertical-align: top;
+      line-height: 1.7;
+      color: #475569;
+    }
+    table.guide-card tbody td:first-child {
+      padding: 12px 24px 2px;
+      font-weight: 600;
+      font-size: 12px;
+      color: #6366f1;
+      background: transparent;
+      width: 100%;
+      border: none;
+      letter-spacing: 0.03em;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    table.guide-card tbody td:first-child::before {
+      display: none;
+    }
+    /* Content lists inside cells */
+    table.guide-card tbody td ul {
+      margin: 0;
+      padding-left: 16px;
+      list-style: none;
+    }
+    table.guide-card tbody td > ul > li {
+      position: relative;
+      padding-left: 14px;
+      margin-bottom: 4px;
+      font-size: 13.5px;
+      color: #475569;
+      line-height: 1.7;
+    }
+    table.guide-card tbody td > ul > li::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 10px;
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: #c7d2fe;
+    }
+    table.guide-card tbody td > ul > li:last-child {
+      margin-bottom: 0;
+    }
+    table.guide-card tbody td ul ul {
+      padding-left: 14px;
+      margin-top: 2px;
+    }
+    table.guide-card tbody td ul ul li {
+      position: relative;
+      padding-left: 12px;
+      margin-bottom: 2px;
+      font-size: 13px;
+      color: #64748b;
+      line-height: 1.6;
+    }
+    table.guide-card tbody td ul ul li::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 9px;
+      width: 3px;
+      height: 3px;
+      border-radius: 50%;
+      background: #cbd5e1;
+    }
+    table.guide-card tbody td strong,
+    table.guide-card tbody td:first-child strong {
+      color: #4338ca;
+      font-weight: 600;
+    }
+    table.guide-card tbody td code {
+      background: #eef2ff;
+      color: #6366f1;
+      font-size: 12.5px;
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-weight: 500;
+    }
+
+/* ===== Navigation ===== */
+    .nav {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 48px;
+      padding-top: 24px;
+      border-top: 1px solid #e2e8f0;
+    }
+    
+    .nav a {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 10px 18px;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      color: #475569;
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 500;
+      transition: all 0.15s ease;
+    }
+    
+    .nav a:hover {
+      background: #3b82f6;
+      color: #fff;
+      border-color: #3b82f6;
+    }
+    
+    /* ===== Search Results ===== */
+    .search-results {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.12);
+      max-height: 400px;
+      overflow-y: auto;
+      z-index: 100;
+      display: none;
+      margin: 4px 0 0;
+    }
+    .search-results.active { display: block; }
+    .search-result-item {
+      display: block;
+      padding: 10px 14px;
+      text-decoration: none;
+      border-bottom: 1px solid #f1f5f9;
+      transition: background 0.15s ease;
+    }
+    .search-result-item:last-child { border-bottom: none; }
+    .search-result-item:hover { background: #f8fafc; }
+    .search-result-item .sr-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: #1e293b;
+      margin-bottom: 2px;
+    }
+    .search-result-item .sr-preview {
+      font-size: 12px;
+      color: #64748b;
+      line-height: 1.4;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .search-result-item .sr-path {
+      font-size: 11px;
+      color: #94a3b8;
+      margin-top: 2px;
+    }
+    .search-no-results {
+      padding: 16px;
+      text-align: center;
+      color: #94a3b8;
+      font-size: 13px;
+    }
+    .search-loading {
+      padding: 12px;
+      text-align: center;
+      color: #94a3b8;
+      font-size: 12px;
+    }
+    .sidebar-search { position: relative; }
+
+    /* ===== Copy Code Button ===== */
+    .code-block-wrapper {
+      position: relative;
+    }
+    .copy-code-btn {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      padding: 4px 10px;
+      background: rgba(255,255,255,0.1);
+      color: #94a3b8;
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 6px;
+      font-size: 12px;
+      cursor: pointer;
+      opacity: 0;
+      transition: opacity 0.15s ease, background 0.15s ease, color 0.15s ease;
+    }
+    .markdown-section pre:hover .copy-code-btn,
+    .copy-code-btn:focus {
+      opacity: 1;
+    }
+    .copy-code-btn:hover {
+      background: rgba(255,255,255,0.2);
+      color: #e2e8f0;
+    }
+    .copy-code-btn.copied {
+      background: #22c55e;
+      color: #fff;
+      border-color: #22c55e;
+      opacity: 1;
+    }
+
+    /* ===== Back to Top ===== */
+    .back-to-top {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      width: 40px;
+      height: 40px;
+      background: #3b82f6;
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 12px rgba(59,130,246,0.3);
+      transition: opacity 0.2s ease, transform 0.2s ease;
+      z-index: 80;
+    }
+    .back-to-top.visible { display: flex; }
+    .back-to-top:hover { transform: translateY(-2px); }
+    .back-to-top svg { width: 20px; height: 20px; }
+
+    /* ===== Mobile Menu Toggle ===== */
+    .menu-toggle {
+      display: none;
+      position: fixed;
+      top: 16px;
+      left: 16px;
+      z-index: 200;
+      width: 40px;
+      height: 40px;
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    .menu-toggle svg {
+      width: 20px;
+      height: 20px;
+      color: #475569;
+    }
+    .sidebar-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.3);
+      z-index: 90;
+    }
+    .sidebar-overlay.active { display: block; }
+
+    /* ===== Mobile ===== */
+    @media (max-width: 1024px) {
+      .menu-toggle { display: flex; }
+      .sidebar { transform: translateX(-100%); transition: transform 0.2s ease; z-index: 100; }
+      .sidebar.open { transform: translateX(0); }
+      .content { margin-left: 0; padding: 24px 20px; padding-top: 64px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <nav class="sidebar">
+      <div class="sidebar-header">
+        <a href="../index.html" class="sidebar-brand">
+          <span class="icon">📚</span>
+          LLM Agent 源码学习
+        </a>
+      </div>
+      
+      <div class="sidebar-search">
+        <div class="search-box">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"/>
+            <path d="M21 21l-4.35-4.35"/>
+          </svg>
+          <input type="text" placeholder="搜索文档..." id="searchInput" autocomplete="off">
+        </div>
+        <div class="search-results" id="searchResults"></div>
+      </div>
+      
+      <div class="quick-links">
+        <a href="../index.html">🏠 首页</a>
+        <a href="../SUMMARY.html">📑 目录</a>
+      </div>
+      
+      <div class="sidebar-nav">
+        <div class="sidebar-section">
+        <div class="sidebar-section-header">
+          <span class="section-title">
+            <span class="section-num">1</span>
+            <span class="section-name">Claude Code</span>
+          </span>
+          <svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+        </div>
+        <div class="sidebar-section-items"><ul><li><a href="./01-OVERVIEW.html"><span class="num">1.0</span>全景概览</a></li><li><a href="./02-BOOTSTRAP.html"><span class="num">2.0</span>启动流程</a></li><li><a href="./03-TYPE-SYSTEM.html"><span class="num">3.0</span>类型系统设计</a></li><li><a href="./04-QUERY-ENGINE.html"><span class="num">4.0</span>查询引擎</a></li><li><a href="./05-MESSAGE-SYSTEM.html"><span class="num">5.0</span>消息系统</a></li><li><a href="./06-STREAMING.html"><span class="num">6.0</span>流式处理</a></li><li><a href="./07-TOOL-ARCHITECTURE.html"><span class="num">7.0</span>工具架构</a></li><li><a href="./08-BUILTIN-TOOLS.html"><span class="num">8.0</span>内置工具</a></li><li><a href="./09-TOOL-EXECUTION.html"><span class="num">9.0</span>工具执行</a></li><li><a href="./10-AGENT-MODEL.html"><span class="num">10.0</span>Agent 模型</a></li><li><a href="./11-SUBAGENT.html"><span class="num">11.0</span>子代理</a></li><li><a href="./12-SKILL-SYSTEM.html"><span class="num">12.0</span>技能系统</a></li><li><a href="./13-PERMISSION-MODEL.html"><span class="num">13.0</span>权限模型</a></li><li><a href="./14-BASH-SECURITY.html"><span class="num">14.0</span>Bash 安全</a></li><li><a href="./15-MCP-PROTOCOL.html"><span class="num">15.0</span>MCP 协议</a></li><li><a href="./16-MCP-AUTH.html"><span class="num">16.0</span>MCP 认证</a></li><li><a href="./17-STATE-MANAGEMENT.html"><span class="num">17.0</span>状态管理</a></li><li><a href="./18-CONVERSATION.html"><span class="num">18.0</span>会话管理</a></li><li><a href="./19-INK-REACT.html"><span class="num">19.0</span>Ink React</a></li><li><a href="./20-REPL.html"><span class="num">20.0</span>REPL</a></li><li><a href="./21-PERFORMANCE.html"><span class="num">21.0</span>性能优化</a></li><li><a href="./22-TESTING.html"><span class="num">22.0</span>测试</a></li><li><a href="./23-BUILD-SYSTEM.html"><span class="num">23.0</span>构建系统</a></li><li><a href="./24-DESIGN-PATTERNS.html"><span class="num">24.0</span>设计模式</a></li><li><a href="./25-PHILOSOPHY.html"><span class="num">25.0</span>哲学思想</a></li><li><a href="./26-COGNITIVE-LOOP.html"><span class="num">26.0</span>认知循环</a></li><li><a href="./APPENDIX-A-GLOSSARY.html">附录A 术语表</a></li><li><a href="./APPENDIX-B-SOURCE-MAP.html">附录B 源码导航</a></li></ul></div></div>
+      </div>
+
+      <div class="sidebar-external">
+        <a href="https://github.com/Hyper66666/claude-code-sourcemap" target="_blank">
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+          </svg>
+          GitHub 源码
+        </a>
+      </div>
+    </nav>
+    <button class="back-to-top" id="backToTop" aria-label="回到顶部" title="回到顶部">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M18 15l-6-6-6 6"/>
+      </svg>
+    </button>
+    <button class="menu-toggle" id="menuToggle" aria-label="打开菜单">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M3 12h18M3 6h18M3 18h18"/>
+      </svg>
+    </button>
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+    <main class="content">
+      <article class="markdown-section">
+        <h1>第 5 章：消息系统</h1>
+<blockquote>
+<p>&quot;在一个以对话为核心的系统中，消息类型的设计就是系统架构的缩影。&quot;</p>
+</blockquote>
+<table class="guide-card collapsed">
+<thead>
+<tr>
+<th>思考维度</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody>
+<tr class="guide-card-header"><td colspan="2"><span class="collapse-icon"></span>引导思考 <span class="collapse-hint">展开</span></td></tr><tr>
+<td><strong>它为什么存在</strong></td>
+<td><ul><li>用户输入、模型回复、工具执行、系统事件——所有交互都要用统一的消息格式表达</li><li>一个 Message 联合类型管 7+ 种消息变体，靠 type 字段区分</li></ul></td>
+</tr>
+<tr>
+<td><strong>它解决什么问题</strong></td>
+<td><ul><li>内部的丰富消息要转换成 API 能理解的 user/assistant 交替格式——归一化管线做这个</li><li>进程崩了消息不能丢——JSONL 增量录制 + 父链追踪保证崩溃安全</li><li>工具结果要存两份：序列化版本给 API、原始数据给 UI 渲染</li></ul></td>
+</tr>
+<tr>
+<td><strong>它在系统中的位置</strong></td>
+<td><ul><li>消息是各层的通信载体——查询引擎生产、API 客户端传输、UI 层消费</li><li>Transcript 以 JSONL 存消息链到磁盘，支撑 --resume 恢复</li></ul></td>
+</tr>
+<tr>
+<td><strong>它如何工作</strong></td>
+<td><ul><li>工厂函数保证每条消息符合不变量——createUserMessage 自动补 uuid 和 timestamp</li><li>normalizeMessagesForAPI 过五关斩六将：过滤 → 附件重排序 → user 合并 → system 转换 → 媒体剥离</li><li>recordTranscript 通过 messageSet 去重实现增量录制——每次只写新消息</li></ul></td>
+</tr>
+<tr>
+<td><strong>它如何实现</strong></td>
+<td><ul><li>UUID 确定性派生——拆分后的子消息在不同时刻保证 UUID 一致，transcript 才能正确 resume</li><li>TombstoneMessage 是事件溯源的&quot;撤回&quot;机制——不删历史，追加一个删除事件</li><li>SYNTHETIC_TOOL_RESULT_PLACEHOLDER 被 HFI 逻辑排除——占位用的内容不能拿去训练模型</li></ul></td>
+</tr>
+<tr>
+<td><strong>不同平台如何做</strong></td>
+<td><ul><li><strong>Cursor Agent</strong>：用 VS Code ExtensionContext.workspaceState 存 JSON，没有消息类型体系</li><li><strong>OpenClaw</strong>：消息类型简化成 user/assistant/system，没有 tombstone/progress 控制消息</li><li><strong>Harness Agent</strong>：数据模型以流水线执行记录为主，对话消息标准化后入审计日志</li></ul></td>
+</tr>
+<tr>
+<td><strong>优势是什么？</strong></td>
+<td><ul><li><strong>优势</strong><ul><li>判别联合让 TypeScript 穷举每一条分支，不会有遗漏</li><li>JSONL 崩溃安全 + 父链支持分支会话</li><li>UUID 确定性派生保证 resume 可靠性</li></ul></li></ul></td>
+</tr>
+</tbody></table>
+<p>Claude Code 的消息系统远不止于&quot;用户说了什么、助手回复了什么&quot;的简单交替。它是一个精心分层的类型体系，涵盖了从流式事件到工具结果、从进度通知到墓碑标记的完整生命周期。本章将从类型定义出发，深入到工厂函数、序列化、持久化和 API 归一化的全过程。</p>
+<hr>
+<h2>5.1 消息类型层次</h2>
+<h3>核心联合类型</h3>
+<p>Claude Code 的消息系统建立在一个判别式联合类型（discriminated union）之上。从 <code>src/query.ts</code> 的导入可以看出完整的类型全貌：</p>
+<pre><code class="language-typescript">import type {
+  AssistantMessage,
+  AttachmentMessage,
+  Message,
+  RequestStartEvent,
+  StreamEvent,
+  ToolUseSummaryMessage,
+  UserMessage,
+  TombstoneMessage,
+} from './types/message.js'</code></pre><p><code>Message</code> 是所有消息类型的联合：</p>
+<div class="mermaid">%%{init: {"theme": "base", "themeVariables":{"primaryColor":"#3b82f6","primaryTextColor":"#1e293b","primaryBorderColor":"#60a5fa","lineColor":"#94a3b8","secondaryColor":"#f1f5f9","tertiaryColor":"#ffffff","fontFamily":"-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif"}}}%%
+classDiagram
+    class Message {
+        &lt;&lt;union&gt;&gt;
+        +type: string
+        +uuid: UUID
+        +timestamp: string
+    }
+
+    class UserMessage {
+        +message.role: user
+        +message.content: text
+        +isMeta: boolean
+        +isVirtual: boolean
+    }
+
+    class AssistantMessage {
+        +message.role: assistant
+        +message.content: ContentBlock[]
+        +message.model: string
+    }
+
+    class SystemMessage {
+        +subtype: string
+    }
+
+    class ProgressMessage {
+        +toolUseID: string
+        +data: object
+    }
+
+    class AttachmentMessage {
+        +attachment: object
+    }
+
+    class TombstoneMessage {
+        +message: AssistantMessage
+    }
+
+    class StreamEvent {
+        +event: object
+    }
+
+    class RequestStartEvent
+
+    class ToolUseSummaryMessage {
+        +summary: string
+        +toolUseIds: string[]
+    }
+
+    Message &lt;|-- UserMessage
+    Message &lt;|-- AssistantMessage
+    Message &lt;|-- SystemMessage
+    Message &lt;|-- ProgressMessage
+    Message &lt;|-- AttachmentMessage
+
+    SystemMessage &lt;|-- SystemCompactBoundaryMessage
+    SystemMessage &lt;|-- SystemLocalCommandMessage
+    SystemMessage &lt;|-- SystemAPIErrorMessage
+    SystemMessage &lt;|-- SystemInformationalMessage
+    SystemMessage &lt;|-- SystemMicrocompactBoundaryMessage
+    SystemMessage &lt;|-- SystemMemorySavedMessage
+    SystemMessage &lt;|-- SystemStopHookSummaryMessage
+    SystemMessage &lt;|-- SystemTurnDurationMessage
+    SystemMessage &lt;|-- SystemPermissionRetryMessage
+    SystemMessage &lt;|-- SystemBridgeStatusMessage
+    SystemMessage &lt;|-- SystemAwaySummaryMessage
+    SystemMessage &lt;|-- SystemApiMetricsMessage
+    SystemMessage &lt;|-- SystemScheduledTaskFireMessage
+    SystemMessage &lt;|-- SystemAgentsKilledMessage</div><h3>判别字段</h3>
+<p><code>type</code> 字段是主判别器。在处理消息的 switch 语句中，TypeScript 的控制流分析可以精确推断每个分支的类型：</p>
+<pre><code class="language-typescript">switch (message.type) {
+  case 'tombstone':
+    // message: TombstoneMessage
+    break
+  case 'assistant':
+    // message: AssistantMessage
+    this.mutableMessages.push(message)
+    yield* normalizeMessage(message)
+    break
+  case 'progress':
+    // message: ProgressMessage
+    break
+  case 'user':
+    // message: UserMessage
+    break
+  case 'stream_event':
+    // message: StreamEvent
+    break
+}</code></pre><h3>UserMessage 的多面性</h3>
+<p><code>UserMessage</code> 是系统中最多态的类型。同一个 <code>type: &quot;user&quot;</code> 下承载了截然不同的语义：</p>
+<p><strong>人类输入</strong>：用户在终端或 SDK 中输入的文本。</p>
+<p><strong>工具结果</strong>：模型的工具调用执行后返回的结果，通过 <code>tool_result</code> content block 标识。<code>toolUseResult</code> 字段存储原始输出，<code>sourceToolAssistantUUID</code> 指向触发这次工具调用的 assistant 消息。</p>
+<p><strong>Meta 消息</strong>：<code>isMeta: true</code> 标记的消息不会在 UI 中显示给用户，仅供模型消费。典型用例包括：</p>
+<ul>
+<li>系统注入的警告提示</li>
+<li>max_output_tokens 恢复指令</li>
+<li>compact 后的摘要</li>
+</ul>
+<p><strong>虚拟消息</strong>：<code>isVirtual: true</code> 标记的消息存在于内存中用于 UI 渲染，但在发送给 API 时被过滤掉。</p>
+<p>这种设计将所有&quot;用户角色&quot;（API 层面 role=&quot;user&quot;）的消息统一到一个类型下，避免了 API 协议的 user/assistant 交替规则被破坏。</p>
+<h3>AssistantMessage 的丰富元数据</h3>
+<pre><code class="language-typescript">function baseCreateAssistantMessage({
+  content,
+  isApiErrorMessage = false,
+  apiError,
+  error,
+  errorDetails,
+  isVirtual,
+  usage = {
+    input_tokens: 0,
+    output_tokens: 0,
+    cache_creation_input_tokens: 0,
+    cache_read_input_tokens: 0,
+    server_tool_use: { web_search_requests: 0, web_fetch_requests: 0 },
+    service_tier: null,
+    cache_creation: {
+      ephemeral_1h_input_tokens: 0,
+      ephemeral_5m_input_tokens: 0,
+    },
+    inference_geo: null,
+    iterations: null,
+    speed: null,
+  },
+}: ...): AssistantMessage {
+  return {
+    type: 'assistant',
+    uuid: randomUUID(),
+    timestamp: new Date().toISOString(),
+    message: {
+      id: randomUUID(),
+      container: null,
+      model: SYNTHETIC_MODEL,
+      role: 'assistant',
+      stop_reason: 'stop_sequence',
+      stop_sequence: '',
+      type: 'message',
+      usage,
+      content,
+      context_management: null,
+    },
+    requestId: undefined,
+    apiError,
+    error,
+    errorDetails,
+    isApiErrorMessage,
+    isVirtual,
+  }
+}</code></pre><p>注意 <code>usage</code> 的默认值结构——它镜像了 Claude API 响应的完整 usage 对象，包括缓存统计、服务层级、推理地理位置甚至迭代次数。合成消息（如错误消息）使用 <code>SYNTHETIC_MODEL = &#39;&lt;synthetic&gt;&#39;</code> 作为模型标识，这让下游的 <code>isSyntheticApiErrorMessage</code> 检查成为可能。</p>
+<h3>TombstoneMessage：消息的墓碑</h3>
+<pre><code class="language-typescript">// Tombstone messages are control signals for removing messages
+case 'tombstone':
+  break</code></pre><p>当模型降级回退（streaming fallback）发生时，之前的 partial assistant 消息已经 yield 给了 UI。为了&quot;撤回&quot;这些消息，引擎发射 tombstone：</p>
+<pre><code class="language-typescript">for (const msg of assistantMessages) {
+  yield { type: 'tombstone' as const, message: msg }
+}</code></pre><p>UI 层接收到 tombstone 后，应从显示列表中移除对应的消息。这是一种事件溯源（event sourcing）模式——不是直接修改历史，而是追加一个&quot;删除&quot;事件。</p>
+<h3>SystemMessage 的子类型体系</h3>
+<p>SystemMessage 通过 <code>subtype</code> 字段进一步细分：</p>
+<ul>
+<li><code>compact_boundary</code>：标记压缩边界，用于 --resume 恢复</li>
+<li><code>local_command</code>：本地命令（如 /compact）的输出</li>
+<li><code>api_error</code>：API 错误通知</li>
+<li><code>informational</code>：一般性信息</li>
+<li><code>microcompact_boundary</code>：微压缩边界</li>
+<li><code>memory_saved</code>：内存保存通知</li>
+<li><code>stop_hook_summary</code>：stop hook 执行摘要</li>
+<li><code>turn_duration</code>：轮次耗时统计</li>
+<li><code>api_metrics</code>：API 性能指标</li>
+<li><code>permission_retry</code>：权限重试通知</li>
+<li><code>bridge_status</code>：桥接状态变更</li>
+<li><code>away_summary</code>：离开期间摘要</li>
+<li><code>agents_killed</code>：代理终止通知</li>
+<li><code>scheduled_task_fire</code>：定时任务触发</li>
+</ul>
+<p>这种扁平的子类型枚举（而非深层继承）让 pattern matching 保持简洁，同时避免了面向对象继承链的刚性约束。</p>
+<div class="thinking-note"><h3>思考笔记</h3>
+<p>Message 判别联合是 Claude Code 消息系统的&quot;DNA&quot;——它定义了整个系统中消息的边界和变体。</p>
+<ul>
+<li>10 种消息类型覆盖了从用户输入到系统诊断的完整光谱——类型系统在这里起了穷举约束的作用：处理 Message 的代码必须考虑所有变体。</li>
+<li>SystemMessage 通过 subtype 字段进一步细分 10+ 种系统子类型——这是一种&quot;两阶段判别&quot;：先分大类，再分小类。</li>
+<li>Tombstone 和 Progress 这类控制消息的存在说明：Engine 内部的状态管理同时也产生了大量终端用户看不到的消息类型。</li>
+<li>扁平的联合类型 vs 深层继承——Claude Code 选择了前者，因为 pattern matching 比继承链更容易推理和维护。</li>
+</ul>
+</div><hr>
+<h2>5.2 消息创建与序列化</h2>
+<h3>工厂函数体系</h3>
+<p>Claude Code 不直接构造消息对象，而是通过一组工厂函数确保每条消息都满足不变量。</p>
+<p><strong>createUserMessage</strong> 是使用最频繁的工厂函数：</p>
+<pre><code class="language-typescript">export function createUserMessage({
+  content,
+  isMeta,
+  isVisibleInTranscriptOnly,
+  isVirtual,
+  isCompactSummary,
+  toolUseResult,
+  mcpMeta,
+  uuid,
+  timestamp,
+  imagePasteIds,
+  sourceToolAssistantUUID,
+  permissionMode,
+  origin,
+  // ...
+}: { ... }): UserMessage {
+  const m: UserMessage = {
+    type: 'user',
+    message: {
+      role: 'user',
+      content: content || NO_CONTENT_MESSAGE,
+    },
+    isMeta,
+    isVisibleInTranscriptOnly,
+    isVirtual,
+    isCompactSummary,
+    uuid: (uuid as UUID | undefined) || randomUUID(),
+    timestamp: timestamp ?? new Date().toISOString(),
+    toolUseResult,
+    mcpMeta,
+    imagePasteIds,
+    sourceToolAssistantUUID,
+    permissionMode,
+    origin,
+  }
+  return m
+}</code></pre><p>关键不变量：</p>
+<ol>
+<li><code>content</code> 为空时替换为 <code>NO_CONTENT_MESSAGE</code>，防止向 API 发送空消息。</li>
+<li><code>uuid</code> 如果未提供则自动生成，确保每条消息都有唯一标识。</li>
+<li><code>timestamp</code> 如果未提供则使用当前时间。</li>
+</ol>
+<p><strong>createAssistantMessage</strong> 和 <strong>createAssistantAPIErrorMessage</strong> 分别用于正常回复和错误回复：</p>
+<pre><code class="language-typescript">export function createAssistantMessage({
+  content,
+  usage,
+  isVirtual,
+}: { ... }): AssistantMessage {
+  return baseCreateAssistantMessage({
+    content:
+      typeof content === 'string'
+        ? [{ type: 'text', text: content === '' ? NO_CONTENT_MESSAGE : content }]
+        : content,
+    usage,
+    isVirtual,
+  })
+}</code></pre><p>注意字符串到 ContentBlock 数组的自动转换——调用方可以传入纯文本，工厂函数会将其包装为 <code>[{ type: &#39;text&#39;, text: ... }]</code>。</p>
+<p><strong>createProgressMessage</strong> 创建工具执行进度消息：</p>
+<pre><code class="language-typescript">export function createProgressMessage&lt;P extends Progress&gt;({
+  toolUseID,
+  parentToolUseID,
+  data,
+}: { ... }): ProgressMessage&lt;P&gt; {
+  return {
+    type: 'progress',
+    data,
+    toolUseID,
+    parentToolUseID,
+    uuid: randomUUID(),
+    timestamp: new Date().toISOString(),
+  }
+}</code></pre><p>Progress 是泛型参数——不同工具可以定义自己的进度数据结构，类型安全地传递给 UI 层。</p>
+<h3>合成消息常量</h3>
+<p>系统定义了一组固定的合成消息文本：</p>
+<pre><code class="language-typescript">export const INTERRUPT_MESSAGE = '[Request interrupted by user]'
+export const CANCEL_MESSAGE =
+  "The user doesn't want to take this action right now. ..."
+export const REJECT_MESSAGE =
+  "The user doesn't want to proceed with this tool use. ..."
+
+export const SYNTHETIC_MESSAGES = new Set([
+  INTERRUPT_MESSAGE,
+  INTERRUPT_MESSAGE_FOR_TOOL_USE,
+  CANCEL_MESSAGE,
+  REJECT_MESSAGE,
+  NO_RESPONSE_REQUESTED,
+])</code></pre><p><code>SYNTHETIC_MESSAGES</code> 集合用于 <code>isSyntheticMessage</code> 检查——这些消息是系统生成的控制信号，不应被计入用户消息统计。</p>
+<h3>确定性 UUID 派生</h3>
+<p>当消息需要拆分（normalizeMessages）时，子消息的 UUID 不是随机生成的，而是从父 UUID 确定性派生的：</p>
+<pre><code class="language-typescript">export function deriveUUID(parentUUID: UUID, index: number): UUID {
+  const hex = index.toString(16).padStart(12, '0')
+  return `${parentUUID.slice(0, 24)}${hex}` as UUID
+}</code></pre><p>这意味着同一条消息在不同时刻拆分总是产生相同的子 UUID，这对于 transcript 的一致性和 <code>--resume</code> 功能至关重要。</p>
+<div class="thinking-note"><h3>思考笔记</h3>
+<p>UUID 派生和消息序列化的设计体现了&quot;确定性&quot;在分布式系统中的重要性——同样的操作产生同样的结果，这是可恢复性的基础。</p>
+<ul>
+<li>UUID 确定性派生（父 UUID + 序号）保证日志一致性——无论何时拆分消息，产生的 UUID 都相同，resume 时不会 mismatch。</li>
+<li>预写（pre-write）transcript 模式是&quot;先记日志再干活&quot;——崩溃时至少有最后状态的记录，不会丢数据。</li>
+<li>fire-and-forget 的 transcript 写入说明了一个权衡：实时性要求高时，异步落盘比同步可靠但可能丢最后几条。</li>
+<li>tool_use 与 tool_result 的关联靠 sourceToolAssistantUUID——这是消息系统的&quot;外键约束&quot;，没有它工具结果就不知道属于谁。</li>
+</ul>
+</div><hr>
+<h2>5.3 工具结果消息</h2>
+<h3>tool_result 的编码</h3>
+<p>工具执行结果被编码为 <code>UserMessage</code>，其 <code>content</code> 字段包含一个 <code>tool_result</code> content block：</p>
+<pre><code class="language-typescript">createUserMessage({
+  content: [
+    {
+      type: 'tool_result',
+      content: resultContent,
+      is_error: isError,
+      tool_use_id: toolUseBlock.id,
+    },
+  ],
+  toolUseResult: originalOutput,
+  sourceToolAssistantUUID: assistantMessage.uuid,
+})</code></pre><p>这里存在一个重要的双重存储：</p>
+<ul>
+<li><code>content[0].content</code>：发送给 API 的序列化结果（字符串或 content block 数组）。</li>
+<li><code>toolUseResult</code>：工具的原始输出（保持原始类型），用于 UI 渲染和 HFI 数据提取。</li>
+</ul>
+<h3>合成工具结果占位符</h3>
+<p>当工具执行被中断，或 API 调用意外抛出异常，可能出现 <code>tool_use</code> 没有对应 <code>tool_result</code> 的情况。<code>yieldMissingToolResultBlocks</code> 函数处理这个&quot;悬空配对&quot;问题：</p>
+<pre><code class="language-typescript">function* yieldMissingToolResultBlocks(
+  assistantMessages: AssistantMessage[],
+  errorMessage: string,
+) {
+  for (const assistantMessage of assistantMessages) {
+    const toolUseBlocks = assistantMessage.message.content.filter(
+      content =&gt; content.type === 'tool_use',
+    ) as ToolUseBlock[]
+
+    for (const toolUse of toolUseBlocks) {
+      yield createUserMessage({
+        content: [
+          {
+            type: 'tool_result',
+            content: errorMessage,
+            is_error: true,
+            tool_use_id: toolUse.id,
+          },
+        ],
+        toolUseResult: errorMessage,
+        sourceToolAssistantUUID: assistantMessage.uuid,
+      })
+    }
+  }
+}</code></pre><p>占位符的存在有一个训练数据安全影响：</p>
+<pre><code class="language-typescript">// Exported so HFI submission can reject any payload containing it —
+// placeholder satisfies pairing structurally but the content is fake,
+// which poisons training data if submitted.
+export const SYNTHETIC_TOOL_RESULT_PLACEHOLDER =
+  '[Tool result missing due to internal error]'</code></pre><h3>权限拒绝的精细消息</h3>
+<p>工具被拒绝时，消息根据上下文有不同的表述：</p>
+<pre><code class="language-typescript">// 用户手动拒绝
+export const REJECT_MESSAGE =
+  "The user doesn't want to proceed with this tool use. The tool use was rejected..."
+
+// 子代理内的拒绝（无用户交互）
+export const SUBAGENT_REJECT_MESSAGE =
+  'Permission for this tool use was denied. The tool use was rejected...'
+
+// 自动模式分类器拒绝
+export function buildYoloRejectionMessage(reason: string): string {
+  return `${AUTO_MODE_REJECTION_PREFIX}${reason}. ` +
+    `If you have other tasks that don't depend on this action, continue working on those. ` +
+    `${DENIAL_WORKAROUND_GUIDANCE} ` + ruleHint
+}</code></pre><p><code>DENIAL_WORKAROUND_GUIDANCE</code> 是一段精心撰写的指导文本：</p>
+<pre><code class="language-typescript">export const DENIAL_WORKAROUND_GUIDANCE =
+  `IMPORTANT: You *may* attempt to accomplish this action using other tools ` +
+  `that might naturally be used to accomplish this goal, ` +
+  `e.g. using head instead of cat. But you *should not* attempt to work ` +
+  `around this denial in malicious ways...`</code></pre><p>这段文本在安全工程和用户体验之间取得平衡——允许模型寻找合理替代方案，但明确禁止恶意绕过。</p>
+<h3>消息创建与工具结果的数据流</h3>
+<div class="mermaid">%%{init: {"theme": "base", "themeVariables":{"primaryColor":"#3b82f6","primaryTextColor":"#1e293b","primaryBorderColor":"#60a5fa","lineColor":"#94a3b8","secondaryColor":"#f1f5f9","tertiaryColor":"#ffffff","fontFamily":"-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif"}}}%%
+sequenceDiagram
+    participant User as 用户输入
+    participant REPL as REPL.tsx
+    participant QE as QueryEngine
+    participant API as Claude API
+    participant STE as StreamingToolExecutor
+    participant Tool as 具体工具
+    participant TS as Transcript Storage
+
+    User-&gt;&gt;REPL: 输入文本
+    REPL-&gt;&gt;QE: submitMessage(prompt)
+    QE-&gt;&gt;QE: createUserMessage({content})
+    QE-&gt;&gt;TS: recordTranscript(messages) [预写]
+    QE-&gt;&gt;API: messages + systemPrompt
+    API--&gt;&gt;QE: AssistantMessage (stream)
+    QE-&gt;&gt;QE: baseCreateAssistantMessage({content, usage})
+
+    Note over API,STE: 模型返回 tool_use block
+    QE-&gt;&gt;STE: addTool(toolUseBlock)
+    STE-&gt;&gt;Tool: tool.call(input, context)
+    Tool--&gt;&gt;STE: ToolResult{data}
+    STE-&gt;&gt;STE: createUserMessage({tool_result})
+    Note right of STE: toolUseResult = 原始输出&lt;br/&gt;content = 序列化结果&lt;br/&gt;sourceToolAssistantUUID = 关联
+
+    STE--&gt;&gt;QE: yield 工具结果消息
+    QE-&gt;&gt;TS: void recordTranscript() [fire-and-forget]
+    QE-&gt;&gt;API: 继续下一轮...</div><h3>消息归一化管线</h3>
+<div class="mermaid">%%{init: {"theme": "base", "themeVariables":{"primaryColor":"#3b82f6","primaryTextColor":"#1e293b","primaryBorderColor":"#60a5fa","lineColor":"#94a3b8","secondaryColor":"#f1f5f9","tertiaryColor":"#ffffff","fontFamily":"-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif"}}}%%
+flowchart LR
+    A["内部消息列表&lt;br/&gt;(7+ 种类型)"] --&gt; B["过滤阶段"]
+    B --&gt; B1["移除 progress"]
+    B --&gt; B2["移除 isVirtual"]
+    B --&gt; B3["移除 synthetic API errors"]
+
+    B1 & B2 & B3 --&gt; C["附件重排序&lt;br/&gt;reorderAttachmentsForAPI"]
+
+    C --&gt; D["连续 user 合并&lt;br/&gt;mergeUserMessages"]
+
+    D --&gt; E["system → user 转换&lt;br/&gt;local_command 等"]
+
+    E --&gt; F["媒体剥离&lt;br/&gt;过大图片/PDF"]
+
+    F --&gt; G["API 格式&lt;br/&gt;user/assistant 交替"]
+
+    style A fill:#ecfeff,stroke:#06b6d4
+    style G fill:#dcfce7,stroke:#22c55e</div><div class="thinking-note"><h3>思考笔记</h3>
+<p>工具结果消息（tool_result）是&quot;用户&quot;和&quot;系统&quot;的混合体——它既是工具执行的产物，又伪装成用户消息。</p>
+<ul>
+<li>tool_result 塞进 user 消息是 Anthropic API 的要求——API 的 user/assistant 交替规则不允许独立工具结果消息类型。</li>
+<li>UserMessage 承载了过多的语义（工具结果、meta、虚拟消息）——API 约束和设计理想之间的妥协。</li>
+<li>sourceToolAssistantUUID 作为工具结果和工具调用的关联键——没有它消息系统就无法关联请求和响应。</li>
+<li>fire-and-forget 的 transcript 写入是吞吐和可靠性的经典权衡。</li>
+</ul>
+</div><hr>
+<h2>5.4 消息持久化</h2>
+<h3>Transcript 录制机制</h3>
+<p>Claude Code 使用 JSONL（JSON Lines）格式将对话消息持久化到磁盘。核心入口是 <code>recordTranscript</code> 函数：</p>
+<pre><code class="language-typescript">export async function recordTranscript(
+  messages: Message[],
+  teamInfo?: TeamInfo,
+  startingParentUuidHint?: UUID,
+  allMessages?: readonly Message[],
+): Promise&lt;UUID | null&gt; {
+  const cleanedMessages = cleanMessagesForLogging(messages, allMessages)
+  const sessionId = getSessionId() as UUID
+  const messageSet = await getSessionMessages(sessionId)
+  const newMessages: typeof cleanedMessages = []
+  let startingParentUuid: UUID | undefined = startingParentUuidHint
+  let seenNewMessage = false
+  for (const m of cleanedMessages) {
+    if (messageSet.has(m.uuid as UUID)) {
+      if (!seenNewMessage &amp;&amp; isChainParticipant(m)) {
+        startingParentUuid = m.uuid as UUID
+      }
+    } else {
+      newMessages.push(m)
+      seenNewMessage = true
+    }
+  }
+  if (newMessages.length &gt; 0) {
+    await getProject().insertMessageChain(
+      newMessages,
+      false,
+      undefined,
+      startingParentUuid,
+      teamInfo,
+    )
+  }
+  return (lastRecorded?.uuid as UUID | undefined) ?? startingParentUuid ?? null
+}</code></pre><p>这个函数有几个关键的设计决策：</p>
+<p><strong>增量录制</strong>：通过 <code>messageSet</code> 跟踪已录制的消息 UUID，每次只写入新消息。这避免了在长对话中反复序列化整个历史。</p>
+<p><strong>父链追踪</strong>：<code>startingParentUuid</code> 维护消息之间的因果链。这对于 <code>--resume</code> 恢复和分支管理至关重要。</p>
+<p><strong>前缀检测</strong>：已录制消息只有在形成前缀时才更新 <code>startingParentUuid</code>。这处理了 compaction 场景——新的 compact boundary 和摘要消息出现在保留消息之前，不应被视为父链的一部分。</p>
+<h3>Crashproof 设计</h3>
+<p>消息持久化的时序经过精心设计以实现崩溃安全：</p>
+<pre><code class="language-typescript">// 用户消息在进入查询循环之前写入
+if (persistSession &amp;&amp; messagesFromUserInput.length &gt; 0) {
+  const transcriptPromise = recordTranscript(messages)
+  if (isBareMode()) {
+    void transcriptPromise  // fire-and-forget for scripts
+  } else {
+    await transcriptPromise  // block for interactive sessions
+  }
+}</code></pre><p>注释中详细解释了为什么用户消息必须在 API 调用之前写入：</p>
+<pre><code>// If the process is killed before that (e.g. user clicks Stop in cowork
+// seconds after send), the transcript is left with only queue-operation
+// entries; getLastSessionLog filters those out, returns null, and --resume
+// fails with "No conversation found".</code></pre><p>对于 assistant 消息，策略不同——使用 fire-and-forget：</p>
+<pre><code class="language-typescript">if (message.type === 'assistant') {
+  void recordTranscript(messages)  // fire-and-forget
+} else {
+  await recordTranscript(messages)  // await for user messages
+}</code></pre><p>原因是 <code>claude.ts</code> 的流式机制——它 yield 一个 assistant 消息后会 mutate 该消息的 <code>usage</code> 和 <code>stop_reason</code> 字段。如果 await 写入，后续的 <code>message_delta</code> 事件就无法及时处理。写入队列的 100ms 延迟 jsonStringify 自然处理了这个竞态。</p>
+<h3>Compact Boundary 的持久化</h3>
+<p>压缩边界需要特殊处理——在写入 compact boundary 之前，必须确保保留段的尾部消息已经写入：</p>
+<pre><code class="language-typescript">if (message.type === 'system' &amp;&amp; message.subtype === 'compact_boundary') {
+  const tailUuid = message.compactMetadata?.preservedSegment?.tailUuid
+  if (tailUuid) {
+    const tailIdx = this.mutableMessages.findLastIndex(
+      m =&gt; m.uuid === tailUuid,
+    )
+    if (tailIdx !== -1) {
+      await recordTranscript(this.mutableMessages.slice(0, tailIdx + 1))
+    }
+  }
+}</code></pre><p>如果跳过这一步，<code>--resume</code> 恢复时 <code>applyPreservedSegmentRelinks</code> 的 tail-to-head 遍历会因找不到已录制的尾部消息而失败。</p>
+<div class="thinking-note"><h3>思考笔记</h3>
+<p>JSONL 持久化和 --resume 恢复机制是 Claude Code 区别于纯 Web 聊天的重要能力——所有历史都在本地，随时可以回到之前的对话。</p>
+<ul>
+<li>JSONL 追加写比 JSON 批量写更 crash-safe——写一行 flush 一行，写到一半崩溃也不会丢已写部分。</li>
+<li>父链（parentUUID）支持分支会话——同一条消息可以 fork 出多个不同的后续路径，像 git branch 一样灵活。</li>
+<li>入口点存档（entry-point archiving）解决的是&quot;断点续传&quot;的定位问题——从入口到当前消息的路径必须完整记录。</li>
+<li>transcript 的预写 + fire-and-forget 双模式既保证了数据安全性，又不阻塞主流程——是吞吐和可靠性的平衡方案。</li>
+</ul>
+</div><hr>
+<h2>5.5 消息归一化</h2>
+<h3>normalizeMessagesForAPI</h3>
+<p><code>normalizeMessagesForAPI</code> 是消息发送给 API 前的最后一道转换。它的职责是将内部的丰富消息类型映射为 Claude API 接受的 user/assistant 交替格式。</p>
+<pre><code class="language-typescript">export function normalizeMessagesForAPI(
+  messages: Message[],
+  tools: Tools = [],
+): (UserMessage | AssistantMessage)[] {
+  const availableToolNames = new Set(tools.map(t =&gt; t.name))
+
+  const reorderedMessages = reorderAttachmentsForAPI(messages).filter(
+    m =&gt; !((m.type === 'user' || m.type === 'assistant') &amp;&amp; m.isVirtual),
+  )</code></pre><p>转换过程包含多个阶段：</p>
+<p><strong>第一阶段：过滤</strong></p>
+<ul>
+<li>移除 <code>progress</code> 消息（仅用于 UI）</li>
+<li>移除虚拟消息（<code>isVirtual: true</code>）</li>
+<li>移除合成 API 错误消息（<code>isSyntheticApiErrorMessage</code>）</li>
+</ul>
+<p><strong>第二阶段：附件重排序</strong></p>
+<p><code>reorderAttachmentsForAPI</code> 将 attachment 消息上移到它们相关的 tool_result 之前，因为 API 要求 user 消息不能出现在 tool_result 之间。</p>
+<p><strong>第三阶段：连续 user 消息合并</strong></p>
+<p>Bedrock API 不支持连续的 user 消息（1P API 支持但会自动合并），所以归一化函数主动合并它们：</p>
+<pre><code class="language-typescript">case 'user': {
+  const lastMessage = last(result)
+  if (lastMessage?.type === 'user') {
+    result[result.length - 1] = mergeUserMessages(lastMessage, userMsg)
+    return
+  }
+  result.push(userMsg)
+  return
+}</code></pre><p><strong>第四阶段：System 消息转 User 消息</strong></p>
+<p><code>local_command</code> 类型的系统消息需要转换为 user 消息，因为 API 不接受 system role 的中间消息：</p>
+<pre><code class="language-typescript">case 'system': {
+  const userMsg = createUserMessage({
+    content: message.content,
+    uuid: message.uuid,
+    timestamp: message.timestamp,
+  })
+  // ...
+}</code></pre><p><strong>第五阶段：错误引起的媒体剥离</strong></p>
+<p>如果之前的 API 调用因为图片/PDF 过大而失败，归一化函数会从对应的 user 消息中剥离这些媒体块，防止重复触发同样的错误：</p>
+<pre><code class="language-typescript">const typesToStrip = stripTargets.get(normalizedMessage.uuid)
+if (typesToStrip &amp;&amp; normalizedMessage.isMeta) {
+  const content = normalizedMessage.message.content
+  if (Array.isArray(content)) {
+    const filtered = content.filter(
+      block =&gt; !typesToStrip.has(block.type),
+    )
+    // ...
+  }
+}</code></pre><h3>normalizeMessages（UI 归一化）</h3>
+<p>与 API 归一化不同，UI 归一化（<code>normalizeMessages</code>）将多 content block 的消息拆分为每条消息一个 block：</p>
+<pre><code class="language-typescript">export function normalizeMessages(messages: Message[]): NormalizedMessage[] {
+  let isNewChain = false
+  return messages.flatMap(message =&gt; {
+    switch (message.type) {
+      case 'assistant': {
+        isNewChain = isNewChain || message.message.content.length &gt; 1
+        return message.message.content.map((_, index) =&gt; {
+          const uuid = isNewChain
+            ? deriveUUID(message.uuid, index)
+            : message.uuid
+          return {
+            type: 'assistant',
+            message: { ...message.message, content: [_] },
+            uuid,
+            // ...
+          }
+        })
+      }
+      // ...
+    }
+  })
+}</code></pre><p><code>isNewChain</code> 标志确保一旦发生拆分，后续所有消息的 UUID 都重新派生。这维护了 UUID 的唯一性不变量——不会出现两条消息共享同一个 UUID 的情况。</p>
+<h3>reorderMessagesInUI</h3>
+<p>UI 渲染需要的消息顺序与 API 不同。<code>reorderMessagesInUI</code> 将工具调用相关的消息按逻辑分组：</p>
+<pre><code>tool_use -&gt; pre_hooks -&gt; tool_result -&gt; post_hooks</code></pre><p>而非按时间顺序。这让用户看到的是一个完整的&quot;工具调用故事&quot;，而非零散的交错事件。</p>
+<pre><code class="language-typescript">// First pass: group messages by tool use ID
+for (const message of messages) {
+  if (isToolUseRequestMessage(message)) {
+    toolUseGroups.set(toolUseID, {
+      toolUse: null,
+      preHooks: [],
+      toolResult: null,
+      postHooks: [],
+    })
+  }
+}
+
+// Second pass: reconstruct in logical order
+for (const message of messages) {
+  if (isToolUseRequestMessage(message)) {
+    const group = toolUseGroups.get(toolUseID)
+    result.push(group.toolUse)
+    result.push(...group.preHooks)
+    if (group.toolResult) result.push(group.toolResult)
+    result.push(...group.postHooks)
+  }
+}</code></pre><p>这种两遍扫描算法（first pass: group, second pass: reconstruct）在保持 O(n) 时间复杂度的同时，实现了任意交错消息的正确重排。</p>
+<div class="thinking-note"><h3>思考笔记</h3>
+<p>消息归一化管线是&quot;入站消息的安检通道&quot;——所有消息在发送给 API 之前都要经过 5 个阶段的过滤和重组。</p>
+<ul>
+<li>5 阶段管线（过滤 → 重排序 → 合并 → 转换 → 剥离）每一阶段都有明确的职责——这比一个巨大的处理函数更容易测试和维护。</li>
+<li>连续 user 消息合并且不是简单拼接——因为 tool_result 后的 user 消息和用户真实输入的区别需要在合并时保留关键信息。</li>
+<li>媒体剥离说明了一个现实：token 预算有限，超大附件不能无限制地塞进上下文——归一化管线是最后一层防护。</li>
+<li>user/assistant 交替是 Anthropic API 的硬性要求——归一化管线最后一步确保格式合规，把脏活累活留给框架而非开发者。</li>
+</ul>
+</div>
+      </article>
+    </main>
+  </div>
+  
+  <!-- Syntax highlighting -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script>hljs.highlightAll();</script>
+
+  <script>
+    // Collapsible sidebar sections
+    document.querySelectorAll('.sidebar-section-header').forEach(header => {
+      header.addEventListener('click', () => {
+        const items = header.nextElementSibling;
+        const isCollapsed = items.classList.contains('collapsed');
+        // If collapsed, uncollapse; if visible, collapse
+        items.classList.toggle('collapsed');
+        header.classList.toggle('open');
+      });
+    });
+
+    // Auto-open current page's section + highlight active link
+    const currentPath = window.location.pathname;
+    const currentFilename = currentPath.split('/').pop();
+    let foundMatch = false;
+    document.querySelectorAll('.sidebar-section-items a').forEach(link => {
+      const href = link.getAttribute('href');
+      const linkFilename = href.split('/').pop();
+      if (linkFilename === currentFilename) {
+        link.classList.add('active');
+        const section = link.closest('.sidebar-section-items');
+        const header = section ? section.previousElementSibling : null;
+        if (section) section.classList.remove('collapsed');
+        if (header) header.classList.add('open');
+        foundMatch = true;
+      }
+    });
+    
+    // Full-text search
+    (function() {
+      const searchInput = document.getElementById('searchInput');
+      const searchResults = document.getElementById('searchResults');
+      if (!searchInput || !searchResults) return;
+
+      let searchIndex = [];
+      let indexLoaded = false;
+
+      // Compute root path for loading search-index.json
+      const currentScript = document.currentScript;
+      const rootPath = '../';
+
+      function loadIndex() {
+        if (indexLoaded) return;
+        indexLoaded = true;
+        fetch(rootPath + 'search-index.json')
+          .then(r => r.json())
+          .then(data => { searchIndex = data; })
+          .catch(() => { searchIndex = []; });
+      }
+
+      function highlight(text, query) {
+        const re = new RegExp('(' + query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi');
+        return text.replace(re, '<mark style="background:#fde047;padding:0 2px;border-radius:2px;">$1</mark>');
+      }
+
+      function search(query) {
+        if (!query || !searchIndex.length) return [];
+        const terms = query.toLowerCase().split(/\s+/).filter(t => t.length > 0);
+        if (!terms.length) return [];
+
+        const results = searchIndex.map(doc => {
+          const titleLower = doc.title.toLowerCase();
+          const textLower = doc.text.toLowerCase();
+          let score = 0;
+
+          for (const term of terms) {
+            if (titleLower.includes(term)) score += 10;
+            if (textLower.includes(term)) score += 1;
+          }
+
+          if (score === 0) return null;
+
+          // Find best snippet
+          let snippet = doc.text.slice(0, 120);
+          for (const term of terms) {
+            const idx = doc.text.toLowerCase().indexOf(term);
+            if (idx !== -1) {
+              const start = Math.max(0, idx - 40);
+              snippet = doc.text.slice(start, start + 120);
+              break;
+            }
+          }
+
+          return { ...doc, score, snippet };
+        }).filter(Boolean);
+
+        return results.sort((a, b) => b.score - a.score).slice(0, 10);
+      }
+
+      function render(results, query) {
+        if (!query) {
+          searchResults.classList.remove('active');
+          searchResults.innerHTML = '';
+          return;
+        }
+        if (!results.length) {
+          searchResults.innerHTML = '<div class="search-no-results">未找到相关文档</div>';
+          searchResults.classList.add('active');
+          return;
+        }
+
+        let html = '';
+        for (const r of results) {
+          const title = highlight(r.title, query);
+          const preview = highlight(r.snippet.replace(/\s+/g, ' '), query);
+          html += `<a href="${rootPath + r.path}" class="search-result-item">
+            <div class="sr-title">${title}</div>
+            <div class="sr-preview">${preview}...</div>
+          </a>`;
+        }
+        searchResults.innerHTML = html;
+        searchResults.classList.add('active');
+      }
+
+      let debounce;
+      searchInput.addEventListener('input', (e) => {
+        loadIndex();
+        clearTimeout(debounce);
+        const query = e.target.value.trim();
+        if (!query) {
+          render([], '');
+          return;
+        }
+        searchResults.innerHTML = '<div class="search-loading">搜索中...</div>';
+        searchResults.classList.add('active');
+        debounce = setTimeout(() => {
+          render(search(query), query);
+        }, 150);
+      });
+
+      // Close results on click outside
+      document.addEventListener('click', (e) => {
+        if (!e.target.closest('.sidebar-search')) {
+          searchResults.classList.remove('active');
+        }
+      });
+
+      // Keyboard navigation
+      searchInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          searchResults.classList.remove('active');
+          searchInput.blur();
+        }
+      });
+    })();
+    
+    // Back to top
+    (function() {
+      const btn = document.getElementById('backToTop');
+      if (!btn) return;
+      const toggle = () => {
+        btn.classList.toggle('visible', window.scrollY > 400);
+      };
+      window.addEventListener('scroll', toggle, { passive: true });
+      btn.addEventListener('click', () => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+    })();
+
+    // Mobile menu toggle
+    (function() {
+      const menuToggle = document.getElementById('menuToggle');
+      const sidebar = document.querySelector('.sidebar');
+      const overlay = document.getElementById('sidebarOverlay');
+      if (!menuToggle || !sidebar || !overlay) return;
+
+      menuToggle.addEventListener('click', () => {
+        sidebar.classList.toggle('open');
+        overlay.classList.toggle('active');
+      });
+
+      overlay.addEventListener('click', () => {
+        sidebar.classList.remove('open');
+        overlay.classList.remove('active');
+      });
+
+      // Close sidebar when a nav link is clicked (mobile)
+      sidebar.querySelectorAll('a').forEach(link => {
+        link.addEventListener('click', () => {
+          if (window.innerWidth <= 1024) {
+            sidebar.classList.remove('open');
+            overlay.classList.remove('active');
+          }
+        });
+      });
+    })();
+
+    // Copy code buttons
+    (function() {
+      document.querySelectorAll('.markdown-section pre').forEach(pre => {
+        const btn = document.createElement('button');
+        btn.className = 'copy-code-btn';
+        btn.textContent = '复制';
+        btn.addEventListener('click', () => {
+          const code = pre.querySelector('code')?.textContent || pre.textContent;
+          navigator.clipboard.writeText(code).then(() => {
+            btn.textContent = '已复制';
+            btn.classList.add('copied');
+            setTimeout(() => {
+              btn.textContent = '复制';
+              btn.classList.remove('copied');
+            }, 1500);
+          }).catch(() => {
+            btn.textContent = '失败';
+            setTimeout(() => { btn.textContent = '复制'; }, 1500);
+          });
+        });
+        pre.style.position = 'relative';
+        pre.appendChild(btn);
+      });
+    })();
+
+    // 引导思考 collapsible card
+    (function() {
+      document.querySelectorAll('.guide-card-header').forEach(function(header) {
+        header.addEventListener('click', function() {
+          var table = header.closest('.guide-card');
+          table.classList.toggle('collapsed');
+        });
+      });
+    })();
+
+    // Mermaid: Load dynamically + zoomable containers
+    (function() {
+      var mermaidDivs = document.querySelectorAll('.mermaid');
+      if (mermaidDivs.length === 0) return;
+
+      var cdns = [
+        '../mermaid.min.js',
+        'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js',
+        'https://unpkg.com/mermaid@10/dist/mermaid.min.js'
+      ];
+      var cdnIndex = 0;
+
+      function showError(msg) {
+        mermaidDivs.forEach(function(div) {
+          div.innerHTML = '<div class="mermaid-error" style="padding:16px;color:#dc2626;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;margin:20px 0;">' + msg + '</div>';
+          div.classList.add('rendered');
+        });
+      }
+
+      function wrapZoomable(div) {
+        if (div.parentNode.classList.contains('mermaid-zoom-container')) return;
+        if (!div.querySelector('svg')) return;
+        div.classList.add('rendered');
+
+        var wrapper = document.createElement('div');
+        wrapper.className = 'mermaid-zoom-container';
+        div.parentNode.insertBefore(wrapper, div);
+        wrapper.appendChild(div);
+
+        // Click overlay hint
+        var overlay = document.createElement('div');
+        overlay.className = 'mermaid-expand-overlay';
+        overlay.innerHTML = '<span><span class="expand-icon">⛶</span> 点击查看全图</span>';
+        wrapper.appendChild(overlay);
+
+        // Click (or double-click) to open modal
+        wrapper.addEventListener('click', function() { openMermaidModal(div); });
+      }
+
+      // ---- Mermaid Modal (full-screen viewer) ----
+      var modalInstance = null;
+
+      function openMermaidModal(sourceDiv) {
+        closeMermaidModal();
+        var clone = sourceDiv.cloneNode(true);
+        var svg = clone.querySelector('svg');
+        if (!svg) return;
+
+        // Let SVG fill width, height follows viewBox aspect ratio
+        svg.removeAttribute('width');
+        svg.removeAttribute('height');
+        svg.style.width = '100%';
+        svg.style.height = 'auto';
+        svg.style.maxWidth = 'none';
+
+        // Build modal: simple header + scrollable body
+        var modal = document.createElement('div');
+        modal.className = 'mermaid-modal active';
+
+        var content = document.createElement('div');
+        content.className = 'mermaid-modal-content';
+
+        var header = document.createElement('div');
+        header.className = 'mermaid-modal-header';
+        var chapterHint = '';
+        var prev = sourceDiv.closest('.markdown-section');
+        if (prev) {
+          var heading = prev.querySelector('h2, h3');
+          if (heading) chapterHint = heading.textContent.replace(/[#\d.]/g,'').trim().slice(0, 30);
+        }
+        header.innerHTML =
+          '<div class="modal-title-wrap">' +
+            '<span class="modal-icon">⬡</span>' +
+            '<span class="modal-title">' + (chapterHint || '图表') + '</span>' +
+          '</div>' +
+          '<button class="modal-close" title="关闭 (ESC)">✕</button>';
+
+        var body = document.createElement('div');
+        body.className = 'mermaid-modal-body';
+        body.appendChild(clone);
+
+        content.appendChild(header);
+        content.appendChild(body);
+        modal.appendChild(content);
+        document.body.appendChild(modal);
+
+        // Close handlers
+        header.querySelector('.modal-close').addEventListener('click', closeMermaidModal);
+        modal.addEventListener('click', function(e) {
+          if (e.target === modal) closeMermaidModal();
+        });
+
+        modalInstance = modal;
+      }
+
+      function closeMermaidModal() {
+        if (modalInstance) {
+          modalInstance.remove();
+          modalInstance = null;
+        }
+      }
+
+      document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') closeMermaidModal();
+      });
+
+      function tryLoadMermaid() {
+        if (cdnIndex >= cdns.length) {
+          showError('❌ 无法加载图表库，请检查网络连接后刷新页面');
+          return;
+        }
+
+        var script = document.createElement('script');
+        script.src = cdns[cdnIndex];
+        script.onload = function() {
+          if (typeof mermaid === 'undefined') {
+            showError('❌ 图表库加载失败');
+            return;
+          }
+          try {
+            mermaid.initialize({
+              startOnLoad: false,
+              theme: 'base',
+              themeVariables: {
+                fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif',
+                primaryColor: '#ffffff',
+                primaryTextColor: '#1e293b',
+                primaryBorderColor: '#e2e8f0',
+                lineColor: '#64748b',
+                secondaryColor: '#f1f5f9',
+                tertiaryColor: '#f8fafc',
+              },
+              securityLevel: 'loose',
+              flowchart: {
+                curve: 'basis',
+                padding: 15,
+                nodeSpacing: 50,
+                rankSpacing: 80,
+              },
+              maxTextSize: 50000,
+            });
+            mermaid.run({ querySelector: '.mermaid' }).then(function() {
+              mermaidDivs.forEach(wrapZoomable);
+            });
+          } catch(e) {
+            showError('❌ 图表渲染失败: ' + e.message);
+          }
+        };
+        script.onerror = function() {
+          cdnIndex++;
+          tryLoadMermaid();
+        };
+        document.head.appendChild(script);
+      }
+
+      tryLoadMermaid();
+    })();
+
+  </script>
+</body>
+</html>

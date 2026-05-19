@@ -1,0 +1,2340 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>第 12 章：Skill 系统</title>
+  <style>
+    /* ===== Reset & Base ===== */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { font-size: 62.5%; }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+      font-size: 15px;
+      color: #1e293b;
+      line-height: 1.7;
+      background: #ffffff;
+      -webkit-font-smoothing: antialiased;
+    }
+    
+    /* ===== Layout ===== */
+    .app {
+      display: flex;
+      min-height: 100vh;
+    }
+    
+    /* ===== Sidebar ===== */
+    .sidebar {
+      width: 280px;
+      min-width: 280px;
+      background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+      border-right: 1px solid #e2e8f0;
+      position: fixed;
+      top: 0;
+      left: 0;
+      bottom: 0;
+      display: flex;
+      flex-direction: column;
+    }
+    .sidebar::-webkit-scrollbar { width: 4px; }
+    .sidebar::-webkit-scrollbar-track { background: transparent; }
+    .sidebar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+    .sidebar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+    .sidebar-header {
+      padding: 20px 20px 14px;
+      border-bottom: 1px solid #e2e8f0;
+      flex-shrink: 0;
+    }
+
+    .sidebar-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 15px;
+      font-weight: 700;
+      color: #0f172a;
+      text-decoration: none;
+      letter-spacing: -0.02em;
+    }
+
+    .sidebar-brand .icon {
+      width: 30px;
+      height: 30px;
+      background: linear-gradient(135deg, #3b82f6 0%, #0ea5e9 100%);
+      border-radius: 7px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 15px;
+      flex-shrink: 0;
+    }
+
+    .sidebar-search {
+      padding: 12px 20px;
+      flex-shrink: 0;
+    }
+
+    .search-box {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 8px 12px;
+      transition: all 0.2s ease;
+    }
+
+    .search-box:focus-within {
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+
+    .search-box input {
+      flex: 1;
+      border: none;
+      outline: none;
+      font-size: 13px;
+      color: #1e293b;
+      background: transparent;
+    }
+
+    .search-box input::placeholder {
+      color: #94a3b8;
+    }
+
+    .search-box svg {
+      width: 15px;
+      height: 15px;
+      color: #94a3b8;
+      flex-shrink: 0;
+    }
+
+    .sidebar-nav {
+      flex: 1;
+      padding: 4px 8px;
+      overflow-y: auto;
+    }
+
+    .sidebar-nav ul, .sidebar-nav li {
+      list-style: none;
+    }
+
+    .quick-links {
+      display: flex;
+      gap: 6px;
+      padding: 0 8px 10px;
+      flex-shrink: 0;
+    }
+
+    .quick-links a {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      padding: 7px 10px;
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 7px;
+      font-size: 12px;
+      font-weight: 500;
+      color: #64748b;
+      text-decoration: none;
+      transition: all 0.15s ease;
+    }
+
+    .quick-links a:hover {
+      color: #3b82f6;
+      border-color: #3b82f6;
+      background: #eff6ff;
+    }
+
+    .quick-links a .ql-icon {
+      font-size: 13px;
+      line-height: 1;
+    }
+
+    .sidebar-section {
+      margin-bottom: 2px;
+    }
+
+    .sidebar-section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 9px 12px 9px 14px;
+      cursor: pointer;
+      user-select: none;
+      border-radius: 8px;
+      margin: 0 2px;
+      transition: background 0.15s ease;
+    }
+
+    .sidebar-section-header:hover {
+      background: rgba(59, 130, 246, 0.06);
+    }
+
+    .sidebar-section-header.open {
+      background: rgba(59, 130, 246, 0.08);
+    }
+
+    .section-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+    }
+
+    .section-num {
+      width: 22px;
+      height: 22px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #3b82f6 0%, #0ea5e9 100%);
+      border-radius: 5px;
+      font-size: 10px;
+      font-weight: 700;
+      color: #ffffff;
+      flex-shrink: 0;
+    }
+
+    .section-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: #1e293b;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .sidebar-section-header .arrow {
+      width: 16px;
+      height: 16px;
+      color: #94a3b8;
+      transition: transform 0.2s ease, color 0.15s ease;
+      flex-shrink: 0;
+    }
+
+    .sidebar-section-header:hover .arrow {
+      color: #64748b;
+    }
+
+    .sidebar-section-header.open .arrow {
+      transform: rotate(90deg);
+      color: #3b82f6;
+    }
+
+    .sidebar-section-items {
+      overflow: hidden;
+      transition: max-height 0.2s ease, opacity 0.15s ease;
+      max-height: 2000px;
+      opacity: 1;
+    }
+    .sidebar-section-items.collapsed {
+      max-height: 0;
+      opacity: 0;
+    }
+
+    .sidebar-section-items ul {
+      padding: 2px 6px 6px;
+    }
+
+    .sidebar-section-items li {
+      margin: 1px 0;
+    }
+
+    .sidebar-section-items a {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 10px;
+      font-size: 13px;
+      color: #64748b;
+      text-decoration: none;
+      border-radius: 6px;
+      transition: all 0.15s ease;
+      position: relative;
+    }
+
+    .sidebar-section-items a:hover {
+      color: #3b82f6;
+      background: rgba(59, 130, 246, 0.06);
+    }
+
+    .sidebar-section-items a.active {
+      color: #1e293b;
+      background: rgba(59, 130, 246, 0.1);
+      font-weight: 500;
+    }
+    .sidebar-section-items a.active::before {
+      content: '';
+      position: absolute;
+      left: -6px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 3px;
+      height: 18px;
+      border-radius: 2px;
+      background: #3b82f6;
+    }
+    .sidebar-section-items a.active .num {
+      color: #3b82f6;
+    }
+    .sidebar-section-items a[href*="APPENDIX"] {
+      font-size: 12px;
+      color: #94a3b8;
+      padding-left: 14px;
+    }
+    .sidebar-section-items a[href*="APPENDIX"]:hover {
+      color: #3b82f6;
+    }
+    .sidebar-section-items a[href*="APPENDIX"] .num {
+      display: none;
+    }
+
+    .sidebar-section-items a .num {
+      font-size: 11px;
+      font-weight: 500;
+      color: #94a3b8;
+      min-width: 26px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .sidebar-divider {
+      height: 1px;
+      background: linear-gradient(90deg, transparent, #e2e8f0, transparent);
+      margin: 6px 10px 10px;
+    }
+
+    .sidebar-external {
+      padding: 0 8px 12px;
+      flex-shrink: 0;
+    }
+
+    .sidebar-external a {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 9px 12px;
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 500;
+      color: #475569;
+      text-decoration: none;
+      transition: all 0.15s ease;
+    }
+
+    .sidebar-external a:hover {
+      border-color: #3b82f6;
+      color: #3b82f6;
+      background: #eff6ff;
+    }
+
+    .sidebar-external a svg {
+      width: 15px;
+      height: 15px;
+      opacity: 0.5;
+      flex-shrink: 0;
+    }
+    .sidebar-external a:hover svg {
+      opacity: 0.8;
+    }
+    
+    /* ===== Content ===== */
+    .content {
+      flex: 1;
+      margin-left: 280px;
+      padding: 48px 64px;
+      min-height: 100vh;
+      max-width: 1400px;
+    }
+
+    /* ===== Typography ===== */
+    .markdown-section h1 {
+      font-size: 28px;
+      font-weight: 700;
+      color: #0f172a;
+      letter-spacing: -0.02em;
+      margin: 0 0 24px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    
+    .markdown-section h2 {
+      font-size: 20px;
+      font-weight: 600;
+      color: #1e293b;
+      letter-spacing: -0.01em;
+      margin: 40px 0 16px;
+    }
+    
+    .markdown-section h3 {
+      font-size: 16px;
+      font-weight: 600;
+      color: #3b82f6;
+      margin: 28px 0 12px;
+    }
+    
+    .markdown-section h4 {
+      font-size: 15px;
+      font-weight: 600;
+      color: #1e293b;
+      margin: 20px 0 8px;
+    }
+    .markdown-section h1, .markdown-section h2, .markdown-section h3, .markdown-section h4 {
+      position: relative;
+    }
+    .markdown-section .heading-anchor {
+      position: absolute;
+      left: -20px;
+      top: 50%;
+      transform: translateY(-50%);
+      opacity: 0;
+      color: #94a3b8;
+      text-decoration: none;
+      font-size: 0.8em;
+      font-weight: 400;
+      transition: opacity 0.15s ease;
+      padding-right: 4px;
+    }
+    .markdown-section h1:hover .heading-anchor,
+    .markdown-section h2:hover .heading-anchor,
+    .markdown-section h3:hover .heading-anchor,
+    .markdown-section h4:hover .heading-anchor {
+      opacity: 1;
+    }
+    
+    .markdown-section p {
+      margin: 12px 0;
+      color: #475569;
+    }
+
+    /* ===== Thinking Note ===== */
+    .thinking-note {
+      background: #fffbeb;
+      border-left: 4px solid #f59e0b;
+      border-radius: 0 12px 12px 0;
+      padding: 20px 24px;
+      margin: 24px 0;
+    }
+    .thinking-note h3 {
+      margin: 0 0 12px;
+      padding: 0;
+      border: none;
+      font-size: 14px;
+      font-weight: 700;
+      color: #d97706;
+      letter-spacing: 0.03em;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .thinking-note p {
+      margin: 8px 0;
+      font-size: 14px;
+      line-height: 1.8;
+      color: #78350f;
+    }
+    .thinking-note strong {
+      display: inline-block;
+      margin-top: 6px;
+      color: #92400e;
+    }
+    .thinking-note strong:first-of-type {
+      margin-top: 0;
+    }
+    .thinking-note ul {
+      margin: 4px 0 4px 0;
+      padding-left: 18px;
+      list-style: none;
+    }
+    .thinking-note li {
+      margin: 4px 0;
+      padding-left: 14px;
+      position: relative;
+      color: #78350f;
+      font-size: 14px;
+      line-height: 1.7;
+    }
+    .thinking-note li::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 10px;
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: #d97706;
+      opacity: 0.5;
+    }
+    .thinking-note li strong {
+      color: #92400e;
+    }
+
+    .markdown-section a {
+      color: #3b82f6;
+      text-decoration: none;
+      font-weight: 500;
+    }
+    
+    .markdown-section a:hover {
+      text-decoration: underline;
+    }
+    
+    .markdown-section code {
+      background: #f1f5f9;
+      color: #0f172a;
+      padding: 2px 6px;
+      font-size: 13px;
+      border-radius: 4px;
+      font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Consolas', monospace;
+    }
+    
+    .markdown-section pre {
+      background: #1e293b;
+      border-radius: 12px;
+      padding: 20px 24px;
+      overflow-x: auto;
+      margin: 20px 0;
+    }
+    
+    .markdown-section pre code {
+      background: transparent;
+      color: #e2e8f0;
+      padding: 0;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+    
+    .markdown-section blockquote {
+      background: #f8fafc;
+      border-left: 4px solid #3b82f6;
+      border-radius: 0 8px 8px 0;
+      padding: 16px 20px;
+      margin: 20px 0;
+    }
+    
+    .markdown-section blockquote p {
+      margin: 0;
+      color: #475569;
+    }
+    
+    .markdown-section table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0;
+      font-size: 14px;
+      border-radius: 12px;
+      
+      border: 1px solid #e2e8f0;
+    }
+    
+    .markdown-section table th {
+      background: #f8fafc;
+      font-weight: 600;
+      text-align: left;
+      padding: 12px 16px;
+      color: #475569;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    
+    .markdown-section table td {
+      padding: 12px 16px;
+      border-top: 1px solid #e2e8f0;
+    }
+    
+    .markdown-section table tr:nth-child(2n) td {
+      background: #f8fafc;
+    }
+    
+    .markdown-section ul, .markdown-section ol {
+      padding-left: 24px;
+      margin: 12px 0;
+    }
+    
+    .markdown-section li {
+      margin: 6px 0;
+      color: #475569;
+    }
+    
+    .markdown-section hr {
+      height: 1px;
+      background: #e2e8f0;
+      border: none;
+      margin: 32px 0;
+    }
+    
+    .markdown-section img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 8px;
+    }
+    
+    /* ===== Mermaid Diagrams ===== */
+    .mermaid {
+      background: #f8fafc;
+      border-radius: 12px;
+      padding: 24px;
+      margin: 20px 0;
+      overflow-x: auto;
+      border: 1px solid #e2e8f0;
+      display: block;
+    }
+    .mermaid.rendered {
+      display: block;
+    }
+    .mermaid svg {
+      max-width: 100%;
+      height: auto;
+    }
+    .mermaid-error {
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      border-radius: 8px;
+      padding: 16px;
+      color: #dc2626;
+      margin: 20px 0;
+    }
+    .mermaid-loading {
+      background: #f8fafc;
+      border: 1px dashed #e2e8f0;
+      border-radius: 12px;
+      padding: 24px;
+      margin: 20px 0;
+      color: #64748b;
+      text-align: center;
+    }
+
+    
+    
+
+/* ===== Click-to-Expand Mermaid ===== */
+    .mermaid-zoom-container {
+      position: relative;
+      overflow: hidden;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      margin: 20px 0;
+      background: #f8fafc;
+      cursor: pointer;
+      min-height: 100px;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+    .mermaid-zoom-container:hover {
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 2px rgba(59,130,246,0.1);
+    }
+    .mermaid-zoom-container .mermaid {
+      margin: 0;
+      border: none;
+      border-radius: 0;
+      background: transparent;
+    }
+    .mermaid-zoom-container .mermaid svg {
+      display: block;
+    }
+    .mermaid-expand-overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+      background: rgba(15,23,42,0.03);
+    }
+    .mermaid-zoom-container:hover .mermaid-expand-overlay {
+      opacity: 1;
+    }
+    .mermaid-expand-overlay span {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 18px;
+      background: rgba(255,255,255,0.95);
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 500;
+      color: #3b82f6;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+      backdrop-filter: blur(4px);
+      pointer-events: none;
+      transition: transform 0.15s ease;
+    }
+    .mermaid-zoom-container:hover .mermaid-expand-overlay span {
+      transform: translateY(-2px);
+    }
+    .mermaid-expand-overlay .expand-icon {
+      font-size: 15px;
+    }
+
+    /* ===== Mermaid Modal ===== */
+    @keyframes modal-fade-in {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    @keyframes modal-content-in {
+      from { opacity: 0; transform: scale(0.95) translateY(8px); }
+      to { opacity: 1; transform: scale(1) translateY(0); }
+    }
+    .mermaid-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 1000;
+      background: rgba(15, 23, 42, 0.65);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      animation: modal-fade-in 0.2s ease;
+    }
+    .mermaid-modal.active {
+      display: flex;
+    }
+    .mermaid-modal-content {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      max-width: 90vw;
+      max-height: 90vh;
+      background: #fff;
+      border-radius: 14px;
+      box-shadow: 0 25px 80px rgba(0,0,0,0.3);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      animation: modal-content-in 0.2s ease;
+    }
+    .mermaid-modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 20px;
+      border-bottom: 1px solid #e2e8f0;
+      flex-shrink: 0;
+      background: #fafbfc;
+      gap: 12px;
+    }
+    .mermaid-modal-header .modal-title-wrap {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+    }
+    .mermaid-modal-header .modal-icon {
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      background: linear-gradient(135deg, #3b82f6, #0ea5e9);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      flex-shrink: 0;
+    }
+    .mermaid-modal-header .modal-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: #1e293b;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .mermaid-modal-header .modal-hint {
+      font-size: 12px;
+      color: #94a3b8;
+      font-weight: 400;
+      margin-left: 4px;
+    }
+    .mermaid-modal-header .modal-actions {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      flex-shrink: 0;
+    }
+    .mermaid-modal-header .modal-close {
+      width: 30px;
+      height: 30px;
+      border: none;
+      border-radius: 6px;
+      background: transparent;
+      color: #94a3b8;
+      font-size: 17px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s ease;
+      margin-left: 4px;
+    }
+    .mermaid-modal-header .modal-close:hover {
+      background: #fee2e2;
+      color: #dc2626;
+    }
+    .mermaid-modal-body {
+      flex: 1;
+      overflow: auto;
+      position: relative;
+      user-select: auto;
+      background: #f8fafc
+        repeating-linear-gradient(
+          0deg, transparent, transparent 23px, #f1f5f9 23px, #f1f5f9 24px
+        ),
+        repeating-linear-gradient(
+          90deg, transparent, transparent 23px, #f1f5f9 23px, #f1f5f9 24px
+        );
+    }
+    .mermaid-modal-body svg {
+      display: block;
+    }
+    @media (max-width: 768px) {
+      .mermaid-modal { padding: 12px; }
+      .mermaid-modal-content { max-width: 100vw; max-height: 100vh; border-radius: 10px; }
+      .mermaid-modal-header { padding: 10px 14px; }
+    }
+    @media (max-width: 480px) {
+      .mermaid-modal { padding: 0; }
+      .mermaid-modal-content { border-radius: 0; max-width: 100vw; max-height: 100vh; }
+    }
+
+
+/* ===== 引导思考 - Note-style Card ===== */
+    tr.guide-card-header td {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      width: 100%;
+      padding: 12px 24px !important;
+      font-size: 13px;
+      font-weight: 700;
+      color: #6366f1;
+      letter-spacing: 0.04em;
+      background: transparent !important;
+      border: none !important;
+    }
+    table.guide-card {
+      border-collapse: separate;
+      border-spacing: 0;
+      font-size: 14px;
+      margin: 0 0 24px;
+      overflow: hidden;
+      display: block;
+      width: 100%;
+      background: #f8faff;
+      border-left: 4px solid #6366f1;
+      border-radius: 0 12px 12px 0;
+      box-shadow: 0 1px 3px rgba(99, 102, 241, 0.08);
+    }
+    /* Hide original table header ("思考维度 | 内容") */
+    table.guide-card thead {
+      display: none;
+    }
+    /* Collapse/expand behavior */
+    table.guide-card.collapsed tbody tr:not(.guide-card-header) {
+      display: none;
+    }
+    table.guide-card tbody tr.guide-card-header {
+      cursor: pointer;
+      user-select: none;
+    }
+    table.guide-card tbody tr.guide-card-header:hover {
+      background: rgba(99, 102, 241, 0.04);
+    }
+    .collapse-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 18px;
+      height: 18px;
+      flex-shrink: 0;
+      transition: transform 0.2s ease;
+    }
+    .collapse-icon::before {
+      content: '';
+      display: block;
+      width: 6px;
+      height: 6px;
+      border-right: 2px solid #a5b4fc;
+      border-bottom: 2px solid #a5b4fc;
+      transform: rotate(-45deg);
+      margin-top: -3px;
+      transition: transform 0.2s ease, border-color 0.2s ease;
+    }
+    table.guide-card:not(.collapsed) .collapse-icon::before {
+      transform: rotate(45deg);
+      margin-top: 3px;
+      border-color: #6366f1;
+    }
+    tr.guide-card-header:hover .collapse-icon::before {
+      border-color: #6366f1;
+    }
+    .collapse-hint {
+      font-size: 11px;
+      color: #a5b4fc;
+      font-weight: 400;
+      transition: color 0.2s ease;
+    }
+    table.guide-card:not(.collapsed) .collapse-hint {
+      display: none;
+    }
+    tr.guide-card-header:hover .collapse-hint {
+      color: #6366f1;
+    }
+    table.guide-card tbody,
+    table.guide-card tbody tr {
+      display: block;
+      width: 100%;
+    }
+    table.guide-card tbody td {
+      display: block;
+      width: 100%;
+      padding: 0 24px 14px;
+      border: none;
+      vertical-align: top;
+      line-height: 1.7;
+      color: #475569;
+    }
+    table.guide-card tbody td:first-child {
+      padding: 12px 24px 2px;
+      font-weight: 600;
+      font-size: 12px;
+      color: #6366f1;
+      background: transparent;
+      width: 100%;
+      border: none;
+      letter-spacing: 0.03em;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    table.guide-card tbody td:first-child::before {
+      display: none;
+    }
+    /* Content lists inside cells */
+    table.guide-card tbody td ul {
+      margin: 0;
+      padding-left: 16px;
+      list-style: none;
+    }
+    table.guide-card tbody td > ul > li {
+      position: relative;
+      padding-left: 14px;
+      margin-bottom: 4px;
+      font-size: 13.5px;
+      color: #475569;
+      line-height: 1.7;
+    }
+    table.guide-card tbody td > ul > li::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 10px;
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: #c7d2fe;
+    }
+    table.guide-card tbody td > ul > li:last-child {
+      margin-bottom: 0;
+    }
+    table.guide-card tbody td ul ul {
+      padding-left: 14px;
+      margin-top: 2px;
+    }
+    table.guide-card tbody td ul ul li {
+      position: relative;
+      padding-left: 12px;
+      margin-bottom: 2px;
+      font-size: 13px;
+      color: #64748b;
+      line-height: 1.6;
+    }
+    table.guide-card tbody td ul ul li::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 9px;
+      width: 3px;
+      height: 3px;
+      border-radius: 50%;
+      background: #cbd5e1;
+    }
+    table.guide-card tbody td strong,
+    table.guide-card tbody td:first-child strong {
+      color: #4338ca;
+      font-weight: 600;
+    }
+    table.guide-card tbody td code {
+      background: #eef2ff;
+      color: #6366f1;
+      font-size: 12.5px;
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-weight: 500;
+    }
+
+/* ===== Navigation ===== */
+    .nav {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 48px;
+      padding-top: 24px;
+      border-top: 1px solid #e2e8f0;
+    }
+    
+    .nav a {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 10px 18px;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      color: #475569;
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 500;
+      transition: all 0.15s ease;
+    }
+    
+    .nav a:hover {
+      background: #3b82f6;
+      color: #fff;
+      border-color: #3b82f6;
+    }
+    
+    /* ===== Search Results ===== */
+    .search-results {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.12);
+      max-height: 400px;
+      overflow-y: auto;
+      z-index: 100;
+      display: none;
+      margin: 4px 0 0;
+    }
+    .search-results.active { display: block; }
+    .search-result-item {
+      display: block;
+      padding: 10px 14px;
+      text-decoration: none;
+      border-bottom: 1px solid #f1f5f9;
+      transition: background 0.15s ease;
+    }
+    .search-result-item:last-child { border-bottom: none; }
+    .search-result-item:hover { background: #f8fafc; }
+    .search-result-item .sr-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: #1e293b;
+      margin-bottom: 2px;
+    }
+    .search-result-item .sr-preview {
+      font-size: 12px;
+      color: #64748b;
+      line-height: 1.4;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .search-result-item .sr-path {
+      font-size: 11px;
+      color: #94a3b8;
+      margin-top: 2px;
+    }
+    .search-no-results {
+      padding: 16px;
+      text-align: center;
+      color: #94a3b8;
+      font-size: 13px;
+    }
+    .search-loading {
+      padding: 12px;
+      text-align: center;
+      color: #94a3b8;
+      font-size: 12px;
+    }
+    .sidebar-search { position: relative; }
+
+    /* ===== Copy Code Button ===== */
+    .code-block-wrapper {
+      position: relative;
+    }
+    .copy-code-btn {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      padding: 4px 10px;
+      background: rgba(255,255,255,0.1);
+      color: #94a3b8;
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 6px;
+      font-size: 12px;
+      cursor: pointer;
+      opacity: 0;
+      transition: opacity 0.15s ease, background 0.15s ease, color 0.15s ease;
+    }
+    .markdown-section pre:hover .copy-code-btn,
+    .copy-code-btn:focus {
+      opacity: 1;
+    }
+    .copy-code-btn:hover {
+      background: rgba(255,255,255,0.2);
+      color: #e2e8f0;
+    }
+    .copy-code-btn.copied {
+      background: #22c55e;
+      color: #fff;
+      border-color: #22c55e;
+      opacity: 1;
+    }
+
+    /* ===== Back to Top ===== */
+    .back-to-top {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      width: 40px;
+      height: 40px;
+      background: #3b82f6;
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 12px rgba(59,130,246,0.3);
+      transition: opacity 0.2s ease, transform 0.2s ease;
+      z-index: 80;
+    }
+    .back-to-top.visible { display: flex; }
+    .back-to-top:hover { transform: translateY(-2px); }
+    .back-to-top svg { width: 20px; height: 20px; }
+
+    /* ===== Mobile Menu Toggle ===== */
+    .menu-toggle {
+      display: none;
+      position: fixed;
+      top: 16px;
+      left: 16px;
+      z-index: 200;
+      width: 40px;
+      height: 40px;
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    .menu-toggle svg {
+      width: 20px;
+      height: 20px;
+      color: #475569;
+    }
+    .sidebar-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.3);
+      z-index: 90;
+    }
+    .sidebar-overlay.active { display: block; }
+
+    /* ===== Mobile ===== */
+    @media (max-width: 1024px) {
+      .menu-toggle { display: flex; }
+      .sidebar { transform: translateX(-100%); transition: transform 0.2s ease; z-index: 100; }
+      .sidebar.open { transform: translateX(0); }
+      .content { margin-left: 0; padding: 24px 20px; padding-top: 64px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <nav class="sidebar">
+      <div class="sidebar-header">
+        <a href="../index.html" class="sidebar-brand">
+          <span class="icon">📚</span>
+          LLM Agent 源码学习
+        </a>
+      </div>
+      
+      <div class="sidebar-search">
+        <div class="search-box">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"/>
+            <path d="M21 21l-4.35-4.35"/>
+          </svg>
+          <input type="text" placeholder="搜索文档..." id="searchInput" autocomplete="off">
+        </div>
+        <div class="search-results" id="searchResults"></div>
+      </div>
+      
+      <div class="quick-links">
+        <a href="../index.html">🏠 首页</a>
+        <a href="../SUMMARY.html">📑 目录</a>
+      </div>
+      
+      <div class="sidebar-nav">
+        <div class="sidebar-section">
+        <div class="sidebar-section-header">
+          <span class="section-title">
+            <span class="section-num">1</span>
+            <span class="section-name">Claude Code</span>
+          </span>
+          <svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+        </div>
+        <div class="sidebar-section-items"><ul><li><a href="./01-OVERVIEW.html"><span class="num">1.0</span>全景概览</a></li><li><a href="./02-BOOTSTRAP.html"><span class="num">2.0</span>启动流程</a></li><li><a href="./03-TYPE-SYSTEM.html"><span class="num">3.0</span>类型系统设计</a></li><li><a href="./04-QUERY-ENGINE.html"><span class="num">4.0</span>查询引擎</a></li><li><a href="./05-MESSAGE-SYSTEM.html"><span class="num">5.0</span>消息系统</a></li><li><a href="./06-STREAMING.html"><span class="num">6.0</span>流式处理</a></li><li><a href="./07-TOOL-ARCHITECTURE.html"><span class="num">7.0</span>工具架构</a></li><li><a href="./08-BUILTIN-TOOLS.html"><span class="num">8.0</span>内置工具</a></li><li><a href="./09-TOOL-EXECUTION.html"><span class="num">9.0</span>工具执行</a></li><li><a href="./10-AGENT-MODEL.html"><span class="num">10.0</span>Agent 模型</a></li><li><a href="./11-SUBAGENT.html"><span class="num">11.0</span>子代理</a></li><li><a href="./12-SKILL-SYSTEM.html"><span class="num">12.0</span>技能系统</a></li><li><a href="./13-PERMISSION-MODEL.html"><span class="num">13.0</span>权限模型</a></li><li><a href="./14-BASH-SECURITY.html"><span class="num">14.0</span>Bash 安全</a></li><li><a href="./15-MCP-PROTOCOL.html"><span class="num">15.0</span>MCP 协议</a></li><li><a href="./16-MCP-AUTH.html"><span class="num">16.0</span>MCP 认证</a></li><li><a href="./17-STATE-MANAGEMENT.html"><span class="num">17.0</span>状态管理</a></li><li><a href="./18-CONVERSATION.html"><span class="num">18.0</span>会话管理</a></li><li><a href="./19-INK-REACT.html"><span class="num">19.0</span>Ink React</a></li><li><a href="./20-REPL.html"><span class="num">20.0</span>REPL</a></li><li><a href="./21-PERFORMANCE.html"><span class="num">21.0</span>性能优化</a></li><li><a href="./22-TESTING.html"><span class="num">22.0</span>测试</a></li><li><a href="./23-BUILD-SYSTEM.html"><span class="num">23.0</span>构建系统</a></li><li><a href="./24-DESIGN-PATTERNS.html"><span class="num">24.0</span>设计模式</a></li><li><a href="./25-PHILOSOPHY.html"><span class="num">25.0</span>哲学思想</a></li><li><a href="./26-COGNITIVE-LOOP.html"><span class="num">26.0</span>认知循环</a></li><li><a href="./APPENDIX-A-GLOSSARY.html">附录A 术语表</a></li><li><a href="./APPENDIX-B-SOURCE-MAP.html">附录B 源码导航</a></li></ul></div></div>
+      </div>
+
+      <div class="sidebar-external">
+        <a href="https://github.com/Hyper66666/claude-code-sourcemap" target="_blank">
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+          </svg>
+          GitHub 源码
+        </a>
+      </div>
+    </nav>
+    <button class="back-to-top" id="backToTop" aria-label="回到顶部" title="回到顶部">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M18 15l-6-6-6 6"/>
+      </svg>
+    </button>
+    <button class="menu-toggle" id="menuToggle" aria-label="打开菜单">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M3 12h18M3 6h18M3 18h18"/>
+      </svg>
+    </button>
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+    <main class="content">
+      <article class="markdown-section">
+        <h1>第 12 章：Skill 系统</h1>
+<blockquote>
+<p>&quot;好的抽象不是隐藏复杂性，而是将复杂性放在正确的位置。&quot;<br>—— Kevlin Henney</p>
+</blockquote>
+<table class="guide-card collapsed">
+<thead>
+<tr>
+<th>思考维度</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody>
+<tr class="guide-card-header"><td colspan="2"><span class="collapse-icon"></span>引导思考 <span class="collapse-hint">展开</span></td></tr><tr>
+<td><strong>它为什么存在</strong></td>
+<td><ul><li>Skill 是 Claude Code 里最高层次的抽象——站在 Agent、工具、MCP 之上，把多步工作流封装成一键触发的 /command</li><li>用户看到的 /commit、/review-pr 这些斜杠命令，背后是一套完整的发现、解析和执行流水线</li></ul></td>
+</tr>
+<tr>
+<td><strong>它解决什么问题</strong></td>
+<td><ul><li>/batch 把 Plan 模式 + 并行 Agent + Simplify 递归调用串在一起——用户一句话就搞定复杂工作流</li><li>/claude-api 根据项目语言自动注入对应的 API 文档——检测到 Python 就加载 Python SDK 文档</li><li>Inline 模式轻量注入当前上下文，Fork 模式启动独立子 Agent——按任务复杂度自动选</li></ul></td>
+</tr>
+<tr>
+<td><strong>它在系统中的位置</strong></td>
+<td><ul><li>Skill 没有自己的独立类型——它就是 Command 的 type: &#39;prompt&#39; 子集</li><li>通过 SkillTool 注入会话，三种来源（文件系统 + 内置 + MCP）聚合并通过统一接口暴露</li></ul></td>
+</tr>
+<tr>
+<td><strong>它如何工作</strong></td>
+<td><ul><li>Inline 模式把 Skill 提示词直接注入主对话，主 Agent 在当前轮次就把活干了</li><li>Fork 模式通过 prepareForkedCommandContext 创建隔离的子 Agent 来执行</li><li>Skill 列表展示限制在上下文窗口的 1% 以内——不是所有 Skill 都显示，而是按优先级和相关性筛选</li></ul></td>
+</tr>
+<tr>
+<td><strong>它如何实现</strong></td>
+<td><ul><li>bundledSkills.ts 注册内置 Skill，loadSkillsDir.ts 扫描文件系统发现用户自定义 Skill</li><li>SkillTool 的 executeForkedSkill 构建 Agent 定义和提示词消息</li><li>/loop Skill 用的&quot;Prompt as Controller&quot;模式——不是直接操作 Cron 系统，而是生成指令让模型调用 ScheduleCronTool</li></ul></td>
+</tr>
+<tr>
+<td><strong>不同平台如何做</strong></td>
+<td><ul><li><strong>Cursor Agent</strong>：没有 Slash 命令或技能系统，多步工作流通过 Composer 面板手动编排</li><li><strong>OpenClaw</strong>：功能封装在 Agent 定义中而非独立的能力单元，Agent 间通过消息传递协作</li><li><strong>Harness Agent</strong>：Pipeline 模板提供类似技能的可复用能力包，但编排方式是声明式 DAG 而非模型自主调用</li></ul></td>
+</tr>
+<tr>
+<td><strong>优势是什么？</strong></td>
+<td><ul><li><strong>优势</strong><ul><li>Command 统一抽象让 Skill 无缝集成到现有命令系统中，用户感知一致</li><li>Inline/Fork 双模根据任务复杂度自动选择执行策略</li><li>Prompt as Controller 模式有极高的灵活性和可组合性</li></ul></li></ul></td>
+</tr>
+</tbody></table>
+<p>如果说 Agent 是 Claude Code 的&quot;执行单元&quot;，那么 Skill 就是它的&quot;能力包&quot;。Skill 系统将特定领域的专业知识（以 Markdown 编写的 Prompt 模板）、工具约束和执行策略封装为一个可发现、可调用、可复用的单元。用户看到的是 <code>/commit</code>、<code>/review-pr</code> 这样的斜杠命令，背后则是一套精密的发现、解析和执行机制。</p>
+<hr>
+<h2>12.1 Skill 的本质 —— Prompt 模板 + Agent 封装</h2>
+<h3>12.1.1 Command 类型作为统一抽象</h3>
+<p>在 Claude Code 的类型体系中，Skill 并没有独立的类型——它是 <code>Command</code> 类型中 <code>type: &#39;prompt&#39;</code> 的子集。这种&quot;Skill 即 Command&quot;的设计使得 Skill 可以无缝集成到已有的命令系统中：</p>
+<pre><code class="language-typescript">// src/types/command.ts (概念简化)
+
+export type Command = {
+  type: 'prompt'              // 区分于 'action' 等其他命令类型
+  name: string                 // 唯一名称，如 'commit', 'review-pr'
+  description: string          // 人可读描述
+  hasUserSpecifiedDescription: boolean
+  allowedTools: string[]       // 此 Skill 允许使用的工具
+  argumentHint?: string        // 参数提示
+  whenToUse?: string           // 何时自动调用的描述
+  model?: string               // 模型覆盖
+  disableModelInvocation: boolean  // 是否禁止模型自动调用
+  userInvocable: boolean       // 用户是否可手动调用
+  context?: 'inline' | 'fork'  // 执行上下文
+  agent?: string               // 绑定的 Agent 类型
+  effort?: EffortValue         // 推理努力级别
+  paths?: string[]             // 路径匹配模式
+  hooks?: HooksSettings        // Skill 级钩子
+  skillRoot?: string           // Skill 的根目录
+  source: 'bundled' | 'user' | 'project' | 'managed' | 'plugin'
+  loadedFrom: 'skills' | 'plugin' | 'managed' | 'bundled' | 'mcp'
+  getPromptForCommand: (args: string, context: ToolUseContext)
+    =&gt; Promise&lt;ContentBlockParam[]&gt;
+}</code></pre><p><code>getPromptForCommand</code> 是每个 Skill 的核心——它接收用户参数和工具使用上下文，返回一组内容块（ContentBlockParam），这些内容块将被注入到对话中。</p>
+<h3>12.1.2 两种执行模式</h3>
+<p>Skill 有两种执行模式，由 <code>context</code> 字段控制：</p>
+<div class="mermaid">%%{init: {"theme": "base", "themeVariables":{"primaryColor":"#3b82f6","primaryTextColor":"#1e293b","primaryBorderColor":"#60a5fa","lineColor":"#94a3b8","secondaryColor":"#f1f5f9","tertiaryColor":"#ffffff","fontFamily":"-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif"}}}%%
+graph TD
+    subgraph "Inline 模式（默认）"
+        I1["SkillTool 调用"] --&gt; I2["加载 Skill 提示词"]
+        I2 --&gt; I3["注入到主对话上下文"]
+        I3 --&gt; I4["主 Agent 在当前轮次执行"]
+        I4 --&gt; I5["返回成功标志"]
+    end
+
+    subgraph "Fork 模式"
+        F1["SkillTool 调用"] --&gt; F2["加载 Skill 提示词"]
+        F2 --&gt; F3["创建子 Agent 上下文"]
+        F3 --&gt; F4["prepareForkedCommandContext"]
+        F4 --&gt; F5["runAgent 执行子 Agent"]
+        F5 --&gt; F6["提取结果文本"]
+        F6 --&gt; F7["返回结果到主 Agent"]
+    end</div><p><strong>Inline 模式</strong>是轻量级的——Skill 提示词被注入到当前对话中，主 Agent 在同一轮次内执行。适用于简单的配置变更或信息查询。</p>
+<p><strong>Fork 模式</strong>会启动一个独立的子 Agent 来执行 Skill，拥有独立的 token 预算和执行空间。适用于复杂的多步骤任务，如代码审查或部署验证。</p>
+<h3>12.1.3 BundledSkillDefinition</h3>
+<p>内置 Skill（bundled skills）通过代码注册，而非文件系统加载：</p>
+<pre><code class="language-typescript">// src/skills/bundledSkills.ts
+
+export type BundledSkillDefinition = {
+  name: string
+  description: string
+  aliases?: string[]
+  whenToUse?: string
+  argumentHint?: string
+  allowedTools?: string[]
+  model?: string
+  disableModelInvocation?: boolean
+  userInvocable?: boolean
+  isEnabled?: () =&gt; boolean         // 动态启用/禁用
+  hooks?: HooksSettings
+  context?: 'inline' | 'fork'
+  agent?: string                     // 绑定到特定 Agent
+  files?: Record&lt;string, string&gt;    // 附带的参考文件
+  getPromptForCommand: (args: string, context: ToolUseContext)
+    =&gt; Promise&lt;ContentBlockParam[]&gt;
+}</code></pre><p><code>files</code> 字段是一个值得注意的设计——它允许 Skill 携带参考文件（如 API 文档、代码模板），这些文件在首次调用时被提取到磁盘：</p>
+<pre><code class="language-typescript">export function registerBundledSkill(definition: BundledSkillDefinition): void {
+  const { files } = definition
+
+  if (files &amp;&amp; Object.keys(files).length &gt; 0) {
+    skillRoot = getBundledSkillExtractDir(definition.name)
+    let extractionPromise: Promise&lt;string | null&gt; | undefined
+    const inner = definition.getPromptForCommand
+
+    getPromptForCommand = async (args, ctx) =&gt; {
+      // 惰性提取：首次调用时写入磁盘，后续复用
+      extractionPromise ??= extractBundledSkillFiles(definition.name, files)
+      const extractedDir = await extractionPromise
+      const blocks = await inner(args, ctx)
+      if (extractedDir === null) return blocks
+      return prependBaseDir(blocks, extractedDir)  // 前缀 "Base directory: ..."
+    }
+  }
+
+  // 注册为 Command 对象
+  bundledSkills.push({
+    type: 'prompt',
+    name: definition.name,
+    // ...
+    getPromptForCommand,
+  })
+}</code></pre><p><code>extractionPromise</code> 的 memoization 确保了并发调用不会产生竞态条件——多个调用者 await 同一个 Promise。</p>
+<p>文件提取过程经过安全加固——使用 <code>O_NOFOLLOW | O_EXCL</code> 标志防止符号链接攻击，配合 <code>0o600</code>/<code>0o700</code> 权限确保仅文件所有者可访问：</p>
+<pre><code class="language-typescript">const SAFE_WRITE_FLAGS = process.platform === 'win32'
+  ? 'wx'
+  : fsConstants.O_WRONLY | fsConstants.O_CREAT | fsConstants.O_EXCL | O_NOFOLLOW
+
+async function safeWriteFile(p: string, content: string): Promise&lt;void&gt; {
+  const fh = await open(p, SAFE_WRITE_FLAGS, 0o600)
+  try { await fh.writeFile(content, 'utf8') }
+  finally { await fh.close() }
+}</code></pre><div class="thinking-note"><h3>思考笔记</h3>
+<ul>
+<li>Skill 和 Agent 的本质区别不在于功能，而在于触发方式——Agent 是预先定义好的角色，Skill 是用户通过 /command 触发的能力。</li>
+<li>Prompt 模板 + Agent 封装的组合让 Skill 既足够灵活（提示词决定行为），又足够规范（Agent 提供安全边界和工具绑定）。</li>
+<li>Skill 的&quot;模板&quot;属性是其最大的优势：一个写得好好的 Skill prompt，换个项目换个语境也能复用——只需要调整模板参数即可。</li>
+<li>Command 统一抽象意味着：Skill、插件、内置命令，在用户视角都是用 /slash 触发的——感知一致性降低学习成本。</li>
+</ul>
+</div><hr>
+<h2>12.2 Skill 发现 —— 文件系统、插件、MCP 三种来源</h2>
+<h3>12.2.1 发现架构总览</h3>
+<p>Skill 的发现是一个多源聚合过程：</p>
+<div class="mermaid">%%{init: {"theme": "base", "themeVariables":{"primaryColor":"#3b82f6","primaryTextColor":"#1e293b","primaryBorderColor":"#60a5fa","lineColor":"#94a3b8","secondaryColor":"#f1f5f9","tertiaryColor":"#ffffff","fontFamily":"-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif"}}}%%
+flowchart TD
+    subgraph "文件系统来源"
+        FS1["~/.claude/skills/*.md
+(用户级)"]
+        FS2[".claude/skills/*.md
+(项目级)"]
+        FS3["&lt;managed&gt;/.claude/skills/*.md
+(策略级)"]
+    end
+
+    subgraph "代码注册来源"
+        B1["initBundledSkills()
+(内置 Skill)"]
+    end
+
+    subgraph "插件来源"
+        P1["插件 Manifest
+中声明的 Skill"]
+    end
+
+    subgraph "MCP 来源"
+        M1["MCP Server 提供的
+Prompt 类型资源"]
+    end
+
+    FS1 --&gt; MERGE["loadSkillsDir"]
+    FS2 --&gt; MERGE
+    FS3 --&gt; MERGE
+    B1 --&gt; REG["getBundledSkills()"]
+    P1 --&gt; PLUG["loadPluginAgents"]
+    M1 --&gt; MCP["mcpSkillBuilders"]
+
+    MERGE --&gt; CMD["getCommands()"]
+    REG --&gt; CMD
+    PLUG --&gt; CMD
+    MCP --&gt; APPSTATE["AppState.mcp.commands"]
+
+    CMD --&gt; FINAL["getAllCommands()"]
+    APPSTATE --&gt; FINAL
+    FINAL --&gt; SKILL["SkillTool 可用 Skill 列表"]</div><h3>12.2.2 文件系统 Skill 加载</h3>
+<p><code>loadSkillsDir.ts</code> 是文件系统 Skill 加载的核心模块。它从多个配置目录加载 Markdown 文件，每个文件的 frontmatter 定义了 Skill 的元数据：</p>
+<pre><code class="language-yaml">---
+name: deploy-check
+description: "检查部署前的准备工作"
+allowed-tools:
+  - Bash
+  - Read
+  - Glob
+when_to_use: "当用户说 'deploy'、'部署' 或 '上线' 时自动调用"
+context: fork
+model: inherit
+effort: high
+---
+
+你是一个部署检查专家。在部署之前...</code></pre><p><code>parseSkillFrontmatterFields</code> 函数解析所有 frontmatter 字段：</p>
+<pre><code class="language-typescript">// src/skills/loadSkillsDir.ts
+
+export function parseSkillFrontmatterFields(
+  frontmatter: FrontmatterData,
+  markdownContent: string,
+  resolvedName: string,
+): {
+  displayName: string | undefined
+  description: string
+  allowedTools: string[]
+  whenToUse: string | undefined
+  model: string | undefined
+  executionContext: 'fork' | undefined
+  agent: string | undefined
+  effort: EffortValue | undefined
+  hooks: HooksSettings | undefined
+  // ... 更多字段
+} {
+  const description = coerceDescriptionToString(frontmatter.description, resolvedName)
+    ?? extractDescriptionFromMarkdown(markdownContent, 'Skill')
+
+  const model = frontmatter.model === 'inherit'
+    ? undefined
+    : frontmatter.model ? parseUserSpecifiedModel(frontmatter.model) : undefined
+
+  return {
+    displayName: frontmatter.name != null ? String(frontmatter.name) : undefined,
+    description,
+    allowedTools: parseSlashCommandToolsFromFrontmatter(frontmatter['allowed-tools']),
+    executionContext: frontmatter.context === 'fork' ? 'fork' : undefined,
+    agent: frontmatter.agent as string | undefined,
+    // ...
+  }
+}</code></pre><p>然后 <code>createSkillCommand</code> 将解析结果包装为完整的 <code>Command</code> 对象：</p>
+<pre><code class="language-typescript">export function createSkillCommand({
+  skillName, description, markdownContent,
+  allowedTools, executionContext, agent, source, loadedFrom,
+  // ...
+}: { ... }): Command {
+  return {
+    type: 'prompt',
+    name: skillName,
+    description,
+    allowedTools,
+    context: executionContext,
+    agent,
+    source,
+    loadedFrom,
+    async getPromptForCommand(args, toolUseContext) {
+      let finalContent = baseDir
+        ? `Base directory for this skill: ${baseDir}\n\n${markdownContent}`
+        : markdownContent
+
+      // 参数替换：$ARGUMENTS, $ARG1, $ARG2 等
+      finalContent = substituteArguments(finalContent, args, argumentNames)
+
+      // Shell 命令执行：{{ shell_command }} 模板
+      if (shell) {
+        finalContent = await executeShellCommandsInPrompt(finalContent, shell)
+      }
+
+      return [{ type: 'text', text: finalContent }]
+    },
+  }
+}</code></pre><p>注意两个重要的运行时特性：</p>
+<ol>
+<li><strong>参数替换</strong>：Skill 提示词中的 <code>$ARGUMENTS</code>、<code>$ARG1</code> 等占位符会在调用时被替换为实际参数。</li>
+<li><strong>Shell 模板执行</strong>：<code>{{ ls -la }}</code> 这样的模板会在 Skill 加载时执行对应的 Shell 命令并将输出嵌入提示词。</li>
+</ol>
+<h3>12.2.3 MCP Skill 发现</h3>
+<p>MCP 服务器可以暴露 Prompt 类型的资源，这些资源被 Claude Code 桥接为 Skill。<code>mcpSkillBuilders.ts</code> 通过写一次注册（Write-Once Registration）模式解决了循环依赖问题：</p>
+<pre><code class="language-typescript">// src/skills/mcpSkillBuilders.ts
+
+export type MCPSkillBuilders = {
+  createSkillCommand: typeof createSkillCommand
+  parseSkillFrontmatterFields: typeof parseSkillFrontmatterFields
+}
+
+let builders: MCPSkillBuilders | null = null
+
+export function registerMCPSkillBuilders(b: MCPSkillBuilders): void {
+  builders = b  // loadSkillsDir.ts 模块初始化时注册
+}
+
+export function getMCPSkillBuilders(): MCPSkillBuilders {
+  if (!builders) {
+    throw new Error('MCP skill builders not registered — '
+      + 'loadSkillsDir.ts has not been evaluated yet')
+  }
+  return builders
+}</code></pre><p>为什么需要这个间接层？源码注释中有详细解释：</p>
+<blockquote>
+<p>The non-literal dynamic-import approach (&quot;await import(variable)&quot;) fails at runtime in Bun-bundled binaries — the specifier is resolved against the chunk&#39;s /$bunfs/root/... path, not the original source tree. A literal dynamic import works in bunfs but dependency-cruiser tracks it, and because loadSkillsDir transitively reaches almost everything, the single new edge fans out into many new cycle violations.</p>
+</blockquote>
+<p>简单说：MCP 客户端模块需要调用 <code>createSkillCommand</code>，但 <code>loadSkillsDir</code> 又间接依赖 MCP 客户端，形成循环。<code>mcpSkillBuilders</code> 作为一个&quot;依赖图叶子&quot;打破了这个环。</p>
+<h3>12.2.4 Skill 发现的预算管理</h3>
+<p>Skill 列表被注入到系统提示词中供模型发现，但过多的 Skill 描述会消耗宝贵的上下文窗口。<code>prompt.ts</code> 实现了精细的预算管理：</p>
+<pre><code class="language-typescript">// src/tools/SkillTool/prompt.ts
+
+export const SKILL_BUDGET_CONTEXT_PERCENT = 0.01  // 上下文窗口的 1%
+export const CHARS_PER_TOKEN = 4
+export const DEFAULT_CHAR_BUDGET = 8_000  // 默认 200k × 4 × 1%
+export const MAX_LISTING_DESC_CHARS = 250  // 单条描述硬上限
+
+export function formatCommandsWithinBudget(
+  commands: Command[], contextWindowTokens?: number,
+): string {
+  const budget = getCharBudget(contextWindowTokens)
+
+  // 1. 尝试完整描述
+  const fullEntries = commands.map(cmd =&gt; ({
+    cmd, full: formatCommandDescription(cmd),
+  }))
+  const fullTotal = fullEntries.reduce((sum, e) =&gt; sum + stringWidth(e.full), 0)
+  if (fullTotal &lt;= budget) return fullEntries.map(e =&gt; e.full).join('\n')
+
+  // 2. 分区：内置 Skill 永远完整，其他 Skill 可截断
+  const bundledIndices = new Set&lt;number&gt;()
+  // ...
+
+  // 3. 计算非内置 Skill 的最大描述长度
+  const availableForDescs = remainingBudget - restNameOverhead
+  const maxDescLen = Math.floor(availableForDescs / restCommands.length)
+
+  // 4. 极端情况：非内置 Skill 只显示名称
+  if (maxDescLen &lt; MIN_DESC_LENGTH) {
+    return commands.map((cmd, i) =&gt;
+      bundledIndices.has(i) ? fullEntries[i]!.full : `- ${cmd.name}`
+    ).join('\n')
+  }
+
+  // 5. 正常截断非内置 Skill 的描述
+  return commands.map((cmd, i) =&gt; {
+    if (bundledIndices.has(i)) return fullEntries[i]!.full
+    return `- ${cmd.name}: ${truncate(description, maxDescLen)}`
+  }).join('\n')
+}</code></pre><p>这个预算分配算法的优先级是：</p>
+<ol>
+<li>内置 Skill 的描述永远完整保留</li>
+<li>其他 Skill 先尝试完整描述</li>
+<li>超预算时等比例截断非内置 Skill 的描述</li>
+<li>极端情况下非内置 Skill 只保留名称</li>
+</ol>
+<div class="thinking-note"><h3>思考笔记</h3>
+<ul>
+<li>Skill 发现机制支持三种来源（文件系统、插件、MCP）——这是&quot;可插拔&quot;架构在能力系统中的应用：不用手动注册，放到约定目录就能自动发现。</li>
+<li>文件系统是最主要的 Skill 来源：用户把 .md 文件放到约定目录下，系统自动识别为 Skill。这比 GUI 管理或数据库存储更符合开发者的工作流。</li>
+<li>MCP Skill 是 MCP 协议扩展能力的一个有趣应用——远程 Skill 通过 MCP 协议加载，让能力发现超越了本地文件系统。</li>
+<li>三种来源的优先级决定了覆盖顺序：本地覆盖远程，项目覆盖全局——和 Agent 的优先级策略一脉相承。</li>
+</ul>
+</div><hr>
+<h2>12.3 Skill 执行 —— executeForkedSkill 的 Fork 子 Agent 模式</h2>
+<h3>12.3.1 SkillTool 的整体结构</h3>
+<p><code>SkillTool.ts</code> 是 Skill 系统的执行入口，它实现了完整的 Tool 接口：</p>
+<pre><code class="language-typescript">// src/tools/SkillTool/SkillTool.ts
+
+export const SkillTool: Tool&lt;InputSchema, Output, Progress&gt; = buildTool({
+  name: SKILL_TOOL_NAME,
+  searchHint: 'invoke a slash-command skill',
+  maxResultSizeChars: 100_000,
+
+  inputSchema: z.object({
+    skill: z.string().describe('The skill name'),
+    args: z.string().optional().describe('Optional arguments'),
+  }),
+
+  outputSchema: z.union([
+    // Inline 模式输出
+    z.object({ success: z.boolean(), commandName: z.string(),
+               status: z.literal('inline') }),
+    // Fork 模式输出
+    z.object({ success: z.boolean(), commandName: z.string(),
+               status: z.literal('forked'), agentId: z.string(),
+               result: z.string() }),
+  ]),
+
+  // ... call, validate 等方法
+})</code></pre><h3>12.3.2 命令解析与查找</h3>
+<p>SkillTool 的第一步是将用户指定的 skill 名称解析为 Command 对象。它通过 <code>getAllCommands</code> 整合本地和 MCP 来源：</p>
+<pre><code class="language-typescript">async function getAllCommands(context: ToolUseContext): Promise&lt;Command[]&gt; {
+  // MCP Skill（不是普通 MCP Prompt）
+  const mcpSkills = context.getAppState().mcp.commands.filter(
+    cmd =&gt; cmd.type === 'prompt' &amp;&amp; cmd.loadedFrom === 'mcp',
+  )
+  if (mcpSkills.length === 0) return getCommands(getProjectRoot())
+  const localCommands = await getCommands(getProjectRoot())
+  return uniqBy([...localCommands, ...mcpSkills], 'name')
+}</code></pre><h3>12.3.3 Fork 执行详解</h3>
+<p>当 Skill 的 <code>context</code> 为 <code>&#39;fork&#39;</code> 时，<code>executeForkedSkill</code> 被调用。这个函数是 Skill 系统与 Agent 系统的交汇点：</p>
+<pre><code class="language-typescript">async function executeForkedSkill(
+  command: Command &amp; { type: 'prompt' },
+  commandName: string,
+  args: string | undefined,
+  context: ToolUseContext,
+  canUseTool: CanUseToolFn,
+  parentMessage: AssistantMessage,
+  onProgress?: ToolCallProgress&lt;Progress&gt;,
+): Promise&lt;ToolResult&lt;Output&gt;&gt; {
+  const startTime = Date.now()
+  const agentId = createAgentId()
+
+  // 1. 准备 Fork 上下文——创建隔离的 AppState 和提示词消息
+  const { modifiedGetAppState, baseAgent, promptMessages, skillContent } =
+    await prepareForkedCommandContext(command, args || '', context)
+
+  // 2. 合并 Skill 的 effort 到 Agent 定义
+  const agentDefinition = command.effort !== undefined
+    ? { ...baseAgent, effort: command.effort }
+    : baseAgent
+
+  const agentMessages: Message[] = []
+
+  // 3. 运行子 Agent
+  for await (const message of runAgent({
+    agentDefinition,
+    promptMessages,
+    toolUseContext: { ...context, getAppState: modifiedGetAppState },
+    canUseTool,
+    isAsync: false,            // Skill 的 Fork 默认同步
+    querySource: 'agent:custom',
+    model: command.model as ModelAlias | undefined,
+    availableTools: context.options.tools,
+    override: { agentId },
+  })) {
+    agentMessages.push(message)
+
+    // 4. 报告进度（工具调用）
+    if ((message.type === 'assistant' || message.type === 'user') &amp;&amp; onProgress) {
+      const normalizedNew = normalizeMessages([message])
+      for (const m of normalizedNew) {
+        if (m.message.content.some(c =&gt;
+          c.type === 'tool_use' || c.type === 'tool_result')) {
+          onProgress({
+            toolUseID: `skill_${parentMessage.message.id}`,
+            data: { message: m, type: 'skill_progress', prompt: skillContent, agentId },
+          })
+        }
+      }
+    }
+  }
+
+  // 5. 提取最终结果
+  const resultText = extractResultText(agentMessages, 'Skill execution completed')
+  agentMessages.length = 0  // 释放消息内存
+
+  return {
+    data: { success: true, commandName, status: 'forked', agentId, result: resultText },
+  }
+}</code></pre><div class="mermaid">%%{init: {"theme": "base", "themeVariables":{"primaryColor":"#3b82f6","primaryTextColor":"#1e293b","primaryBorderColor":"#60a5fa","lineColor":"#94a3b8","secondaryColor":"#f1f5f9","tertiaryColor":"#ffffff","fontFamily":"-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif"}}}%%
+sequenceDiagram
+    participant User as 用户
+    participant Main as 主 Agent
+    participant SkillTool as SkillTool
+    participant Prep as prepareForkedCommandContext
+    participant SubAgent as Fork 子 Agent
+
+    User-&gt;&gt;Main: "帮我检查部署准备"
+    Main-&gt;&gt;SkillTool: Skill(skill="deploy-check")
+    SkillTool-&gt;&gt;SkillTool: getAllCommands → 查找 deploy-check
+    SkillTool-&gt;&gt;SkillTool: context === 'fork'?
+    SkillTool-&gt;&gt;Prep: prepareForkedCommandContext
+    Prep-&gt;&gt;Prep: 加载 Skill 提示词
+    Prep-&gt;&gt;Prep: 创建 modifiedGetAppState
+    Prep-&gt;&gt;Prep: 构建 promptMessages
+    Prep--&gt;&gt;SkillTool: { baseAgent, promptMessages, ... }
+
+    SkillTool-&gt;&gt;SubAgent: runAgent(agentDefinition, promptMessages)
+
+    loop 子 Agent 执行
+        SubAgent-&gt;&gt;SubAgent: query() → tool_use → tool_result
+        SubAgent--&gt;&gt;SkillTool: message（进度报告）
+    end
+
+    SubAgent--&gt;&gt;SkillTool: 最终 assistant 消息
+    SkillTool-&gt;&gt;SkillTool: extractResultText
+    SkillTool--&gt;&gt;Main: { success: true, status: 'forked', result: "..." }
+    Main--&gt;&gt;User: 转述 Skill 执行结果</div><p><code>prepareForkedCommandContext</code> 是连接 Skill 系统和 Agent 系统的桥梁函数，定义在 <code>forkedAgent.ts</code> 中。它做三件核心工作：</p>
+<ol>
+<li><strong>构建 Agent 定义</strong>：基于 Skill 的 <code>agent</code> 字段选择 Agent 类型（默认 general-purpose），并合并 Skill 的 <code>allowedTools</code>。</li>
+<li><strong>创建隔离的 AppState</strong>：修改 <code>getAppState</code> 以注入 Skill 特定的权限规则。</li>
+<li><strong>构建提示词消息</strong>：将 Skill 的 <code>getPromptForCommand</code> 输出包装为用户消息。</li>
+</ol>
+<div class="thinking-note"><h3>思考笔记</h3>
+<p>executeForkedSkill 通过 Fork 子 Agent 模式执行 Skill——每个 Skill 在隔离上下文中运行。</p>
+<ul>
+<li>Fork 模式隔离了执行环境——工具调用不影响主对话的消息列表。</li>
+<li>Inline 模式在同一个上下文中执行——适合简单、快速的 Skill，不需要 Fork 开销。</li>
+<li>Fork/Inline 的选择根据 Skill 复杂度自动决定——系统判断而非用户选择。</li>
+<li>Skill 的核心哲学：可组合的能力单元，不是可执行的任务脚本。</li>
+</ul>
+</div><hr>
+<h2>12.4 内置 Skill —— 核心能力分析</h2>
+<h3>12.4.1 注册入口</h3>
+<p>所有内置 Skill 在 <code>initBundledSkills()</code> 中注册：</p>
+<pre><code class="language-typescript">// src/skills/bundled/index.ts
+
+export function initBundledSkills(): void {
+  registerUpdateConfigSkill()    // /update-config
+  registerKeybindingsSkill()     // /keybindings
+  registerVerifySkill()          // /verify（仅内部用户）
+  registerDebugSkill()           // /debug
+  registerLoremIpsumSkill()      // /lorem（测试用）
+  registerSkillifySkill()        // /skillify
+  registerRememberSkill()        // /remember（仅内部用户）
+  registerSimplifySkill()        // /simplify
+  registerBatchSkill()           // /batch
+  registerStuckSkill()           // /stuck
+
+  // Feature flag 控制的 Skill
+  if (feature('AGENT_TRIGGERS')) {
+    const { registerLoopSkill } = require('./loop.js')
+    registerLoopSkill()           // /loop
+  }
+  if (feature('AGENT_TRIGGERS_REMOTE')) {
+    const { registerScheduleRemoteAgentsSkill } = require('./scheduleRemoteAgents.js')
+    registerScheduleRemoteAgentsSkill()  // /schedule
+  }
+  if (feature('BUILDING_CLAUDE_APPS')) {
+    const { registerClaudeApiSkill } = require('./claudeApi.js')
+    registerClaudeApiSkill()      // /claude-api
+  }
+  // ...
+}</code></pre><p>这里大量使用了 <code>require()</code> 而非 <code>import</code>，原因是这些模块可能很大（如 <code>claudeApi.js</code> 包含 247KB 的文档字符串），惰性加载避免了不必要的启动成本。</p>
+<h3>12.4.2 /batch —— 并行工作编排</h3>
+<p><code>/batch</code> 是 Skill 系统中最复杂的内置 Skill。它实现了一个完整的三阶段工作流：</p>
+<pre><code>Phase 1: Research and Plan（Plan 模式）
+  ├── 深度研究代码库
+  ├── 分解为 5-30 个独立工作单元
+  ├── 确定端到端测试方案
+  └── 提交计划供用户审批
+
+Phase 2: Spawn Workers（计划批准后）
+  ├── 每个工作单元一个后台 Agent
+  ├── 所有 Agent 使用 isolation: "worktree"
+  └── 在单条消息中并发启动
+
+Phase 3: Track Progress
+  └── 维护状态表直到所有 Worker 完成</code></pre><p>其提示词中明确指定了 Worker 的行为约束：</p>
+<pre><code class="language-typescript">const WORKER_INSTRUCTIONS = `After you finish implementing the change:
+1. **Simplify** — Invoke the Skill tool with skill: "simplify"
+2. **Run unit tests** — Run the project's test suite
+3. **Test end-to-end** — Follow the e2e test recipe
+4. **Commit and push** — Commit, push, create PR with gh pr create
+5. **Report** — End with: PR: &lt;url&gt;`</code></pre><p>这展示了 Skill 和 Agent 的嵌套组合能力——<code>/batch</code> Skill 编排了 Plan 模式、多个并行 Agent（每个在独立 worktree 中）以及对 <code>/simplify</code> Skill 的递归调用。</p>
+<h3>12.4.3 /remember —— 记忆管理</h3>
+<p><code>/remember</code> Skill 是 Agent 记忆系统的用户界面。它审查所有记忆层（auto-memory、CLAUDE.md、CLAUDE.local.md），并提出整理建议：</p>
+<pre><code class="language-typescript">registerBundledSkill({
+  name: 'remember',
+  description: 'Review auto-memory entries and propose promotions...',
+  whenToUse: 'Use when the user wants to review, organize, '
+    + 'or promote their auto-memory entries...',
+  isEnabled: () =&gt; isAutoMemoryEnabled(),  // 仅在自动记忆启用时可用
+  async getPromptForCommand(args) {
+    let prompt = SKILL_PROMPT  // 详细的审查流程指令
+    if (args) prompt += `\n## Additional context from user\n\n${args}`
+    return [{ type: 'text', text: prompt }]
+  },
+})</code></pre><p><code>isEnabled</code> 回调使得 Skill 的可见性与系统配置动态关联——当自动记忆未启用时，<code>/remember</code> 不会出现在 Skill 列表中。</p>
+<h3>12.4.4 /loop —— 循环执行调度</h3>
+<p><code>/loop</code> 展示了 Skill 如何与底层的 Cron 系统集成：</p>
+<pre><code class="language-typescript">function buildPrompt(args: string): string {
+  return `# /loop — schedule a recurring prompt
+
+Parse the input below into [interval] &lt;prompt...&gt; and schedule it
+with ${CRON_CREATE_TOOL_NAME}.
+
+## Parsing (in priority order)
+1. **Leading token**: if first token matches ^\\d+[smhd]$ → interval
+2. **Trailing "every" clause**: if ends with "every &lt;N&gt;&lt;unit&gt;" → extract interval
+3. **Default**: interval is 10m, entire input is prompt
+
+## Interval → cron
+| Pattern | Cron | Notes |
+|---------|------|-------|
+| Nm (N≤59) | */N * * * * | every N minutes |
+| Nm (N≥60) | 0 */H * * * | round to hours |
+| Nh | 0 */N * * * | every N hours |
+| Nd | 0 0 */N * * | every N days |
+
+## Action
+1. Call ${CRON_CREATE_TOOL_NAME}
+2. Confirm schedule details
+3. Execute the prompt immediately
+
+## Input
+${args}`
+}</code></pre><p>这个 Skill 不直接操作 Cron 系统——它生成一个结构化的指令提示词，让模型自行调用 <code>ScheduleCronTool</code>。这种&quot;Prompt as Controller&quot;的模式是 Skill 系统的核心设计理念。</p>
+<h3>12.4.5 /claude-api —— 智能文档注入</h3>
+<p><code>/claude-api</code> 是一个资源密集型 Skill，它根据项目语言环境动态加载相关的 API 文档：</p>
+<pre><code class="language-typescript">async function detectLanguage(): Promise&lt;DetectedLanguage | null&gt; {
+  const cwd = getCwd()
+  const entries = await readdir(cwd)
+  for (const [lang, indicators] of Object.entries(LANGUAGE_INDICATORS)) {
+    for (const indicator of indicators) {
+      if (indicator.startsWith('.')) {
+        if (entries.some(e =&gt; e.endsWith(indicator))) return lang
+      } else {
+        if (entries.includes(indicator)) return lang
+      }
+    }
+  }
+  return null
+}</code></pre><p>检测到 Python 项目时加载 Python SDK 文档，检测到 TypeScript 时加载 TS SDK 文档。由于文档总计 247KB，使用惰性加载避免启动时的内存开销：</p>
+<pre><code class="language-typescript">type SkillContent = typeof import('./claudeApiContent.js')
+// 只在 /claude-api 被调用时才 require</code></pre><h3>12.4.6 /verify —— 结构化验证</h3>
+<p><code>/verify</code> Skill 通过 <code>files</code> 字段携带参考文件，让模型在运行时按需读取验证策略文档：</p>
+<pre><code class="language-typescript">registerBundledSkill({
+  name: 'verify',
+  description: DESCRIPTION,
+  files: SKILL_FILES,  // 验证策略、检查清单等参考文件
+  async getPromptForCommand(args) {
+    const parts: string[] = [SKILL_BODY.trimStart()]
+    if (args) parts.push(`## User Request\n\n${args}`)
+    return [{ type: 'text', text: parts.join('\n\n') }]
+  },
+})</code></pre><div class="thinking-note"><h3>思考笔记</h3>
+<p>内置 Skill 是 Claude Code 内置的&quot;瑞士军刀&quot;——覆盖了最常见的使用场景。</p>
+<ul>
+<li>内置 Skill 包括代码审查、架构分析、测试生成、文档撰写等——每个都有精心设计的 Prompt 模板。</li>
+<li>内置 Skill 的 Prompt 经过了大量迭代优化——不是一次写好的，而是在真实使用中逐步打磨的。</li>
+<li>内置 Skill 和自定义 Skill 使用同一执行机制——用户定义的 Skill 拥有和内置 Skill 一样的运行时支持。</li>
+<li>Skill 的执行可以带参数（通过 /skill_name arg1 arg2 语法）——不是简单的&quot;执行 Skill&quot;，而是&quot;执行 Skill 并传入上下文&quot;。</li>
+</ul>
+</div><hr>
+<h2>12.5 Skill 与插件的关系</h2>
+<h3>12.5.1 插件 Skill 的集成路径</h3>
+<p>插件（Plugin）可以通过其 Manifest 声明 Skill。这些 Skill 经过 <code>loadPluginAgents</code> 加载后，以 <code>source: &#39;plugin&#39;</code> 的身份加入 Skill 列表。插件 Skill 与文件系统 Skill 有相同的功能（frontmatter 配置、Fork 执行等），但多了安全约束：</p>
+<ol>
+<li><strong><code>CUSTOM_AGENT_DISALLOWED_TOOLS</code></strong>：非内置 Agent（包括插件 Agent）被禁止使用某些敏感工具</li>
+<li><strong>pluginOnlyPolicy</strong>：组织管理员可以要求所有 Skill 必须来自已批准的插件</li>
+</ol>
+<h3>12.5.2 MCP 与 Skill 的交叉</h3>
+<p>MCP 服务器可以暴露 Prompt 资源，Claude Code 将其桥接为 Skill。但不是所有 MCP Prompt 都是 Skill——只有带有 Skill frontmatter 的 Prompt 才会被识别为 Skill：</p>
+<pre><code class="language-typescript">// SkillTool.ts 中的过滤逻辑
+const mcpSkills = context.getAppState().mcp.commands.filter(
+  cmd =&gt; cmd.type === 'prompt' &amp;&amp; cmd.loadedFrom === 'mcp',
+)</code></pre><div class="mermaid">%%{init: {"theme": "base", "themeVariables":{"primaryColor":"#3b82f6","primaryTextColor":"#1e293b","primaryBorderColor":"#60a5fa","lineColor":"#94a3b8","secondaryColor":"#f1f5f9","tertiaryColor":"#ffffff","fontFamily":"-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif"}}}%%
+graph TD
+    subgraph "MCP Prompt"
+        MP1["普通 MCP Prompt
+（不可通过 SkillTool 调用）"]
+        MP2["MCP Skill
+（loadedFrom === 'mcp'）"]
+    end
+
+    subgraph "Skill 系统"
+        S1["文件系统 Skill"]
+        S2["内置 Skill"]
+        S3["插件 Skill"]
+    end
+
+    MP2 --&gt; |"桥接为 Command"| SKILL["SkillTool 可调用"]
+    S1 --&gt; SKILL
+    S2 --&gt; SKILL
+    S3 --&gt; SKILL
+    MP1 --&gt; |"不桥接"| EXCLUDED["不可通过 SkillTool 访问"]</div><h3>12.5.3 Skill 的安全模型</h3>
+<p>Skill 的安全性通过多层机制保障：</p>
+<ol>
+<li><strong>权限模式继承</strong>：Fork 模式的 Skill 运行在子 Agent 中，受父代权限模式约束</li>
+<li><strong>工具白名单</strong>：<code>allowedTools</code> 限制 Skill 可以使用的工具</li>
+<li><strong>路径限制</strong>：<code>paths</code> 字段限制 Skill 仅在特定目录下生效</li>
+<li><strong>钩子审计</strong>：Skill 级 <code>hooks</code> 可以在工具调用前后执行审计逻辑</li>
+<li><strong>分类器审查</strong>：异步执行的 Skill 结果经过 Handoff 分类器审查</li>
+</ol>
+<div class="thinking-note"><h3>思考笔记</h3>
+<p>Skill 和插件（Plugin）在概念上有重叠，但机制不同——Skill 是 Prompt 模板，插件是可执行代码包。</p>
+<ul>
+<li>Skill 是&quot;提示词 + Agent 封装&quot;——本质上是给模型的一套指令，不需要编译或打包。</li>
+<li>插件是&quot;可执行代码&quot;——需要编译、安装、加载，可以包含复杂的逻辑和外部依赖。</li>
+<li>Skill 比插件更轻量——创建 Skill 只需要写一个 .md 文件，创建插件需要写代码并发布。</li>
+<li>MCP 协议桥接两者——MCP 插件可以暴露 Skill，Skill 也可以调用 MCP 工具。</li>
+</ul>
+</div><hr>
+<h2>12.6 本章小结</h2>
+<p>Skill 系统是 Claude Code 架构中&quot;最高层次的抽象&quot;——它站在 Agent、工具、MCP 之上，将复杂的多步骤工作流封装为用户可以一键触发的能力单元。</p>
+<ol>
+<li><p><strong>统一的 Command 抽象</strong>：Skill 不是独立类型，而是 <code>Command</code> 类型的一个变体。这使得 Skill 可以无缝集成到命令系统中，复用已有的发现和路由机制。</p>
+</li>
+<li><p><strong>三源聚合的发现机制</strong>：文件系统、代码注册（bundled）和 MCP 三种来源通过统一的 <code>Command</code> 接口聚合，为用户提供一致的体验。</p>
+</li>
+<li><p><strong>Inline/Fork 双模执行</strong>：简单 Skill 以 Inline 模式直接注入上下文，复杂 Skill 以 Fork 模式启动独立子 Agent——两种模式通过 <code>context</code> 字段声明式选择。</p>
+</li>
+<li><p><strong>预算感知的发现列表</strong>：Skill 列表的展示严格控制在上下文窗口的 1% 以内，内置 Skill 优先保留完整描述。</p>
+</li>
+<li><p><strong>&quot;Prompt as Controller&quot;模式</strong>：Skill 不直接操作系统——它生成结构化的提示词，引导模型使用已有工具完成工作。这种间接层使得 Skill 具有极高的灵活性和可组合性。</p>
+</li>
+<li><p><strong>安全纵深</strong>：从 <code>allowedTools</code> 白名单到路径限制，从权限模式继承到 Handoff 分类器审查，Skill 的安全性建立在多重防线之上。</p>
+</li>
+</ol>
+<p>至此，本书的第四部分——Agent 系统——全部完成。我们从 Agent 的静态定义出发，经过子代编排的动态运行时，最终到达 Skill 这个最高层次的抽象。这三层共同构成了 Claude Code 的&quot;智能执行层&quot;——它不仅仅是一个工具调用框架，更是一个能够自主规划、并发执行、持久记忆的 Agent 操作系统。</p>
+<div class="thinking-note"><h3>思考笔记</h3>
+<p>Skill 系统是 Claude Code&quot;能力扩展&quot;的用户界面——不是改代码加功能，而是写 Prompt 加能力。</p>
+<ul>
+<li>发现机制（文件系统自动扫描）让添加 Skill 零配置——放到约定目录就能用。</li>
+<li>Fork/Inline 双执行模式兼顾隔离和效率——复杂 Skill 有隔离保护，简单 Skill 有极低延迟。</li>
+<li>Skill 和 Agent 的异同：两者都是&quot;带提示词的能力单元&quot;，Agent 更偏角色定义，Skill 更偏任务定义。</li>
+<li>MCP 插件的未来：如果 MCP 生态成熟，Skill 可以从本地 Prompt 扩展到远程能力。</li>
+</ul>
+</div><hr>
+
+      </article>
+    </main>
+  </div>
+  
+  <!-- Syntax highlighting -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script>hljs.highlightAll();</script>
+
+  <script>
+    // Collapsible sidebar sections
+    document.querySelectorAll('.sidebar-section-header').forEach(header => {
+      header.addEventListener('click', () => {
+        const items = header.nextElementSibling;
+        const isCollapsed = items.classList.contains('collapsed');
+        // If collapsed, uncollapse; if visible, collapse
+        items.classList.toggle('collapsed');
+        header.classList.toggle('open');
+      });
+    });
+
+    // Auto-open current page's section + highlight active link
+    const currentPath = window.location.pathname;
+    const currentFilename = currentPath.split('/').pop();
+    let foundMatch = false;
+    document.querySelectorAll('.sidebar-section-items a').forEach(link => {
+      const href = link.getAttribute('href');
+      const linkFilename = href.split('/').pop();
+      if (linkFilename === currentFilename) {
+        link.classList.add('active');
+        const section = link.closest('.sidebar-section-items');
+        const header = section ? section.previousElementSibling : null;
+        if (section) section.classList.remove('collapsed');
+        if (header) header.classList.add('open');
+        foundMatch = true;
+      }
+    });
+    
+    // Full-text search
+    (function() {
+      const searchInput = document.getElementById('searchInput');
+      const searchResults = document.getElementById('searchResults');
+      if (!searchInput || !searchResults) return;
+
+      let searchIndex = [];
+      let indexLoaded = false;
+
+      // Compute root path for loading search-index.json
+      const currentScript = document.currentScript;
+      const rootPath = '../';
+
+      function loadIndex() {
+        if (indexLoaded) return;
+        indexLoaded = true;
+        fetch(rootPath + 'search-index.json')
+          .then(r => r.json())
+          .then(data => { searchIndex = data; })
+          .catch(() => { searchIndex = []; });
+      }
+
+      function highlight(text, query) {
+        const re = new RegExp('(' + query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi');
+        return text.replace(re, '<mark style="background:#fde047;padding:0 2px;border-radius:2px;">$1</mark>');
+      }
+
+      function search(query) {
+        if (!query || !searchIndex.length) return [];
+        const terms = query.toLowerCase().split(/\s+/).filter(t => t.length > 0);
+        if (!terms.length) return [];
+
+        const results = searchIndex.map(doc => {
+          const titleLower = doc.title.toLowerCase();
+          const textLower = doc.text.toLowerCase();
+          let score = 0;
+
+          for (const term of terms) {
+            if (titleLower.includes(term)) score += 10;
+            if (textLower.includes(term)) score += 1;
+          }
+
+          if (score === 0) return null;
+
+          // Find best snippet
+          let snippet = doc.text.slice(0, 120);
+          for (const term of terms) {
+            const idx = doc.text.toLowerCase().indexOf(term);
+            if (idx !== -1) {
+              const start = Math.max(0, idx - 40);
+              snippet = doc.text.slice(start, start + 120);
+              break;
+            }
+          }
+
+          return { ...doc, score, snippet };
+        }).filter(Boolean);
+
+        return results.sort((a, b) => b.score - a.score).slice(0, 10);
+      }
+
+      function render(results, query) {
+        if (!query) {
+          searchResults.classList.remove('active');
+          searchResults.innerHTML = '';
+          return;
+        }
+        if (!results.length) {
+          searchResults.innerHTML = '<div class="search-no-results">未找到相关文档</div>';
+          searchResults.classList.add('active');
+          return;
+        }
+
+        let html = '';
+        for (const r of results) {
+          const title = highlight(r.title, query);
+          const preview = highlight(r.snippet.replace(/\s+/g, ' '), query);
+          html += `<a href="${rootPath + r.path}" class="search-result-item">
+            <div class="sr-title">${title}</div>
+            <div class="sr-preview">${preview}...</div>
+          </a>`;
+        }
+        searchResults.innerHTML = html;
+        searchResults.classList.add('active');
+      }
+
+      let debounce;
+      searchInput.addEventListener('input', (e) => {
+        loadIndex();
+        clearTimeout(debounce);
+        const query = e.target.value.trim();
+        if (!query) {
+          render([], '');
+          return;
+        }
+        searchResults.innerHTML = '<div class="search-loading">搜索中...</div>';
+        searchResults.classList.add('active');
+        debounce = setTimeout(() => {
+          render(search(query), query);
+        }, 150);
+      });
+
+      // Close results on click outside
+      document.addEventListener('click', (e) => {
+        if (!e.target.closest('.sidebar-search')) {
+          searchResults.classList.remove('active');
+        }
+      });
+
+      // Keyboard navigation
+      searchInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          searchResults.classList.remove('active');
+          searchInput.blur();
+        }
+      });
+    })();
+    
+    // Back to top
+    (function() {
+      const btn = document.getElementById('backToTop');
+      if (!btn) return;
+      const toggle = () => {
+        btn.classList.toggle('visible', window.scrollY > 400);
+      };
+      window.addEventListener('scroll', toggle, { passive: true });
+      btn.addEventListener('click', () => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+    })();
+
+    // Mobile menu toggle
+    (function() {
+      const menuToggle = document.getElementById('menuToggle');
+      const sidebar = document.querySelector('.sidebar');
+      const overlay = document.getElementById('sidebarOverlay');
+      if (!menuToggle || !sidebar || !overlay) return;
+
+      menuToggle.addEventListener('click', () => {
+        sidebar.classList.toggle('open');
+        overlay.classList.toggle('active');
+      });
+
+      overlay.addEventListener('click', () => {
+        sidebar.classList.remove('open');
+        overlay.classList.remove('active');
+      });
+
+      // Close sidebar when a nav link is clicked (mobile)
+      sidebar.querySelectorAll('a').forEach(link => {
+        link.addEventListener('click', () => {
+          if (window.innerWidth <= 1024) {
+            sidebar.classList.remove('open');
+            overlay.classList.remove('active');
+          }
+        });
+      });
+    })();
+
+    // Copy code buttons
+    (function() {
+      document.querySelectorAll('.markdown-section pre').forEach(pre => {
+        const btn = document.createElement('button');
+        btn.className = 'copy-code-btn';
+        btn.textContent = '复制';
+        btn.addEventListener('click', () => {
+          const code = pre.querySelector('code')?.textContent || pre.textContent;
+          navigator.clipboard.writeText(code).then(() => {
+            btn.textContent = '已复制';
+            btn.classList.add('copied');
+            setTimeout(() => {
+              btn.textContent = '复制';
+              btn.classList.remove('copied');
+            }, 1500);
+          }).catch(() => {
+            btn.textContent = '失败';
+            setTimeout(() => { btn.textContent = '复制'; }, 1500);
+          });
+        });
+        pre.style.position = 'relative';
+        pre.appendChild(btn);
+      });
+    })();
+
+    // 引导思考 collapsible card
+    (function() {
+      document.querySelectorAll('.guide-card-header').forEach(function(header) {
+        header.addEventListener('click', function() {
+          var table = header.closest('.guide-card');
+          table.classList.toggle('collapsed');
+        });
+      });
+    })();
+
+    // Mermaid: Load dynamically + zoomable containers
+    (function() {
+      var mermaidDivs = document.querySelectorAll('.mermaid');
+      if (mermaidDivs.length === 0) return;
+
+      var cdns = [
+        '../mermaid.min.js',
+        'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js',
+        'https://unpkg.com/mermaid@10/dist/mermaid.min.js'
+      ];
+      var cdnIndex = 0;
+
+      function showError(msg) {
+        mermaidDivs.forEach(function(div) {
+          div.innerHTML = '<div class="mermaid-error" style="padding:16px;color:#dc2626;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;margin:20px 0;">' + msg + '</div>';
+          div.classList.add('rendered');
+        });
+      }
+
+      function wrapZoomable(div) {
+        if (div.parentNode.classList.contains('mermaid-zoom-container')) return;
+        if (!div.querySelector('svg')) return;
+        div.classList.add('rendered');
+
+        var wrapper = document.createElement('div');
+        wrapper.className = 'mermaid-zoom-container';
+        div.parentNode.insertBefore(wrapper, div);
+        wrapper.appendChild(div);
+
+        // Click overlay hint
+        var overlay = document.createElement('div');
+        overlay.className = 'mermaid-expand-overlay';
+        overlay.innerHTML = '<span><span class="expand-icon">⛶</span> 点击查看全图</span>';
+        wrapper.appendChild(overlay);
+
+        // Click (or double-click) to open modal
+        wrapper.addEventListener('click', function() { openMermaidModal(div); });
+      }
+
+      // ---- Mermaid Modal (full-screen viewer) ----
+      var modalInstance = null;
+
+      function openMermaidModal(sourceDiv) {
+        closeMermaidModal();
+        var clone = sourceDiv.cloneNode(true);
+        var svg = clone.querySelector('svg');
+        if (!svg) return;
+
+        // Let SVG fill width, height follows viewBox aspect ratio
+        svg.removeAttribute('width');
+        svg.removeAttribute('height');
+        svg.style.width = '100%';
+        svg.style.height = 'auto';
+        svg.style.maxWidth = 'none';
+
+        // Build modal: simple header + scrollable body
+        var modal = document.createElement('div');
+        modal.className = 'mermaid-modal active';
+
+        var content = document.createElement('div');
+        content.className = 'mermaid-modal-content';
+
+        var header = document.createElement('div');
+        header.className = 'mermaid-modal-header';
+        var chapterHint = '';
+        var prev = sourceDiv.closest('.markdown-section');
+        if (prev) {
+          var heading = prev.querySelector('h2, h3');
+          if (heading) chapterHint = heading.textContent.replace(/[#\d.]/g,'').trim().slice(0, 30);
+        }
+        header.innerHTML =
+          '<div class="modal-title-wrap">' +
+            '<span class="modal-icon">⬡</span>' +
+            '<span class="modal-title">' + (chapterHint || '图表') + '</span>' +
+          '</div>' +
+          '<button class="modal-close" title="关闭 (ESC)">✕</button>';
+
+        var body = document.createElement('div');
+        body.className = 'mermaid-modal-body';
+        body.appendChild(clone);
+
+        content.appendChild(header);
+        content.appendChild(body);
+        modal.appendChild(content);
+        document.body.appendChild(modal);
+
+        // Close handlers
+        header.querySelector('.modal-close').addEventListener('click', closeMermaidModal);
+        modal.addEventListener('click', function(e) {
+          if (e.target === modal) closeMermaidModal();
+        });
+
+        modalInstance = modal;
+      }
+
+      function closeMermaidModal() {
+        if (modalInstance) {
+          modalInstance.remove();
+          modalInstance = null;
+        }
+      }
+
+      document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') closeMermaidModal();
+      });
+
+      function tryLoadMermaid() {
+        if (cdnIndex >= cdns.length) {
+          showError('❌ 无法加载图表库，请检查网络连接后刷新页面');
+          return;
+        }
+
+        var script = document.createElement('script');
+        script.src = cdns[cdnIndex];
+        script.onload = function() {
+          if (typeof mermaid === 'undefined') {
+            showError('❌ 图表库加载失败');
+            return;
+          }
+          try {
+            mermaid.initialize({
+              startOnLoad: false,
+              theme: 'base',
+              themeVariables: {
+                fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif',
+                primaryColor: '#ffffff',
+                primaryTextColor: '#1e293b',
+                primaryBorderColor: '#e2e8f0',
+                lineColor: '#64748b',
+                secondaryColor: '#f1f5f9',
+                tertiaryColor: '#f8fafc',
+              },
+              securityLevel: 'loose',
+              flowchart: {
+                curve: 'basis',
+                padding: 15,
+                nodeSpacing: 50,
+                rankSpacing: 80,
+              },
+              maxTextSize: 50000,
+            });
+            mermaid.run({ querySelector: '.mermaid' }).then(function() {
+              mermaidDivs.forEach(wrapZoomable);
+            });
+          } catch(e) {
+            showError('❌ 图表渲染失败: ' + e.message);
+          }
+        };
+        script.onerror = function() {
+          cdnIndex++;
+          tryLoadMermaid();
+        };
+        document.head.appendChild(script);
+      }
+
+      tryLoadMermaid();
+    })();
+
+  </script>
+</body>
+</html>

@@ -1,0 +1,2240 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>第 8 章：内置工具深度解析</title>
+  <style>
+    /* ===== Reset & Base ===== */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { font-size: 62.5%; }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+      font-size: 15px;
+      color: #1e293b;
+      line-height: 1.7;
+      background: #ffffff;
+      -webkit-font-smoothing: antialiased;
+    }
+    
+    /* ===== Layout ===== */
+    .app {
+      display: flex;
+      min-height: 100vh;
+    }
+    
+    /* ===== Sidebar ===== */
+    .sidebar {
+      width: 280px;
+      min-width: 280px;
+      background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+      border-right: 1px solid #e2e8f0;
+      position: fixed;
+      top: 0;
+      left: 0;
+      bottom: 0;
+      display: flex;
+      flex-direction: column;
+    }
+    .sidebar::-webkit-scrollbar { width: 4px; }
+    .sidebar::-webkit-scrollbar-track { background: transparent; }
+    .sidebar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+    .sidebar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+    .sidebar-header {
+      padding: 20px 20px 14px;
+      border-bottom: 1px solid #e2e8f0;
+      flex-shrink: 0;
+    }
+
+    .sidebar-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 15px;
+      font-weight: 700;
+      color: #0f172a;
+      text-decoration: none;
+      letter-spacing: -0.02em;
+    }
+
+    .sidebar-brand .icon {
+      width: 30px;
+      height: 30px;
+      background: linear-gradient(135deg, #3b82f6 0%, #0ea5e9 100%);
+      border-radius: 7px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 15px;
+      flex-shrink: 0;
+    }
+
+    .sidebar-search {
+      padding: 12px 20px;
+      flex-shrink: 0;
+    }
+
+    .search-box {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 8px 12px;
+      transition: all 0.2s ease;
+    }
+
+    .search-box:focus-within {
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+
+    .search-box input {
+      flex: 1;
+      border: none;
+      outline: none;
+      font-size: 13px;
+      color: #1e293b;
+      background: transparent;
+    }
+
+    .search-box input::placeholder {
+      color: #94a3b8;
+    }
+
+    .search-box svg {
+      width: 15px;
+      height: 15px;
+      color: #94a3b8;
+      flex-shrink: 0;
+    }
+
+    .sidebar-nav {
+      flex: 1;
+      padding: 4px 8px;
+      overflow-y: auto;
+    }
+
+    .sidebar-nav ul, .sidebar-nav li {
+      list-style: none;
+    }
+
+    .quick-links {
+      display: flex;
+      gap: 6px;
+      padding: 0 8px 10px;
+      flex-shrink: 0;
+    }
+
+    .quick-links a {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      padding: 7px 10px;
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 7px;
+      font-size: 12px;
+      font-weight: 500;
+      color: #64748b;
+      text-decoration: none;
+      transition: all 0.15s ease;
+    }
+
+    .quick-links a:hover {
+      color: #3b82f6;
+      border-color: #3b82f6;
+      background: #eff6ff;
+    }
+
+    .quick-links a .ql-icon {
+      font-size: 13px;
+      line-height: 1;
+    }
+
+    .sidebar-section {
+      margin-bottom: 2px;
+    }
+
+    .sidebar-section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 9px 12px 9px 14px;
+      cursor: pointer;
+      user-select: none;
+      border-radius: 8px;
+      margin: 0 2px;
+      transition: background 0.15s ease;
+    }
+
+    .sidebar-section-header:hover {
+      background: rgba(59, 130, 246, 0.06);
+    }
+
+    .sidebar-section-header.open {
+      background: rgba(59, 130, 246, 0.08);
+    }
+
+    .section-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+    }
+
+    .section-num {
+      width: 22px;
+      height: 22px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #3b82f6 0%, #0ea5e9 100%);
+      border-radius: 5px;
+      font-size: 10px;
+      font-weight: 700;
+      color: #ffffff;
+      flex-shrink: 0;
+    }
+
+    .section-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: #1e293b;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .sidebar-section-header .arrow {
+      width: 16px;
+      height: 16px;
+      color: #94a3b8;
+      transition: transform 0.2s ease, color 0.15s ease;
+      flex-shrink: 0;
+    }
+
+    .sidebar-section-header:hover .arrow {
+      color: #64748b;
+    }
+
+    .sidebar-section-header.open .arrow {
+      transform: rotate(90deg);
+      color: #3b82f6;
+    }
+
+    .sidebar-section-items {
+      overflow: hidden;
+      transition: max-height 0.2s ease, opacity 0.15s ease;
+      max-height: 2000px;
+      opacity: 1;
+    }
+    .sidebar-section-items.collapsed {
+      max-height: 0;
+      opacity: 0;
+    }
+
+    .sidebar-section-items ul {
+      padding: 2px 6px 6px;
+    }
+
+    .sidebar-section-items li {
+      margin: 1px 0;
+    }
+
+    .sidebar-section-items a {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 10px;
+      font-size: 13px;
+      color: #64748b;
+      text-decoration: none;
+      border-radius: 6px;
+      transition: all 0.15s ease;
+      position: relative;
+    }
+
+    .sidebar-section-items a:hover {
+      color: #3b82f6;
+      background: rgba(59, 130, 246, 0.06);
+    }
+
+    .sidebar-section-items a.active {
+      color: #1e293b;
+      background: rgba(59, 130, 246, 0.1);
+      font-weight: 500;
+    }
+    .sidebar-section-items a.active::before {
+      content: '';
+      position: absolute;
+      left: -6px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 3px;
+      height: 18px;
+      border-radius: 2px;
+      background: #3b82f6;
+    }
+    .sidebar-section-items a.active .num {
+      color: #3b82f6;
+    }
+    .sidebar-section-items a[href*="APPENDIX"] {
+      font-size: 12px;
+      color: #94a3b8;
+      padding-left: 14px;
+    }
+    .sidebar-section-items a[href*="APPENDIX"]:hover {
+      color: #3b82f6;
+    }
+    .sidebar-section-items a[href*="APPENDIX"] .num {
+      display: none;
+    }
+
+    .sidebar-section-items a .num {
+      font-size: 11px;
+      font-weight: 500;
+      color: #94a3b8;
+      min-width: 26px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .sidebar-divider {
+      height: 1px;
+      background: linear-gradient(90deg, transparent, #e2e8f0, transparent);
+      margin: 6px 10px 10px;
+    }
+
+    .sidebar-external {
+      padding: 0 8px 12px;
+      flex-shrink: 0;
+    }
+
+    .sidebar-external a {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 9px 12px;
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 500;
+      color: #475569;
+      text-decoration: none;
+      transition: all 0.15s ease;
+    }
+
+    .sidebar-external a:hover {
+      border-color: #3b82f6;
+      color: #3b82f6;
+      background: #eff6ff;
+    }
+
+    .sidebar-external a svg {
+      width: 15px;
+      height: 15px;
+      opacity: 0.5;
+      flex-shrink: 0;
+    }
+    .sidebar-external a:hover svg {
+      opacity: 0.8;
+    }
+    
+    /* ===== Content ===== */
+    .content {
+      flex: 1;
+      margin-left: 280px;
+      padding: 48px 64px;
+      min-height: 100vh;
+      max-width: 1400px;
+    }
+
+    /* ===== Typography ===== */
+    .markdown-section h1 {
+      font-size: 28px;
+      font-weight: 700;
+      color: #0f172a;
+      letter-spacing: -0.02em;
+      margin: 0 0 24px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    
+    .markdown-section h2 {
+      font-size: 20px;
+      font-weight: 600;
+      color: #1e293b;
+      letter-spacing: -0.01em;
+      margin: 40px 0 16px;
+    }
+    
+    .markdown-section h3 {
+      font-size: 16px;
+      font-weight: 600;
+      color: #3b82f6;
+      margin: 28px 0 12px;
+    }
+    
+    .markdown-section h4 {
+      font-size: 15px;
+      font-weight: 600;
+      color: #1e293b;
+      margin: 20px 0 8px;
+    }
+    .markdown-section h1, .markdown-section h2, .markdown-section h3, .markdown-section h4 {
+      position: relative;
+    }
+    .markdown-section .heading-anchor {
+      position: absolute;
+      left: -20px;
+      top: 50%;
+      transform: translateY(-50%);
+      opacity: 0;
+      color: #94a3b8;
+      text-decoration: none;
+      font-size: 0.8em;
+      font-weight: 400;
+      transition: opacity 0.15s ease;
+      padding-right: 4px;
+    }
+    .markdown-section h1:hover .heading-anchor,
+    .markdown-section h2:hover .heading-anchor,
+    .markdown-section h3:hover .heading-anchor,
+    .markdown-section h4:hover .heading-anchor {
+      opacity: 1;
+    }
+    
+    .markdown-section p {
+      margin: 12px 0;
+      color: #475569;
+    }
+
+    /* ===== Thinking Note ===== */
+    .thinking-note {
+      background: #fffbeb;
+      border-left: 4px solid #f59e0b;
+      border-radius: 0 12px 12px 0;
+      padding: 20px 24px;
+      margin: 24px 0;
+    }
+    .thinking-note h3 {
+      margin: 0 0 12px;
+      padding: 0;
+      border: none;
+      font-size: 14px;
+      font-weight: 700;
+      color: #d97706;
+      letter-spacing: 0.03em;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .thinking-note p {
+      margin: 8px 0;
+      font-size: 14px;
+      line-height: 1.8;
+      color: #78350f;
+    }
+    .thinking-note strong {
+      display: inline-block;
+      margin-top: 6px;
+      color: #92400e;
+    }
+    .thinking-note strong:first-of-type {
+      margin-top: 0;
+    }
+    .thinking-note ul {
+      margin: 4px 0 4px 0;
+      padding-left: 18px;
+      list-style: none;
+    }
+    .thinking-note li {
+      margin: 4px 0;
+      padding-left: 14px;
+      position: relative;
+      color: #78350f;
+      font-size: 14px;
+      line-height: 1.7;
+    }
+    .thinking-note li::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 10px;
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: #d97706;
+      opacity: 0.5;
+    }
+    .thinking-note li strong {
+      color: #92400e;
+    }
+
+    .markdown-section a {
+      color: #3b82f6;
+      text-decoration: none;
+      font-weight: 500;
+    }
+    
+    .markdown-section a:hover {
+      text-decoration: underline;
+    }
+    
+    .markdown-section code {
+      background: #f1f5f9;
+      color: #0f172a;
+      padding: 2px 6px;
+      font-size: 13px;
+      border-radius: 4px;
+      font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Consolas', monospace;
+    }
+    
+    .markdown-section pre {
+      background: #1e293b;
+      border-radius: 12px;
+      padding: 20px 24px;
+      overflow-x: auto;
+      margin: 20px 0;
+    }
+    
+    .markdown-section pre code {
+      background: transparent;
+      color: #e2e8f0;
+      padding: 0;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+    
+    .markdown-section blockquote {
+      background: #f8fafc;
+      border-left: 4px solid #3b82f6;
+      border-radius: 0 8px 8px 0;
+      padding: 16px 20px;
+      margin: 20px 0;
+    }
+    
+    .markdown-section blockquote p {
+      margin: 0;
+      color: #475569;
+    }
+    
+    .markdown-section table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0;
+      font-size: 14px;
+      border-radius: 12px;
+      
+      border: 1px solid #e2e8f0;
+    }
+    
+    .markdown-section table th {
+      background: #f8fafc;
+      font-weight: 600;
+      text-align: left;
+      padding: 12px 16px;
+      color: #475569;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    
+    .markdown-section table td {
+      padding: 12px 16px;
+      border-top: 1px solid #e2e8f0;
+    }
+    
+    .markdown-section table tr:nth-child(2n) td {
+      background: #f8fafc;
+    }
+    
+    .markdown-section ul, .markdown-section ol {
+      padding-left: 24px;
+      margin: 12px 0;
+    }
+    
+    .markdown-section li {
+      margin: 6px 0;
+      color: #475569;
+    }
+    
+    .markdown-section hr {
+      height: 1px;
+      background: #e2e8f0;
+      border: none;
+      margin: 32px 0;
+    }
+    
+    .markdown-section img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 8px;
+    }
+    
+    /* ===== Mermaid Diagrams ===== */
+    .mermaid {
+      background: #f8fafc;
+      border-radius: 12px;
+      padding: 24px;
+      margin: 20px 0;
+      overflow-x: auto;
+      border: 1px solid #e2e8f0;
+      display: block;
+    }
+    .mermaid.rendered {
+      display: block;
+    }
+    .mermaid svg {
+      max-width: 100%;
+      height: auto;
+    }
+    .mermaid-error {
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      border-radius: 8px;
+      padding: 16px;
+      color: #dc2626;
+      margin: 20px 0;
+    }
+    .mermaid-loading {
+      background: #f8fafc;
+      border: 1px dashed #e2e8f0;
+      border-radius: 12px;
+      padding: 24px;
+      margin: 20px 0;
+      color: #64748b;
+      text-align: center;
+    }
+
+    
+    
+
+/* ===== Click-to-Expand Mermaid ===== */
+    .mermaid-zoom-container {
+      position: relative;
+      overflow: hidden;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      margin: 20px 0;
+      background: #f8fafc;
+      cursor: pointer;
+      min-height: 100px;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+    .mermaid-zoom-container:hover {
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 2px rgba(59,130,246,0.1);
+    }
+    .mermaid-zoom-container .mermaid {
+      margin: 0;
+      border: none;
+      border-radius: 0;
+      background: transparent;
+    }
+    .mermaid-zoom-container .mermaid svg {
+      display: block;
+    }
+    .mermaid-expand-overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+      background: rgba(15,23,42,0.03);
+    }
+    .mermaid-zoom-container:hover .mermaid-expand-overlay {
+      opacity: 1;
+    }
+    .mermaid-expand-overlay span {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 18px;
+      background: rgba(255,255,255,0.95);
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 500;
+      color: #3b82f6;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+      backdrop-filter: blur(4px);
+      pointer-events: none;
+      transition: transform 0.15s ease;
+    }
+    .mermaid-zoom-container:hover .mermaid-expand-overlay span {
+      transform: translateY(-2px);
+    }
+    .mermaid-expand-overlay .expand-icon {
+      font-size: 15px;
+    }
+
+    /* ===== Mermaid Modal ===== */
+    @keyframes modal-fade-in {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    @keyframes modal-content-in {
+      from { opacity: 0; transform: scale(0.95) translateY(8px); }
+      to { opacity: 1; transform: scale(1) translateY(0); }
+    }
+    .mermaid-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 1000;
+      background: rgba(15, 23, 42, 0.65);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      animation: modal-fade-in 0.2s ease;
+    }
+    .mermaid-modal.active {
+      display: flex;
+    }
+    .mermaid-modal-content {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      max-width: 90vw;
+      max-height: 90vh;
+      background: #fff;
+      border-radius: 14px;
+      box-shadow: 0 25px 80px rgba(0,0,0,0.3);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      animation: modal-content-in 0.2s ease;
+    }
+    .mermaid-modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 20px;
+      border-bottom: 1px solid #e2e8f0;
+      flex-shrink: 0;
+      background: #fafbfc;
+      gap: 12px;
+    }
+    .mermaid-modal-header .modal-title-wrap {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+    }
+    .mermaid-modal-header .modal-icon {
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      background: linear-gradient(135deg, #3b82f6, #0ea5e9);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      flex-shrink: 0;
+    }
+    .mermaid-modal-header .modal-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: #1e293b;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .mermaid-modal-header .modal-hint {
+      font-size: 12px;
+      color: #94a3b8;
+      font-weight: 400;
+      margin-left: 4px;
+    }
+    .mermaid-modal-header .modal-actions {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      flex-shrink: 0;
+    }
+    .mermaid-modal-header .modal-close {
+      width: 30px;
+      height: 30px;
+      border: none;
+      border-radius: 6px;
+      background: transparent;
+      color: #94a3b8;
+      font-size: 17px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s ease;
+      margin-left: 4px;
+    }
+    .mermaid-modal-header .modal-close:hover {
+      background: #fee2e2;
+      color: #dc2626;
+    }
+    .mermaid-modal-body {
+      flex: 1;
+      overflow: auto;
+      position: relative;
+      user-select: auto;
+      background: #f8fafc
+        repeating-linear-gradient(
+          0deg, transparent, transparent 23px, #f1f5f9 23px, #f1f5f9 24px
+        ),
+        repeating-linear-gradient(
+          90deg, transparent, transparent 23px, #f1f5f9 23px, #f1f5f9 24px
+        );
+    }
+    .mermaid-modal-body svg {
+      display: block;
+    }
+    @media (max-width: 768px) {
+      .mermaid-modal { padding: 12px; }
+      .mermaid-modal-content { max-width: 100vw; max-height: 100vh; border-radius: 10px; }
+      .mermaid-modal-header { padding: 10px 14px; }
+    }
+    @media (max-width: 480px) {
+      .mermaid-modal { padding: 0; }
+      .mermaid-modal-content { border-radius: 0; max-width: 100vw; max-height: 100vh; }
+    }
+
+
+/* ===== 引导思考 - Note-style Card ===== */
+    tr.guide-card-header td {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      width: 100%;
+      padding: 12px 24px !important;
+      font-size: 13px;
+      font-weight: 700;
+      color: #6366f1;
+      letter-spacing: 0.04em;
+      background: transparent !important;
+      border: none !important;
+    }
+    table.guide-card {
+      border-collapse: separate;
+      border-spacing: 0;
+      font-size: 14px;
+      margin: 0 0 24px;
+      overflow: hidden;
+      display: block;
+      width: 100%;
+      background: #f8faff;
+      border-left: 4px solid #6366f1;
+      border-radius: 0 12px 12px 0;
+      box-shadow: 0 1px 3px rgba(99, 102, 241, 0.08);
+    }
+    /* Hide original table header ("思考维度 | 内容") */
+    table.guide-card thead {
+      display: none;
+    }
+    /* Collapse/expand behavior */
+    table.guide-card.collapsed tbody tr:not(.guide-card-header) {
+      display: none;
+    }
+    table.guide-card tbody tr.guide-card-header {
+      cursor: pointer;
+      user-select: none;
+    }
+    table.guide-card tbody tr.guide-card-header:hover {
+      background: rgba(99, 102, 241, 0.04);
+    }
+    .collapse-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 18px;
+      height: 18px;
+      flex-shrink: 0;
+      transition: transform 0.2s ease;
+    }
+    .collapse-icon::before {
+      content: '';
+      display: block;
+      width: 6px;
+      height: 6px;
+      border-right: 2px solid #a5b4fc;
+      border-bottom: 2px solid #a5b4fc;
+      transform: rotate(-45deg);
+      margin-top: -3px;
+      transition: transform 0.2s ease, border-color 0.2s ease;
+    }
+    table.guide-card:not(.collapsed) .collapse-icon::before {
+      transform: rotate(45deg);
+      margin-top: 3px;
+      border-color: #6366f1;
+    }
+    tr.guide-card-header:hover .collapse-icon::before {
+      border-color: #6366f1;
+    }
+    .collapse-hint {
+      font-size: 11px;
+      color: #a5b4fc;
+      font-weight: 400;
+      transition: color 0.2s ease;
+    }
+    table.guide-card:not(.collapsed) .collapse-hint {
+      display: none;
+    }
+    tr.guide-card-header:hover .collapse-hint {
+      color: #6366f1;
+    }
+    table.guide-card tbody,
+    table.guide-card tbody tr {
+      display: block;
+      width: 100%;
+    }
+    table.guide-card tbody td {
+      display: block;
+      width: 100%;
+      padding: 0 24px 14px;
+      border: none;
+      vertical-align: top;
+      line-height: 1.7;
+      color: #475569;
+    }
+    table.guide-card tbody td:first-child {
+      padding: 12px 24px 2px;
+      font-weight: 600;
+      font-size: 12px;
+      color: #6366f1;
+      background: transparent;
+      width: 100%;
+      border: none;
+      letter-spacing: 0.03em;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    table.guide-card tbody td:first-child::before {
+      display: none;
+    }
+    /* Content lists inside cells */
+    table.guide-card tbody td ul {
+      margin: 0;
+      padding-left: 16px;
+      list-style: none;
+    }
+    table.guide-card tbody td > ul > li {
+      position: relative;
+      padding-left: 14px;
+      margin-bottom: 4px;
+      font-size: 13.5px;
+      color: #475569;
+      line-height: 1.7;
+    }
+    table.guide-card tbody td > ul > li::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 10px;
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: #c7d2fe;
+    }
+    table.guide-card tbody td > ul > li:last-child {
+      margin-bottom: 0;
+    }
+    table.guide-card tbody td ul ul {
+      padding-left: 14px;
+      margin-top: 2px;
+    }
+    table.guide-card tbody td ul ul li {
+      position: relative;
+      padding-left: 12px;
+      margin-bottom: 2px;
+      font-size: 13px;
+      color: #64748b;
+      line-height: 1.6;
+    }
+    table.guide-card tbody td ul ul li::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 9px;
+      width: 3px;
+      height: 3px;
+      border-radius: 50%;
+      background: #cbd5e1;
+    }
+    table.guide-card tbody td strong,
+    table.guide-card tbody td:first-child strong {
+      color: #4338ca;
+      font-weight: 600;
+    }
+    table.guide-card tbody td code {
+      background: #eef2ff;
+      color: #6366f1;
+      font-size: 12.5px;
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-weight: 500;
+    }
+
+/* ===== Navigation ===== */
+    .nav {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 48px;
+      padding-top: 24px;
+      border-top: 1px solid #e2e8f0;
+    }
+    
+    .nav a {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 10px 18px;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      color: #475569;
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 500;
+      transition: all 0.15s ease;
+    }
+    
+    .nav a:hover {
+      background: #3b82f6;
+      color: #fff;
+      border-color: #3b82f6;
+    }
+    
+    /* ===== Search Results ===== */
+    .search-results {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.12);
+      max-height: 400px;
+      overflow-y: auto;
+      z-index: 100;
+      display: none;
+      margin: 4px 0 0;
+    }
+    .search-results.active { display: block; }
+    .search-result-item {
+      display: block;
+      padding: 10px 14px;
+      text-decoration: none;
+      border-bottom: 1px solid #f1f5f9;
+      transition: background 0.15s ease;
+    }
+    .search-result-item:last-child { border-bottom: none; }
+    .search-result-item:hover { background: #f8fafc; }
+    .search-result-item .sr-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: #1e293b;
+      margin-bottom: 2px;
+    }
+    .search-result-item .sr-preview {
+      font-size: 12px;
+      color: #64748b;
+      line-height: 1.4;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .search-result-item .sr-path {
+      font-size: 11px;
+      color: #94a3b8;
+      margin-top: 2px;
+    }
+    .search-no-results {
+      padding: 16px;
+      text-align: center;
+      color: #94a3b8;
+      font-size: 13px;
+    }
+    .search-loading {
+      padding: 12px;
+      text-align: center;
+      color: #94a3b8;
+      font-size: 12px;
+    }
+    .sidebar-search { position: relative; }
+
+    /* ===== Copy Code Button ===== */
+    .code-block-wrapper {
+      position: relative;
+    }
+    .copy-code-btn {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      padding: 4px 10px;
+      background: rgba(255,255,255,0.1);
+      color: #94a3b8;
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 6px;
+      font-size: 12px;
+      cursor: pointer;
+      opacity: 0;
+      transition: opacity 0.15s ease, background 0.15s ease, color 0.15s ease;
+    }
+    .markdown-section pre:hover .copy-code-btn,
+    .copy-code-btn:focus {
+      opacity: 1;
+    }
+    .copy-code-btn:hover {
+      background: rgba(255,255,255,0.2);
+      color: #e2e8f0;
+    }
+    .copy-code-btn.copied {
+      background: #22c55e;
+      color: #fff;
+      border-color: #22c55e;
+      opacity: 1;
+    }
+
+    /* ===== Back to Top ===== */
+    .back-to-top {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      width: 40px;
+      height: 40px;
+      background: #3b82f6;
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 12px rgba(59,130,246,0.3);
+      transition: opacity 0.2s ease, transform 0.2s ease;
+      z-index: 80;
+    }
+    .back-to-top.visible { display: flex; }
+    .back-to-top:hover { transform: translateY(-2px); }
+    .back-to-top svg { width: 20px; height: 20px; }
+
+    /* ===== Mobile Menu Toggle ===== */
+    .menu-toggle {
+      display: none;
+      position: fixed;
+      top: 16px;
+      left: 16px;
+      z-index: 200;
+      width: 40px;
+      height: 40px;
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    .menu-toggle svg {
+      width: 20px;
+      height: 20px;
+      color: #475569;
+    }
+    .sidebar-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.3);
+      z-index: 90;
+    }
+    .sidebar-overlay.active { display: block; }
+
+    /* ===== Mobile ===== */
+    @media (max-width: 1024px) {
+      .menu-toggle { display: flex; }
+      .sidebar { transform: translateX(-100%); transition: transform 0.2s ease; z-index: 100; }
+      .sidebar.open { transform: translateX(0); }
+      .content { margin-left: 0; padding: 24px 20px; padding-top: 64px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <nav class="sidebar">
+      <div class="sidebar-header">
+        <a href="../index.html" class="sidebar-brand">
+          <span class="icon">📚</span>
+          LLM Agent 源码学习
+        </a>
+      </div>
+      
+      <div class="sidebar-search">
+        <div class="search-box">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"/>
+            <path d="M21 21l-4.35-4.35"/>
+          </svg>
+          <input type="text" placeholder="搜索文档..." id="searchInput" autocomplete="off">
+        </div>
+        <div class="search-results" id="searchResults"></div>
+      </div>
+      
+      <div class="quick-links">
+        <a href="../index.html">🏠 首页</a>
+        <a href="../SUMMARY.html">📑 目录</a>
+      </div>
+      
+      <div class="sidebar-nav">
+        <div class="sidebar-section">
+        <div class="sidebar-section-header">
+          <span class="section-title">
+            <span class="section-num">1</span>
+            <span class="section-name">Claude Code</span>
+          </span>
+          <svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+        </div>
+        <div class="sidebar-section-items"><ul><li><a href="./01-OVERVIEW.html"><span class="num">1.0</span>全景概览</a></li><li><a href="./02-BOOTSTRAP.html"><span class="num">2.0</span>启动流程</a></li><li><a href="./03-TYPE-SYSTEM.html"><span class="num">3.0</span>类型系统设计</a></li><li><a href="./04-QUERY-ENGINE.html"><span class="num">4.0</span>查询引擎</a></li><li><a href="./05-MESSAGE-SYSTEM.html"><span class="num">5.0</span>消息系统</a></li><li><a href="./06-STREAMING.html"><span class="num">6.0</span>流式处理</a></li><li><a href="./07-TOOL-ARCHITECTURE.html"><span class="num">7.0</span>工具架构</a></li><li><a href="./08-BUILTIN-TOOLS.html"><span class="num">8.0</span>内置工具</a></li><li><a href="./09-TOOL-EXECUTION.html"><span class="num">9.0</span>工具执行</a></li><li><a href="./10-AGENT-MODEL.html"><span class="num">10.0</span>Agent 模型</a></li><li><a href="./11-SUBAGENT.html"><span class="num">11.0</span>子代理</a></li><li><a href="./12-SKILL-SYSTEM.html"><span class="num">12.0</span>技能系统</a></li><li><a href="./13-PERMISSION-MODEL.html"><span class="num">13.0</span>权限模型</a></li><li><a href="./14-BASH-SECURITY.html"><span class="num">14.0</span>Bash 安全</a></li><li><a href="./15-MCP-PROTOCOL.html"><span class="num">15.0</span>MCP 协议</a></li><li><a href="./16-MCP-AUTH.html"><span class="num">16.0</span>MCP 认证</a></li><li><a href="./17-STATE-MANAGEMENT.html"><span class="num">17.0</span>状态管理</a></li><li><a href="./18-CONVERSATION.html"><span class="num">18.0</span>会话管理</a></li><li><a href="./19-INK-REACT.html"><span class="num">19.0</span>Ink React</a></li><li><a href="./20-REPL.html"><span class="num">20.0</span>REPL</a></li><li><a href="./21-PERFORMANCE.html"><span class="num">21.0</span>性能优化</a></li><li><a href="./22-TESTING.html"><span class="num">22.0</span>测试</a></li><li><a href="./23-BUILD-SYSTEM.html"><span class="num">23.0</span>构建系统</a></li><li><a href="./24-DESIGN-PATTERNS.html"><span class="num">24.0</span>设计模式</a></li><li><a href="./25-PHILOSOPHY.html"><span class="num">25.0</span>哲学思想</a></li><li><a href="./26-COGNITIVE-LOOP.html"><span class="num">26.0</span>认知循环</a></li><li><a href="./APPENDIX-A-GLOSSARY.html">附录A 术语表</a></li><li><a href="./APPENDIX-B-SOURCE-MAP.html">附录B 源码导航</a></li></ul></div></div>
+      </div>
+
+      <div class="sidebar-external">
+        <a href="https://github.com/Hyper66666/claude-code-sourcemap" target="_blank">
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+          </svg>
+          GitHub 源码
+        </a>
+      </div>
+    </nav>
+    <button class="back-to-top" id="backToTop" aria-label="回到顶部" title="回到顶部">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M18 15l-6-6-6 6"/>
+      </svg>
+    </button>
+    <button class="menu-toggle" id="menuToggle" aria-label="打开菜单">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M3 12h18M3 6h18M3 18h18"/>
+      </svg>
+    </button>
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+    <main class="content">
+      <article class="markdown-section">
+        <h1>第 8 章：内置工具深度解析</h1>
+<blockquote>
+<p>&quot;工具既是手的延伸，也是心智的延伸。&quot; —— Marshall McLuhan</p>
+</blockquote>
+<table class="guide-card collapsed">
+<thead>
+<tr>
+<th>思考维度</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody>
+<tr class="guide-card-header"><td colspan="2"><span class="collapse-icon"></span>引导思考 <span class="collapse-hint">展开</span></td></tr><tr>
+<td><strong>它为什么存在</strong></td>
+<td><ul><li>看来看去，Claude Code 能干的事全靠这些工具撑着。你点一下鼠标、敲几个字，背后就是某个工具在工作</li><li>每个工具都在安全、性能和体验之间走钢丝——少一个都不行，所有工具合起来才是一个完整的开发助手</li></ul></td>
+</tr>
+<tr>
+<td><strong>它解决什么问题</strong></td>
+<td><ul><li>Shell 命令是双刃剑——你要让 AI 干活，但怎么保证它不把系统拆了？BashTool 的 18 个文件就是来干这个的</li><li>文件操作看着简单，但写代码的人最怕大段重写。精确替换才是正道，Edit 工具的 old_string 唯一性校验就是这个思路</li><li>代码库大了以后搜索速度就是命门，Ripgrep 加持的 GrepTool 效率是真的可以</li></ul></td>
+</tr>
+<tr>
+<td><strong>它在系统中的位置</strong></td>
+<td><ul><li>src/tools/ 下面每个子目录就是一个工具，统一在 tools.ts 注册——有了点插件市场的味道</li><li>buildTool 这个工厂函数有意思，默认失败关闭（fail-closed），忘了配安全选项也不会出漏洞</li></ul></td>
+</tr>
+<tr>
+<td><strong>它如何工作</strong></td>
+<td><ul><li>BashTool 先给命令分个类——是搜索、读取、写入还是破坏性操作，分类不同待遇不同</li><li>FileEdit 要求 old_string 必须唯一匹配，逼你写得更精确而不是模糊替换</li><li>WebFetch 抓了网页先让小模型过一遍，提炼你要的东西再塞回上下文——不浪费宝贵的 token</li></ul></td>
+</tr>
+<tr>
+<td><strong>它如何实现</strong></td>
+<td><ul><li>BashTool 的 18 个文件各管一摊，从执行到安全到 sed 校验，层层把关</li><li>Read 的 maxResultSizeChars: Infinity 是我觉得最巧妙的——反正结果不入磁盘，不怕读到死循环</li><li>WebSearchTool 不是直接联网搜的，而是又调了一次 API 让模型帮你搜——工具套工具，套娃式实现</li></ul></td>
+</tr>
+<tr>
+<td><strong>不同平台如何做</strong></td>
+<td><ul><li><strong>Cursor Agent</strong>：没有独立的工具系统，直接撸 VS Code 扩展 API。轻是轻，但能干的事就限制在编辑器范围内了</li><li><strong>OpenClaw</strong>：工具简化为 read/execute/search/edit 五类，安全顾虑少了，但能力边界也小了</li><li><strong>Harness Agent</strong>：工具面向 CI/CD 场景——部署、构建、测试，不需要操心本地文件读写权限</li></ul></td>
+</tr>
+<tr>
+<td><strong>优势是什么？</strong></td>
+<td><ul><li><strong>优势</strong><ul><li>BashTool 的 18 个文件层层防御，安全设计确实是行业标杆级别的</li><li>三剑客各管一摊：Read 防死循环、Edit 精确替换、Write 打完整 diff，分工清晰</li><li>lazySchema 延迟构建 schema，不用这个工具就不加载它的 schema，启动性能好</li></ul></li></ul></td>
+</tr>
+</tbody></table>
+<p>如果说 Tool 接口定义了工具的骨骼，那么具体的工具实现就是肌肉与血液。Claude Code 内置了超过 40 个工具，涵盖了 shell 执行、文件操作、代码搜索、网络访问和任务管理等核心能力。本章将选取最具代表性的工具进行深度剖析，揭示它们在安全性、性能和用户体验方面的精巧设计。</p>
+<hr>
+<h2>8.1 BashTool —— 最复杂的单一工具</h2>
+<h3>8.1.1 复杂度概览</h3>
+<p>BashTool 是 Claude Code 中最复杂的单一工具。其实现涉及 18 个文件，从 <code>BashTool.tsx</code> 主文件到 <code>bashPermissions.ts</code>、<code>bashSecurity.ts</code>、<code>commandSemantics.ts</code>、<code>sedEditParser.ts</code>、<code>shouldUseSandbox.ts</code> 等辅助模块。这种复杂度源于 shell 命令执行在安全领域的特殊地位——它是所有工具中攻击面最大的。</p>
+<pre><code>src/tools/BashTool/
+├── BashTool.tsx              # 主实现（schema 定义、call 方法、UI 渲染）
+├── bashPermissions.ts        # 权限检查：命令解析、规则匹配、分类器
+├── bashSecurity.ts           # 安全检查：命令安全性评估
+├── commandSemantics.ts       # 命令语义解释（退出码含义）
+├── sedEditParser.ts          # sed 命令特殊处理（作为文件编辑）
+├── readOnlyValidation.ts     # 只读约束检查
+├── modeValidation.ts         # 模式验证
+├── pathValidation.ts         # 路径安全检查
+├── sedValidation.ts          # sed 命令验证
+├── shouldUseSandbox.ts       # 沙箱判断逻辑
+├── bashCommandHelpers.ts     # 复合命令辅助函数
+├── destructiveCommandWarning.ts # 破坏性命令警告
+├── prompt.ts                 # 系统提示生成
+├── toolName.ts               # 工具名称常量
+├── commentLabel.ts           # 注释标签
+├── utils.ts                  # 通用工具函数
+├── UI.tsx                    # React UI 组件
+└── BashToolResultMessage.tsx # 结果展示组件</code></pre><h3>8.1.2 输入 Schema</h3>
+<p>BashTool 的输入 schema 经过精心设计，包含多个字段：</p>
+<pre><code class="language-typescript">// src/tools/BashTool/BashTool.tsx
+const fullInputSchema = lazySchema(() =&gt; z.strictObject({
+  command: z.string().describe('The command to execute'),
+  timeout: semanticNumber(z.number().optional()).describe(
+    `Optional timeout in milliseconds (max ${getMaxTimeoutMs()})`
+  ),
+  description: z.string().optional().describe(
+    'Clear, concise description of what this command does in active voice...'
+  ),
+  run_in_background: semanticBoolean(z.boolean().optional()).describe(
+    'Set to true to run this command in the background.'
+  ),
+  dangerouslyDisableSandbox: semanticBoolean(z.boolean().optional()).describe(
+    'Set this to true to dangerously override sandbox mode...'
+  ),
+  _simulatedSedEdit: z.object({
+    filePath: z.string(),
+    newContent: z.string()
+  }).optional().describe('Internal: pre-computed sed edit result from preview')
+}))</code></pre><p>几个值得关注的设计点：</p>
+<p><strong><code>semanticNumber</code> / <code>semanticBoolean</code> 包装器。</strong> 这些函数处理模型生成的&quot;语义化&quot;值——模型有时会把布尔值作为字符串 <code>&quot;true&quot;</code> 发送，或者把数字作为字符串 <code>&quot;42&quot;</code> 发送。这些包装器能容错地解析这些情况。</p>
+<p><strong><code>_simulatedSedEdit</code> 的隐藏与防注入。</strong> 该字段是内部使用的，在发送给模型的 schema 中被显式移除：</p>
+<pre><code class="language-typescript">const inputSchema = lazySchema(() =&gt;
+  fullInputSchema().omit({ _simulatedSedEdit: true, /* ... */ })
+)</code></pre><p>同时，<code>toolExecution.ts</code> 中还有一道防线，如果模型试图在输入中注入这个字段，会被强制剥离：</p>
+<pre><code class="language-typescript">// src/services/tools/toolExecution.ts
+if (tool.name === BASH_TOOL_NAME &amp;&amp; processedInput &amp;&amp;
+    typeof processedInput === 'object' &amp;&amp; '_simulatedSedEdit' in processedInput) {
+  const { _simulatedSedEdit: _, ...rest } = processedInput
+  processedInput = rest
+}</code></pre><p>这是一个经典的纵深防御——即使 schema 验证被绕过，运行时也会拦截。</p>
+<h3>8.1.3 并发安全性与只读判断</h3>
+<p>BashTool 的 <code>isConcurrencySafe</code> 直接委托给 <code>isReadOnly</code>：</p>
+<pre><code class="language-typescript">isConcurrencySafe(input) {
+  return this.isReadOnly?.(input) ?? false
+},
+isReadOnly(input) {
+  const compoundCommandHasCd = commandHasAnyCd(input.command)
+  const result = checkReadOnlyConstraints(input, compoundCommandHasCd)
+  return result.behavior === 'allow'
+},</code></pre><p>这意味着只有确认为只读的命令才会被标记为并发安全。<code>checkReadOnlyConstraints</code> 会解析命令的 AST，检查是否包含任何写操作。</p>
+<h3>8.1.4 命令语义分类</h3>
+<p>BashTool 能够识别命令类型来优化 UI 呈现：</p>
+<pre><code class="language-typescript">// 搜索命令 -- 在 UI 中折叠显示
+const BASH_SEARCH_COMMANDS = new Set([
+  'find', 'grep', 'rg', 'ag', 'ack', 'locate', 'which', 'whereis'
+])
+
+// 读取命令 -- 在 UI 中折叠显示
+const BASH_READ_COMMANDS = new Set([
+  'cat', 'head', 'tail', 'less', 'more',
+  'wc', 'stat', 'file', 'strings',
+  'jq', 'awk', 'cut', 'sort', 'uniq', 'tr'
+])
+
+// 目录列表命令
+const BASH_LIST_COMMANDS = new Set(['ls', 'tree', 'du'])
+
+// 语义中立命令 -- 不改变管道的读/搜索性质
+const BASH_SEMANTIC_NEUTRAL_COMMANDS = new Set([
+  'echo', 'printf', 'true', 'false', ':'
+])
+
+// 静默命令 -- 成功时无输出，显示 "Done" 而非 "(No output)"
+const BASH_SILENT_COMMANDS = new Set([
+  'mv', 'cp', 'rm', 'mkdir', 'rmdir', 'chmod', 'chown',
+  'chgrp', 'touch', 'ln', 'cd', 'export', 'unset', 'wait'
+])</code></pre><p><code>isSearchOrReadBashCommand</code> 的分析逻辑对复合命令有特殊处理——对于管道（<code>|</code>）和链式命令（<code>&amp;&amp;</code>、<code>;</code>），所有部分都必须是搜索/读取命令，整个命令才被视为搜索/读取操作。语义中立命令被跳过，不影响判定：</p>
+<pre><code class="language-typescript">export function isSearchOrReadBashCommand(command: string) {
+  const partsWithOperators = splitCommandWithOperators(command)
+  let hasSearch = false, hasRead = false, hasList = false
+  for (const part of partsWithOperators) {
+    // 跳过操作符和重定向目标
+    if (['||', '&amp;&amp;', '|', ';'].includes(part)) continue
+    const baseCommand = part.trim().split(/\s+/)[0]
+    // 语义中立命令不影响判断
+    if (BASH_SEMANTIC_NEUTRAL_COMMANDS.has(baseCommand)) continue
+    // 任何非搜索/读取命令都会使整个命令不可折叠
+    if (!BASH_SEARCH_COMMANDS.has(baseCommand) &amp;&amp;
+        !BASH_READ_COMMANDS.has(baseCommand) &amp;&amp;
+        !BASH_LIST_COMMANDS.has(baseCommand)) {
+      return { isSearch: false, isRead: false, isList: false }
+    }
+    // ... 累积标记
+  }
+}</code></pre><h3>8.1.5 权限检查的多层防线</h3>
+<p>BashTool 的权限检查通过 <code>bashToolHasPermission</code> 函数实现，是整个系统中最复杂的权限检查流程。它包括：</p>
+<ol>
+<li><strong>模式检查</strong>（<code>checkPermissionMode</code>）-- 检查当前是否在 plan 模式等特殊模式下</li>
+<li><strong>路径约束检查</strong>（<code>checkPathConstraints</code>）-- 确保命令不会操作受限路径</li>
+<li><strong>沙箱判断</strong>（<code>shouldUseSandbox</code>）-- 决定是否在沙箱中执行</li>
+<li><strong>规则匹配</strong> —— 与 <code>allow</code>/<code>deny</code>/<code>ask</code> 规则列表匹配</li>
+<li><strong>安全分类器</strong>（<code>classifyBashCommand</code>）-- 异步 ML 分类器判断命令安全性</li>
+<li><strong>sed 特殊处理</strong>（<code>checkSedConstraints</code>）-- sed in-place 编辑的特殊权限路径</li>
+</ol>
+<p>权限检查还有一个性能优化——推测性分类器预启动：</p>
+<pre><code class="language-typescript">// src/services/tools/toolExecution.ts
+if (tool.name === BASH_TOOL_NAME &amp;&amp; parsedInput.data &amp;&amp; 'command' in parsedInput.data) {
+  startSpeculativeClassifierCheck(
+    parsedInput.data.command,
+    appState.toolPermissionContext,
+    toolUseContext.abortController.signal,
+    toolUseContext.options.isNonInteractiveSession,
+  )
+}</code></pre><p>这段代码在输入验证通过后立即启动分类器检查，而不等到权限检查阶段。这样分类器可以与 pre-tool hooks 并行运行，减少用户等待时间。</p>
+<h3>8.1.6 安全校验流程</h3>
+<div class="mermaid">%%{init: {"theme": "base", "themeVariables":{"primaryColor":"#3b82f6","primaryTextColor":"#1e293b","primaryBorderColor":"#60a5fa","lineColor":"#94a3b8","secondaryColor":"#f1f5f9","tertiaryColor":"#ffffff","fontFamily":"-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif"}}}%%
+flowchart TD
+    A[模型调用 BashTool] --&gt; B[输入验证 Zod safeParse]
+    B --&gt;|失败| Z[返回错误]
+    B --&gt;|成功| C[剥离 _simulatedSedEdit]
+    C --&gt; D[推测性启动分类器]
+    C --&gt; E[Pre-tool hooks]
+    D --&gt; F{并行等待}
+    E --&gt; F
+    F --&gt; G[checkPermissionMode]
+    G --&gt; H[checkPathConstraints]
+    H --&gt; I[规则匹配 allow/deny/ask]
+    I --&gt;|allow 规则匹配| J[允许执行]
+    I --&gt;|deny 规则匹配| Z
+    I --&gt;|ask 或无匹配| K[分类器结果]
+    K --&gt;|allow| J
+    K --&gt;|deny| Z
+    K --&gt;|ask| L[弹出权限对话框]
+    L --&gt;|用户允许| J
+    L --&gt;|用户拒绝| Z
+    J --&gt; M{shouldUseSandbox?}
+    M --&gt;|是| N[沙箱执行]
+    M --&gt;|否| O[直接执行]
+    N --&gt; P[exec 命令]
+    O --&gt; P
+    P --&gt; Q[Post-tool hooks]
+    Q --&gt; R[返回结果]</div><div class="thinking-note"><h3>思考笔记</h3>
+<ul>
+<li>BashTool 是 Claude Code 中最复杂也是最危险的单一工具。18 个文件、多层验证流水线——不是过度设计，而是必须。</li>
+<li>把 50+ 子命令分类到 CommandConfig 的方式值得借鉴：每个命令的授权级别、并发安全性、读写属性都在配置中声明。</li>
+<li>&quot;纵深防御&quot;（Defense in Depth）在这里体现得最充分——不是做一次安全检查，而是 tokenizer → parser → validator → sandbox 层层过滤。</li>
+<li>有意思的设计：BashTool 不是直接执行字符串命令，而是先走一个完整的解析器（parser），生成 AST，再基于 AST 做安全检查。</li>
+</ul>
+</div><hr>
+<h2>8.2 文件操作三剑客 —— FileReadTool / FileEditTool / FileWriteTool</h2>
+<h3>8.2.1 FileReadTool —— 智能文件读取</h3>
+<p>FileReadTool 不是一个简单的 <code>cat</code> 包装。它支持读取普通文本文件、图片（作为视觉内容返回）、PDF（按页提取）、Jupyter Notebook（解析所有 cell）等多种格式。</p>
+<pre><code class="language-typescript">// src/tools/FileReadTool/FileReadTool.ts（关键属性）
+export const FileReadTool = buildTool({
+  name: FILE_READ_TOOL_NAME,
+  maxResultSizeChars: Infinity,  // 注意：Infinity！
+  isConcurrencySafe() { return true },
+  isReadOnly() { return true },
+  // ...
+})</code></pre><p><code>maxResultSizeChars: Infinity</code> 是一个关键设计——FileReadTool 的输出永远不会被持久化到磁盘。源码注释解释道：</p>
+<blockquote>
+<p><em>&quot;Set to Infinity for tools whose output must never be persisted (e.g. Read, where persisting creates a circular Read -&gt; file -&gt; Read loop and the tool already self-bounds via its own limits).&quot;</em></p>
+</blockquote>
+<p>如果将读取结果保存到临时文件，模型可能会再次用 Read 读取那个临时文件，形成无限循环。</p>
+<p>FileReadTool 还有一个安全特性——阻止读取危险的设备文件：</p>
+<pre><code class="language-typescript">const BLOCKED_DEVICE_PATHS = new Set([
+  '/dev/zero',    // 无限输出，永远不会 EOF
+  '/dev/random', '/dev/urandom',  // 同上
+  '/dev/stdin', '/dev/fd/0',      // 阻塞等待输入
+  // ...
+])</code></pre><h3>8.2.2 FileEditTool —— 精确字符串替换</h3>
+<p>FileEditTool 的核心理念是&quot;精确替换&quot;而非&quot;全文重写&quot;——通过 <code>old_string</code> 和 <code>new_string</code> 实现对文件的最小化修改：</p>
+<pre><code class="language-typescript">// src/tools/FileEditTool/types.ts
+const inputSchema = lazySchema(() =&gt; z.strictObject({
+  file_path: z.string().describe('The absolute path to the file to modify'),
+  old_string: z.string().describe('The text to replace'),
+  new_string: z.string().describe('The text to replace it with'),
+  replace_all: z.boolean().default(false).describe(
+    'Replace all occurrences of old_string'
+  ),
+}))</code></pre><p>FileEditTool 的几个关键设计：</p>
+<p><strong>唯一性校验。</strong> 当 <code>replace_all</code> 为 <code>false</code> 时，<code>old_string</code> 必须在文件中唯一出现。如果有多个匹配，工具会报错要求提供更多上下文来消除歧义。</p>
+<p><strong>并发修改检测。</strong> 利用 <code>readFileState</code>（FileStateCache）跟踪文件的最后读取时间戳。如果文件在上次读取后被外部修改，编辑会被拒绝：</p>
+<pre><code class="language-typescript">// 常量定义
+export const FILE_UNEXPECTEDLY_MODIFIED_ERROR =
+  'File was unexpectedly modified since last read'</code></pre><p><strong>文件大小上限。</strong> 设置了 1 GiB 的硬限制，防止处理超大文件导致 OOM：</p>
+<pre><code class="language-typescript">const MAX_EDIT_FILE_SIZE = 1024 * 1024 * 1024 // 1 GiB (stat bytes)</code></pre><p><strong>权限检查。</strong> 通过 <code>checkWritePermissionForTool</code> 验证文件路径是否在允许写入的范围内：</p>
+<pre><code class="language-typescript">async checkPermissions(input, context) {
+  const appState = context.getAppState()
+  return checkWritePermissionForTool(
+    FileEditTool, input, appState.toolPermissionContext,
+  )
+},</code></pre><p><strong>路径回填。</strong> <code>backfillObservableInput</code> 方法将相对路径或 <code>~</code> 开头的路径展开为绝对路径，确保 hook 的 allowlist 不会被绕过：</p>
+<pre><code class="language-typescript">backfillObservableInput(input) {
+  if (typeof input.file_path === 'string') {
+    input.file_path = expandPath(input.file_path)
+  }
+},</code></pre><h3>8.2.3 FileWriteTool —— 全文件创建/覆写</h3>
+<p>FileWriteTool 用于创建新文件或完全覆写已有文件，其 schema 更为简洁：</p>
+<pre><code class="language-typescript">const inputSchema = lazySchema(() =&gt; z.strictObject({
+  file_path: z.string().describe(
+    'The absolute path to the file to write (must be absolute, not relative)'
+  ),
+  content: z.string().describe('The content to write to the file'),
+}))</code></pre><p>FileWriteTool 的输出 schema 包含丰富的变更信息，方便 UI 展示差异：</p>
+<pre><code class="language-typescript">const outputSchema = lazySchema(() =&gt; z.object({
+  type: z.enum(['create', 'update']),  // 创建还是更新
+  filePath: z.string(),
+  content: z.string(),
+  structuredPatch: z.array(hunkSchema()),  // diff patch
+  originalFile: z.string().optional(),      // 原文件内容（如有）
+}))</code></pre><h3>8.2.4 三剑客的设计对比</h3>
+<div class="mermaid">%%{init: {"theme": "base", "themeVariables":{"primaryColor":"#3b82f6","primaryTextColor":"#1e293b","primaryBorderColor":"#60a5fa","lineColor":"#94a3b8","secondaryColor":"#f1f5f9","tertiaryColor":"#ffffff","fontFamily":"-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif"}}}%%
+graph LR
+    subgraph 文件操作工具
+        R[FileReadTool]
+        E[FileEditTool]
+        W[FileWriteTool]
+    end
+
+    R --&gt;|"maxResultSizeChars: Infinity
+isConcurrencySafe: true
+isReadOnly: true"| RR[读取文件]
+    E --&gt;|"maxResultSizeChars: 100K
+isConcurrencySafe: false
+isReadOnly: false
+strict: true"| EE[精确替换]
+    W --&gt;|"maxResultSizeChars: 100K
+isConcurrencySafe: false
+isReadOnly: false"| WW[完全覆写]
+
+    RR --&gt;|支持格式| F1[文本 / 图片 / PDF / Notebook]
+    EE --&gt;|保护机制| F2[唯一性校验 / 并发检测 / 大小限制]
+    WW --&gt;|输出信息| F3[类型 / diff patch / 原文件]</div><table>
+<thead>
+<tr>
+<th>特性</th>
+<th>FileReadTool</th>
+<th>FileEditTool</th>
+<th>FileWriteTool</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>并发安全</td>
+<td>是</td>
+<td>否</td>
+<td>否</td>
+</tr>
+<tr>
+<td>只读</td>
+<td>是</td>
+<td>否</td>
+<td>否</td>
+</tr>
+<tr>
+<td>maxResultSizeChars</td>
+<td>Infinity</td>
+<td>100,000</td>
+<td>100,000</td>
+</tr>
+<tr>
+<td>strict 模式</td>
+<td>否</td>
+<td>是</td>
+<td>否</td>
+</tr>
+<tr>
+<td>格式支持</td>
+<td>文本/图片/PDF/Notebook</td>
+<td>纯文本</td>
+<td>纯文本</td>
+</tr>
+<tr>
+<td>权限检查</td>
+<td>读取权限</td>
+<td>写入权限</td>
+<td>写入权限</td>
+</tr>
+<tr>
+<td>shouldDefer</td>
+<td>否</td>
+<td>否</td>
+<td>否</td>
+</tr>
+</tbody></table>
+<div class="thinking-note"><h3>思考笔记</h3>
+<ul>
+<li>FileRead、FileEdit、FileWrite 三个工具的职责划分非常清晰：Read 负责读取（带 offset/limit），Edit 负责精确替换（search/replace 语义），Write 负责全量写入。</li>
+<li>FileEditTool 的 search/replace 模式是 Claude Code 最具辨识度的设计之一——不是传统的&quot;打开文件改第几行&quot;，而是&quot;找到这段内容替换成那段内容&quot;。这更符合 LLM 的认知模式。</li>
+<li>所有文件工具在写操作前都会走路径安全校验——不是等到 writeFile 才报错，而是调用前就验证路径合法。</li>
+<li>大文件读取有自动截断机制（max_length 参数），防止工具输出撑爆上下文。</li>
+</ul>
+</div><hr>
+<h2>8.3 GlobTool/GrepTool —— Ripgrep 集成</h2>
+<h3>8.3.1 GlobTool —— 快速文件名搜索</h3>
+<p>GlobTool 通过内部的 <code>glob</code> 工具函数执行文件名模式匹配。它的设计注重简洁：</p>
+<pre><code class="language-typescript">// src/tools/GlobTool/GlobTool.ts
+export const GlobTool = buildTool({
+  name: GLOB_TOOL_NAME,
+  searchHint: 'find files by name pattern or wildcard',
+  maxResultSizeChars: 100_000,
+  isConcurrencySafe() { return true },
+  isReadOnly() { return true },
+  isSearchOrReadCommand() { return { isSearch: true, isRead: false } },
+  // ...
+})</code></pre><p>GlobTool 和 GrepTool 都是并发安全且只读的——它们可以与其他搜索工具并行执行。</p>
+<p>输入 schema 只有两个字段：</p>
+<pre><code class="language-typescript">const inputSchema = lazySchema(() =&gt; z.strictObject({
+  pattern: z.string().describe('The glob pattern to match files against'),
+  path: z.string().optional().describe('The directory to search in.'),
+}))</code></pre><p>值得注意的是，当内部构建嵌入了搜索工具时，GlobTool 会被完全移除：</p>
+<pre><code class="language-typescript">// src/tools.ts
+...(hasEmbeddedSearchTools() ? [] : [GlobTool, GrepTool]),</code></pre><h3>8.3.2 GrepTool —— Ripgrep 的深度集成</h3>
+<p>GrepTool 是 Claude Code 搜索能力的核心。它基于 Ripgrep（rg）实现，提供了远超 grep 的搜索体验。</p>
+<p><strong>丰富的输入参数。</strong> GrepTool 的 schema 几乎是 ripgrep 常用参数的一对一映射：</p>
+<pre><code class="language-typescript">const inputSchema = lazySchema(() =&gt; z.strictObject({
+  pattern: z.string(),      // 正则表达式模式
+  path: z.string().optional(),
+  glob: z.string().optional(),  // 文件过滤 glob
+  output_mode: z.enum(['content', 'files_with_matches', 'count']).optional(),
+  '-B': semanticNumber(z.number().optional()),  // 前文行数
+  '-A': semanticNumber(z.number().optional()),  // 后文行数
+  '-C': semanticNumber(z.number().optional()),  // 上下文行数
+  context: semanticNumber(z.number().optional()),
+  '-n': semanticBoolean(z.boolean().optional()),  // 行号
+  '-i': semanticBoolean(z.boolean().optional()),  // 忽略大小写
+  type: z.string().optional(),     // 文件类型过滤
+  head_limit: semanticNumber(z.number().optional()),  // 结果行数限制
+  offset: semanticNumber(z.number().optional()),       // 偏移量
+  multiline: semanticBoolean(z.boolean().optional()),  // 多行模式
+}))</code></pre><p><strong>默认结果限制。</strong> 为防止上下文膨胀，GrepTool 默认只返回前 250 条结果：</p>
+<pre><code class="language-typescript">const DEFAULT_HEAD_LIMIT = 250</code></pre><p>模型可以通过传 <code>head_limit: 0</code> 来获取无限结果，但这在源码注释中被标记为&quot;谨慎使用&quot;。</p>
+<p><strong>VCS 目录自动排除。</strong> 搜索时自动排除版本控制目录：</p>
+<pre><code class="language-typescript">const VCS_DIRECTORIES_TO_EXCLUDE = ['.git', '.svn', '.hg', '.bzr', '.jj', '.sl']</code></pre><p><strong>分页支持。</strong> 通过 <code>offset</code> 和 <code>head_limit</code> 的组合，GrepTool 支持结果分页：</p>
+<pre><code class="language-typescript">function applyHeadLimit&lt;T&gt;(items: T[], limit: number | undefined, offset: number = 0) {
+  if (limit === 0) return { items: items.slice(offset), appliedLimit: undefined }
+  const effectiveLimit = limit ?? DEFAULT_HEAD_LIMIT
+  const sliced = items.slice(offset, offset + effectiveLimit)
+  const wasTruncated = items.length - offset &gt; effectiveLimit
+  return { items: sliced, appliedLimit: wasTruncated ? effectiveLimit : undefined }
+}</code></pre><p><strong>GrepTool 与 BashTool grep 的关系。</strong> 有趣的是，模型可以通过 BashTool 执行 <code>grep</code> 或 <code>rg</code> 命令，也可以使用 GrepTool。系统提示中明确引导模型使用 GrepTool 而非 BashTool 中的 grep。GrepTool 的优势在于：结构化的输出（文件名列表、匹配计数等）、内置的结果限制和分页、以及正确的权限检查。</p>
+<h3>8.3.3 搜索工具的设计模式</h3>
+<div class="mermaid">%%{init: {"theme": "base", "themeVariables":{"primaryColor":"#3b82f6","primaryTextColor":"#1e293b","primaryBorderColor":"#60a5fa","lineColor":"#94a3b8","secondaryColor":"#f1f5f9","tertiaryColor":"#ffffff","fontFamily":"-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif"}}}%%
+sequenceDiagram
+    participant Model as 模型
+    participant Grep as GrepTool
+    participant RG as Ripgrep (rg)
+    participant FS as 文件系统
+
+    Model-&gt;&gt;Grep: { pattern: "TODO", path: "src/", type: "ts" }
+    Grep-&gt;&gt;Grep: validateInput（路径存在性检查）
+    Grep-&gt;&gt;Grep: checkPermissions（读取权限）
+    Grep-&gt;&gt;RG: 构建 rg 命令参数
+    Note right of Grep: --type ts --glob, 排除 .git 等目录
+    RG-&gt;&gt;FS: 遍历文件系统
+    FS--&gt;&gt;RG: 匹配结果
+    RG--&gt;&gt;Grep: 原始输出
+    Grep-&gt;&gt;Grep: applyHeadLimit(results, 250, 0)
+    Grep--&gt;&gt;Model: { numFiles: 12, filenames: [...], content: "..." }</div><div class="thinking-note"><h3>思考笔记</h3>
+<ul>
+<li>Glob 和 Grep 都基于 ripgrep 引擎——速度快、跨平台、忽略 .gitignore 文件。这是工具实现中&quot;选对底层引擎&quot;的典型案例。</li>
+<li>GrepTool 的结果自动做了上下文行展（context_lines），让模型不只能看到匹配行，还能看到前后的背景代码。</li>
+<li>搜索类工具被标记为 isConcurrencySafe（并发安全），因为多个搜索之间没有副作用，可以同时并行跑。</li>
+<li>ripgrep 的 --json 输出模式让解析变得精确而简单——这比解析纯文本输出优雅得多。</li>
+</ul>
+</div><hr>
+<h2>8.4 WebFetchTool / WebSearchTool —— 网络工具</h2>
+<h3>8.4.1 WebFetchTool —— URL 内容抓取</h3>
+<p>WebFetchTool 从指定 URL 抓取内容，将 HTML 转为 Markdown，然后用一个小模型对内容进行总结：</p>
+<pre><code class="language-typescript">export const WebFetchTool = buildTool({
+  name: WEB_FETCH_TOOL_NAME,
+  searchHint: 'fetch and extract content from a URL',
+  maxResultSizeChars: 100_000,
+  shouldDefer: true,           // 延迟加载
+  isConcurrencySafe() { return true },
+  isReadOnly() { return true },
+  // ...
+})</code></pre><p>WebFetchTool 被标记为 <code>shouldDefer: true</code>——它不是核心的编码工具，大多数对话不需要它，所以延迟加载以节省 prompt 空间。</p>
+<p><strong>输入 schema。</strong> 只有两个必填字段：</p>
+<pre><code class="language-typescript">const inputSchema = lazySchema(() =&gt; z.strictObject({
+  url: z.string().url().describe('The URL to fetch content from'),
+  prompt: z.string().describe('The prompt to run on the fetched content'),
+}))</code></pre><p><code>prompt</code> 字段是一个巧妙设计——模型不是简单地抓取网页然后塞入上下文，而是告诉 WebFetchTool &quot;要从页面提取什么信息&quot;。内部使用一个较小的模型处理大量网页内容并提取相关部分，避免了将整个页面内容放入主对话的上下文窗口。</p>
+<p><strong>权限模型。</strong> WebFetchTool 的权限基于域名而非完整 URL：</p>
+<pre><code class="language-typescript">function webFetchToolInputToPermissionRuleContent(input: { [k: string]: unknown }): string {
+  try {
+    const { url } = parsedInput.data
+    const hostname = new URL(url).hostname
+    return `domain:${hostname}`
+  } catch {
+    return `input:${input.toString()}`
+  }
+}</code></pre><p>这意味着用户可以授权 &quot;允许访问 github.com&quot; 而不需要逐一授权每个 URL。</p>
+<p><strong>预批准主机。</strong> 某些安全的主机（如文档网站）被预先批准，无需用户确认：</p>
+<pre><code class="language-typescript">// 通过 isPreapprovedHost 和 isPreapprovedUrl 函数检查</code></pre><h3>8.4.2 WebSearchTool —— 基于 API 的网络搜索</h3>
+<p>WebSearchTool 的实现方式与其他工具截然不同——它不是在本地执行搜索，而是利用 Anthropic API 的内置 web_search 工具：</p>
+<pre><code class="language-typescript">function makeToolSchema(input: Input): BetaWebSearchTool20250305 {
+  return {
+    type: 'web_search_20250305',
+    name: 'web_search',
+    allowed_domains: input.allowed_domains,
+    blocked_domains: input.blocked_domains,
+    max_uses: 8,  // 硬编码最多 8 次搜索
+  }
+}</code></pre><p>WebSearchTool 实际上是一个 &quot;工具中的工具&quot;——它通过 <code>queryModelWithStreaming</code> 发起一次新的 API 调用，在该调用中配置了 <code>web_search</code> 工具。API 侧的模型执行搜索，然后 Claude Code 将搜索结果格式化返回给主对话。</p>
+<pre><code class="language-typescript">const outputSchema = lazySchema(() =&gt; z.object({
+  query: z.string(),
+  results: z.array(z.union([searchResultSchema(), z.string()])),
+  durationSeconds: z.number(),
+}))</code></pre><p>结果是 <code>SearchResult | string</code> 的混合数组——搜索结果和模型生成的文本评论交替出现。</p>
+<h3>8.4.3 网络工具对比</h3>
+<table>
+<thead>
+<tr>
+<th>特性</th>
+<th>WebFetchTool</th>
+<th>WebSearchTool</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>功能</td>
+<td>抓取单个 URL 内容</td>
+<td>网络搜索</td>
+</tr>
+<tr>
+<td>实现方式</td>
+<td>直接 HTTP 请求</td>
+<td>嵌套 API 调用</td>
+</tr>
+<tr>
+<td>内容处理</td>
+<td>HTML -&gt; Markdown -&gt; 小模型总结</td>
+<td>API 侧 web_search 工具</td>
+</tr>
+<tr>
+<td>权限粒度</td>
+<td>域名级别</td>
+<td>通用（域名过滤在参数中）</td>
+</tr>
+<tr>
+<td>shouldDefer</td>
+<td>是</td>
+<td>否</td>
+</tr>
+<tr>
+<td>max_uses</td>
+<td>N/A</td>
+<td>8 次搜索/调用</td>
+</tr>
+</tbody></table>
+<div class="thinking-note"><h3>思考笔记</h3>
+<p>WebFetch/WebSearch 这对网络工具展示了 Agent 工具设计中&quot;能力边界&quot;的设定——模型不能直接访问网络，但可以通过工具间接实现。</p>
+<ul>
+<li>WebFetchTool 获取 URL 内容并转为 markdown——这比返回原始 HTML 更节省 token，模型只需要阅读纯文本内容。</li>
+<li>WebSearchTool 把搜索能力封装为工具——模型通过它执行搜索并获取结果摘要。搜索次数限制（max_uses=8）防止无限搜索耗尽预算。</li>
+<li>域名级别权限控制是网络工具特有的安全需求——不是&quot;能否网络访问&quot;的二元开关，而是&quot;能访问哪些域名&quot;的细粒度规则。</li>
+<li>对比本地工具（文件读写、命令执行），网络工具的安全模型更接近浏览器——同源策略、请求来源标识、内容安全策略。</li>
+</ul>
+</div><hr>
+<h2>8.5 TaskTools —— 任务管理系统</h2>
+<h3>8.5.1 设计背景</h3>
+<p>Task 工具族（TaskCreate、TaskGet、TaskUpdate、TaskList）是 Claude Code 的任务管理系统 v2（TodoV2），用于替代旧的 TodoWriteTool。它们在 <code>isTodoV2Enabled()</code> 为 true 时才可用。</p>
+<h3>8.5.2 TaskCreateTool</h3>
+<pre><code class="language-typescript">// src/tools/TaskCreateTool/TaskCreateTool.ts
+export const TaskCreateTool = buildTool({
+  name: TASK_CREATE_TOOL_NAME,
+  searchHint: 'create a task in the task list',
+  maxResultSizeChars: 100_000,
+  shouldDefer: true,
+  isEnabled() { return isTodoV2Enabled() },
+  isConcurrencySafe() { return true },
+  // ...
+  async call({ subject, description, activeForm, metadata }, context) {
+    const taskListId = await getTaskListId(context)
+    const task = await createTask(taskListId, {
+      subject,
+      description,
+      activeForm,
+      metadata,
+      agentName: getAgentName(context),
+      teamName: getTeamName(context),
+    })
+    // 执行 task-created hooks
+    await executeTaskCreatedHooks(/* ... */)
+    return { data: { task: { id: task.id, subject: task.subject } } }
+  }
+})</code></pre><p>TaskCreateTool 的输入 schema：</p>
+<pre><code class="language-typescript">const inputSchema = lazySchema(() =&gt; z.strictObject({
+  subject: z.string().describe('A brief title for the task'),
+  description: z.string().describe('What needs to be done'),
+  activeForm: z.string().optional().describe(
+    'Present continuous form shown in spinner when in_progress (e.g., "Running tests")'
+  ),
+  metadata: z.record(z.string(), z.unknown()).optional().describe(
+    'Arbitrary metadata to attach to the task'
+  ),
+}))</code></pre><p><strong><code>activeForm</code> 字段</strong> 是一个 UX 优化——当任务处于进行中状态时，spinner 会显示这个描述（如 &quot;Running tests&quot;），而非通用的 &quot;Working...&quot;。</p>
+<h3>8.5.3 Task 工具族的设计模式</h3>
+<p>Task 工具族共享几个设计特征：</p>
+<ol>
+<li><strong>全部 <code>shouldDefer: true</code></strong> —— 任务管理不是每次对话都需要的</li>
+<li><strong>全部 <code>isConcurrencySafe: true</code></strong> —— 任务操作是独立的，可以并行</li>
+<li><strong>条件启用</strong> —— 通过 <code>isEnabled()</code> 检查功能标记</li>
+<li><strong>与 hooks 集成</strong> —— TaskCreate 执行后触发 task-created hooks</li>
+</ol>
+<div class="mermaid">%%{init: {"theme": "base", "themeVariables":{"primaryColor":"#3b82f6","primaryTextColor":"#1e293b","primaryBorderColor":"#60a5fa","lineColor":"#94a3b8","secondaryColor":"#f1f5f9","tertiaryColor":"#ffffff","fontFamily":"-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif"}}}%%
+graph TD
+    subgraph Task 工具族
+        TC[TaskCreateTool
+创建任务]
+        TG[TaskGetTool
+获取任务详情]
+        TU[TaskUpdateTool
+更新任务状态]
+        TL[TaskListTool
+列出所有任务]
+    end
+
+    TC --&gt;|创建| DB[(任务存储)]
+    TG --&gt;|读取| DB
+    TU --&gt;|更新| DB
+    TL --&gt;|查询| DB
+
+    TC --&gt;|触发| H[task-created hooks]
+    TU --&gt;|触发| H2[task-updated hooks]
+
+    subgraph 任务生命周期
+        S1[created] --&gt; S2[in_progress]
+        S2 --&gt; S3[completed]
+        S2 --&gt; S4[failed]
+        S2 --&gt; S5[cancelled]
+    end</div><h3>8.5.4 共同的工具模式</h3>
+<p>回顾本章分析的所有工具，可以提炼出几个共同的设计模式：</p>
+<p><strong>模式一：lazySchema。</strong> 所有工具都使用 <code>lazySchema</code> 延迟构建 Zod schema，避免模块加载时的开销：</p>
+<pre><code class="language-typescript">const inputSchema = lazySchema(() =&gt; z.strictObject({ /* ... */ }))</code></pre><p><strong>模式二：buildTool 工厂。</strong> 每个工具都通过 <code>buildTool</code> 构建，享受失败关闭的默认值。</p>
+<p><strong>模式三：分离的 UI。</strong> 工具的业务逻辑和 UI 渲染分布在不同文件中（如 <code>GrepTool.ts</code> 和 <code>UI.tsx</code>），但通过 Tool 接口统一暴露。</p>
+<p><strong>模式四：权限委托。</strong> 文件工具委托给 <code>checkReadPermissionForTool</code> / <code>checkWritePermissionForTool</code>，BashTool 有独立的权限链，网络工具基于域名。</p>
+<div class="thinking-note"><h3>思考笔记</h3>
+<p>TaskTools（TaskCreate/TaskStop/TaskStatus）展示了 Agent 系统一个独特的能力——Agent 可以创建和管理子任务，形成任务树。</p>
+<ul>
+<li>TaskCreate 让 Agent 拥有了&quot;创建其他 Agent&quot;的能力——不是直接调工具，而是创建一个新的后台 Agent 来执行任务。这是递归式任务分解在实际工程中的体现。</li>
+<li>后台任务有独立的生命周期：创建 → 执行 → 状态查询 → 结果收集。Agent 不需要等待任务完成，可以继续处理其他事情。</li>
+<li>lazySchema 延迟初始化在 TaskTools 的 inputSchema 中被广泛使用——不是所有任务都有相同的输入结构，schema 是动态生成的。</li>
+<li>四个实现模式贯穿所有内置工具：lazySchema（延迟加载）、buildTool 工厂（安全默认）、分离 UI（关注点分离）、权限委托（安全下沉）——这是 40+ 工具的共同架构基因。</li>
+</ul>
+</div><hr>
+<h2>本章小结</h2>
+<p>本章深入分析了 Claude Code 最核心的内置工具：</p>
+<ol>
+<li><strong>BashTool</strong> 是最复杂的工具，18 个文件、多层安全防线、命令语义分类、推测性分类器等设计使其在提供强大 shell 能力的同时保持安全</li>
+<li><strong>FileRead/Edit/Write</strong> 三剑客各司其职，Read 以 Infinity 的 maxResultSizeChars 避免循环读取，Edit 通过精确替换最小化修改，Write 提供完整的 diff 信息</li>
+<li><strong>Glob/Grep</strong> 工具与 Ripgrep 深度集成，提供结构化输出、分页、结果限制等高级功能</li>
+<li><strong>WebFetch/WebSearch</strong> 分别通过 HTTP 抓取和嵌套 API 调用提供网络能力</li>
+<li><strong>Task 工具族</strong> 展示了条件启用、延迟加载、hooks 集成等模式</li>
+</ol>
+<p>下一章将分析这些工具如何在 StreamingToolExecutor 中被调度执行，以及工具结果如何被截断和持久化。</p>
+
+      </article>
+    </main>
+  </div>
+  
+  <!-- Syntax highlighting -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script>hljs.highlightAll();</script>
+
+  <script>
+    // Collapsible sidebar sections
+    document.querySelectorAll('.sidebar-section-header').forEach(header => {
+      header.addEventListener('click', () => {
+        const items = header.nextElementSibling;
+        const isCollapsed = items.classList.contains('collapsed');
+        // If collapsed, uncollapse; if visible, collapse
+        items.classList.toggle('collapsed');
+        header.classList.toggle('open');
+      });
+    });
+
+    // Auto-open current page's section + highlight active link
+    const currentPath = window.location.pathname;
+    const currentFilename = currentPath.split('/').pop();
+    let foundMatch = false;
+    document.querySelectorAll('.sidebar-section-items a').forEach(link => {
+      const href = link.getAttribute('href');
+      const linkFilename = href.split('/').pop();
+      if (linkFilename === currentFilename) {
+        link.classList.add('active');
+        const section = link.closest('.sidebar-section-items');
+        const header = section ? section.previousElementSibling : null;
+        if (section) section.classList.remove('collapsed');
+        if (header) header.classList.add('open');
+        foundMatch = true;
+      }
+    });
+    
+    // Full-text search
+    (function() {
+      const searchInput = document.getElementById('searchInput');
+      const searchResults = document.getElementById('searchResults');
+      if (!searchInput || !searchResults) return;
+
+      let searchIndex = [];
+      let indexLoaded = false;
+
+      // Compute root path for loading search-index.json
+      const currentScript = document.currentScript;
+      const rootPath = '../';
+
+      function loadIndex() {
+        if (indexLoaded) return;
+        indexLoaded = true;
+        fetch(rootPath + 'search-index.json')
+          .then(r => r.json())
+          .then(data => { searchIndex = data; })
+          .catch(() => { searchIndex = []; });
+      }
+
+      function highlight(text, query) {
+        const re = new RegExp('(' + query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi');
+        return text.replace(re, '<mark style="background:#fde047;padding:0 2px;border-radius:2px;">$1</mark>');
+      }
+
+      function search(query) {
+        if (!query || !searchIndex.length) return [];
+        const terms = query.toLowerCase().split(/\s+/).filter(t => t.length > 0);
+        if (!terms.length) return [];
+
+        const results = searchIndex.map(doc => {
+          const titleLower = doc.title.toLowerCase();
+          const textLower = doc.text.toLowerCase();
+          let score = 0;
+
+          for (const term of terms) {
+            if (titleLower.includes(term)) score += 10;
+            if (textLower.includes(term)) score += 1;
+          }
+
+          if (score === 0) return null;
+
+          // Find best snippet
+          let snippet = doc.text.slice(0, 120);
+          for (const term of terms) {
+            const idx = doc.text.toLowerCase().indexOf(term);
+            if (idx !== -1) {
+              const start = Math.max(0, idx - 40);
+              snippet = doc.text.slice(start, start + 120);
+              break;
+            }
+          }
+
+          return { ...doc, score, snippet };
+        }).filter(Boolean);
+
+        return results.sort((a, b) => b.score - a.score).slice(0, 10);
+      }
+
+      function render(results, query) {
+        if (!query) {
+          searchResults.classList.remove('active');
+          searchResults.innerHTML = '';
+          return;
+        }
+        if (!results.length) {
+          searchResults.innerHTML = '<div class="search-no-results">未找到相关文档</div>';
+          searchResults.classList.add('active');
+          return;
+        }
+
+        let html = '';
+        for (const r of results) {
+          const title = highlight(r.title, query);
+          const preview = highlight(r.snippet.replace(/\s+/g, ' '), query);
+          html += `<a href="${rootPath + r.path}" class="search-result-item">
+            <div class="sr-title">${title}</div>
+            <div class="sr-preview">${preview}...</div>
+          </a>`;
+        }
+        searchResults.innerHTML = html;
+        searchResults.classList.add('active');
+      }
+
+      let debounce;
+      searchInput.addEventListener('input', (e) => {
+        loadIndex();
+        clearTimeout(debounce);
+        const query = e.target.value.trim();
+        if (!query) {
+          render([], '');
+          return;
+        }
+        searchResults.innerHTML = '<div class="search-loading">搜索中...</div>';
+        searchResults.classList.add('active');
+        debounce = setTimeout(() => {
+          render(search(query), query);
+        }, 150);
+      });
+
+      // Close results on click outside
+      document.addEventListener('click', (e) => {
+        if (!e.target.closest('.sidebar-search')) {
+          searchResults.classList.remove('active');
+        }
+      });
+
+      // Keyboard navigation
+      searchInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          searchResults.classList.remove('active');
+          searchInput.blur();
+        }
+      });
+    })();
+    
+    // Back to top
+    (function() {
+      const btn = document.getElementById('backToTop');
+      if (!btn) return;
+      const toggle = () => {
+        btn.classList.toggle('visible', window.scrollY > 400);
+      };
+      window.addEventListener('scroll', toggle, { passive: true });
+      btn.addEventListener('click', () => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+    })();
+
+    // Mobile menu toggle
+    (function() {
+      const menuToggle = document.getElementById('menuToggle');
+      const sidebar = document.querySelector('.sidebar');
+      const overlay = document.getElementById('sidebarOverlay');
+      if (!menuToggle || !sidebar || !overlay) return;
+
+      menuToggle.addEventListener('click', () => {
+        sidebar.classList.toggle('open');
+        overlay.classList.toggle('active');
+      });
+
+      overlay.addEventListener('click', () => {
+        sidebar.classList.remove('open');
+        overlay.classList.remove('active');
+      });
+
+      // Close sidebar when a nav link is clicked (mobile)
+      sidebar.querySelectorAll('a').forEach(link => {
+        link.addEventListener('click', () => {
+          if (window.innerWidth <= 1024) {
+            sidebar.classList.remove('open');
+            overlay.classList.remove('active');
+          }
+        });
+      });
+    })();
+
+    // Copy code buttons
+    (function() {
+      document.querySelectorAll('.markdown-section pre').forEach(pre => {
+        const btn = document.createElement('button');
+        btn.className = 'copy-code-btn';
+        btn.textContent = '复制';
+        btn.addEventListener('click', () => {
+          const code = pre.querySelector('code')?.textContent || pre.textContent;
+          navigator.clipboard.writeText(code).then(() => {
+            btn.textContent = '已复制';
+            btn.classList.add('copied');
+            setTimeout(() => {
+              btn.textContent = '复制';
+              btn.classList.remove('copied');
+            }, 1500);
+          }).catch(() => {
+            btn.textContent = '失败';
+            setTimeout(() => { btn.textContent = '复制'; }, 1500);
+          });
+        });
+        pre.style.position = 'relative';
+        pre.appendChild(btn);
+      });
+    })();
+
+    // 引导思考 collapsible card
+    (function() {
+      document.querySelectorAll('.guide-card-header').forEach(function(header) {
+        header.addEventListener('click', function() {
+          var table = header.closest('.guide-card');
+          table.classList.toggle('collapsed');
+        });
+      });
+    })();
+
+    // Mermaid: Load dynamically + zoomable containers
+    (function() {
+      var mermaidDivs = document.querySelectorAll('.mermaid');
+      if (mermaidDivs.length === 0) return;
+
+      var cdns = [
+        '../mermaid.min.js',
+        'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js',
+        'https://unpkg.com/mermaid@10/dist/mermaid.min.js'
+      ];
+      var cdnIndex = 0;
+
+      function showError(msg) {
+        mermaidDivs.forEach(function(div) {
+          div.innerHTML = '<div class="mermaid-error" style="padding:16px;color:#dc2626;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;margin:20px 0;">' + msg + '</div>';
+          div.classList.add('rendered');
+        });
+      }
+
+      function wrapZoomable(div) {
+        if (div.parentNode.classList.contains('mermaid-zoom-container')) return;
+        if (!div.querySelector('svg')) return;
+        div.classList.add('rendered');
+
+        var wrapper = document.createElement('div');
+        wrapper.className = 'mermaid-zoom-container';
+        div.parentNode.insertBefore(wrapper, div);
+        wrapper.appendChild(div);
+
+        // Click overlay hint
+        var overlay = document.createElement('div');
+        overlay.className = 'mermaid-expand-overlay';
+        overlay.innerHTML = '<span><span class="expand-icon">⛶</span> 点击查看全图</span>';
+        wrapper.appendChild(overlay);
+
+        // Click (or double-click) to open modal
+        wrapper.addEventListener('click', function() { openMermaidModal(div); });
+      }
+
+      // ---- Mermaid Modal (full-screen viewer) ----
+      var modalInstance = null;
+
+      function openMermaidModal(sourceDiv) {
+        closeMermaidModal();
+        var clone = sourceDiv.cloneNode(true);
+        var svg = clone.querySelector('svg');
+        if (!svg) return;
+
+        // Let SVG fill width, height follows viewBox aspect ratio
+        svg.removeAttribute('width');
+        svg.removeAttribute('height');
+        svg.style.width = '100%';
+        svg.style.height = 'auto';
+        svg.style.maxWidth = 'none';
+
+        // Build modal: simple header + scrollable body
+        var modal = document.createElement('div');
+        modal.className = 'mermaid-modal active';
+
+        var content = document.createElement('div');
+        content.className = 'mermaid-modal-content';
+
+        var header = document.createElement('div');
+        header.className = 'mermaid-modal-header';
+        var chapterHint = '';
+        var prev = sourceDiv.closest('.markdown-section');
+        if (prev) {
+          var heading = prev.querySelector('h2, h3');
+          if (heading) chapterHint = heading.textContent.replace(/[#\d.]/g,'').trim().slice(0, 30);
+        }
+        header.innerHTML =
+          '<div class="modal-title-wrap">' +
+            '<span class="modal-icon">⬡</span>' +
+            '<span class="modal-title">' + (chapterHint || '图表') + '</span>' +
+          '</div>' +
+          '<button class="modal-close" title="关闭 (ESC)">✕</button>';
+
+        var body = document.createElement('div');
+        body.className = 'mermaid-modal-body';
+        body.appendChild(clone);
+
+        content.appendChild(header);
+        content.appendChild(body);
+        modal.appendChild(content);
+        document.body.appendChild(modal);
+
+        // Close handlers
+        header.querySelector('.modal-close').addEventListener('click', closeMermaidModal);
+        modal.addEventListener('click', function(e) {
+          if (e.target === modal) closeMermaidModal();
+        });
+
+        modalInstance = modal;
+      }
+
+      function closeMermaidModal() {
+        if (modalInstance) {
+          modalInstance.remove();
+          modalInstance = null;
+        }
+      }
+
+      document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') closeMermaidModal();
+      });
+
+      function tryLoadMermaid() {
+        if (cdnIndex >= cdns.length) {
+          showError('❌ 无法加载图表库，请检查网络连接后刷新页面');
+          return;
+        }
+
+        var script = document.createElement('script');
+        script.src = cdns[cdnIndex];
+        script.onload = function() {
+          if (typeof mermaid === 'undefined') {
+            showError('❌ 图表库加载失败');
+            return;
+          }
+          try {
+            mermaid.initialize({
+              startOnLoad: false,
+              theme: 'base',
+              themeVariables: {
+                fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif',
+                primaryColor: '#ffffff',
+                primaryTextColor: '#1e293b',
+                primaryBorderColor: '#e2e8f0',
+                lineColor: '#64748b',
+                secondaryColor: '#f1f5f9',
+                tertiaryColor: '#f8fafc',
+              },
+              securityLevel: 'loose',
+              flowchart: {
+                curve: 'basis',
+                padding: 15,
+                nodeSpacing: 50,
+                rankSpacing: 80,
+              },
+              maxTextSize: 50000,
+            });
+            mermaid.run({ querySelector: '.mermaid' }).then(function() {
+              mermaidDivs.forEach(wrapZoomable);
+            });
+          } catch(e) {
+            showError('❌ 图表渲染失败: ' + e.message);
+          }
+        };
+        script.onerror = function() {
+          cdnIndex++;
+          tryLoadMermaid();
+        };
+        document.head.appendChild(script);
+      }
+
+      tryLoadMermaid();
+    })();
+
+  </script>
+</body>
+</html>
