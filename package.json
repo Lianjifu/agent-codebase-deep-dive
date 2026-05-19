@@ -1,0 +1,14 @@
+{
+  "name": "llm-agent-wiki",
+  "version": "1.0.0",
+  "description": "LLM Agent 源码学习 Wiki - Claude Code · OpenClaw · Hermes Agent · OpenHuman",
+  "scripts": {
+    "build": "node build-html.js"
+  },
+  "keywords": ["wiki", "llm", "agent", "claude-code", "openclaw"],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "marked": "^18.0.3"
+  }
+}
